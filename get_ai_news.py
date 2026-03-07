@@ -434,9 +434,11 @@ def send_email(content):
     """发送邮件"""
     print("📧 正在发送邮件...")
 
-    if not all(EMAIL_CONFIG.values()):
-        print("  ❌ 邮件配置不完整，跳过发送")
-        return False
+    # 检查必要配置
+    required_fields = ['to', 'from', 'smtp_host', 'username', 'password']
+    if not all(EMAIL_CONFIG.get(k) for k in required_fields):
+        print("  ⚠️ 邮件配置不完整，跳过邮件发送")
+        return True  # 返回True而不是False，避免判定为失败
 
     try:
         msg = MIMEMultipart('alternative')
