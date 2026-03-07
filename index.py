@@ -15,6 +15,7 @@ def install_dependencies():
     需要在函数启动时手动安装
     """
     import subprocess
+    import importlib
 
     print("📦 正在安装依赖包...")
 
@@ -28,6 +29,7 @@ def install_dependencies():
         'urllib3'
     ]
 
+    installed = False
     for package in packages:
         try:
             # 尝试导入，如果失败则安装
@@ -47,11 +49,19 @@ def install_dependencies():
                     sys.executable, "-m", "pip", "install",
                     package, "-q", "--target", "/opt/python", "--upgrade"
                 ], stderr=subprocess.DEVNULL)
-                # 将安装路径添加到sys.path最前面
-                sys.path.insert(0, '/opt/python/lib/python3.10/site-packages')
+                installed = True
                 print(f"  ✅ {package} 安装成功")
             except Exception as e:
                 print(f"  ❌ {package} 安装失败: {e}")
+
+    # 如果安装了新包，需要重新加载模块
+    if installed:
+        print("🔄 重新加载模块...")
+        # 重新加载所有已导入的模块
+        for module in list(sys.modules.keys()):
+            if module in ['bs4', 'BeautifulSoup', 'lxml', 'feedparser', 'googletrans']:
+                del sys.modules[module]
+        print("✅ 模块已重新加载")
 
     print("📦 依赖包安装完成")
 
