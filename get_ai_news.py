@@ -277,7 +277,7 @@ def get_ai_news_from_rss(limit=5):
     return all_news[:10]  # 返回最多10条
 
 def get_github_ai_projects(limit=5):
-    """从GitHub获取热门AI项目"""
+    """从GitHub获取热门AI项目（含详细描述）"""
     print("🐙 开始获取GitHub热门AI项目...")
     projects = []
 
@@ -298,13 +298,34 @@ def get_github_ai_projects(limit=5):
                 for item in data.get('items', []):
                     # 避免重复
                     if not any(p['url'] == item['html_url'] for p in projects):
+                        # 获取项目详细信息
+                        full_name = item.get('full_name', '')
+                        name = item.get('name', '')
+                        description = item.get('description', '暂无描述')
+
+                        # 如果描述是英文，尝试翻译
+                        if description and description != '暂无描述':
+                            has_chinese = any('\u4e00' <= c <= '\u9fff' for c in description)
+                            if not has_chinese:
+                                description = translate_text(description)
+
+                        # 获取主题标签
+                        topics_list = item.get('topics', [])[:5]  # 最多5个标签
+
+                        # 构建用途场景说明
+                        use_case = build_use_case(name, topics_list, description)
+
                         projects.append({
-                            'name': item['name'],
-                            'description': item.get('description', '暂无描述'),
+                            'name': name,
+                            'full_name': full_name,
+                            'description': description,
+                            'use_case': use_case,
                             'url': item['html_url'],
                             'stars': item['stargazers_count'],
                             'language': item.get('language', 'Unknown'),
-                            'topics': topic
+                            'topics': topics_list,
+                            'forks': item.get('forks_count', 0),
+                            'updated_at': item.get('updated_at', '')
                         })
             else:
                 print(f"  ⚠️ API请求失败: {response.status_code}")
@@ -314,7 +335,66 @@ def get_github_ai_projects(limit=5):
             continue
 
     print(f"✅ 共获取到 {len(projects)} 个AI项目")
+    # 按星标数排序
+    projects.sort(key=lambda x: x['stars'], reverse=True)
     return projects[:8]  # 返回最多8个项目
+
+def build_use_case(name, topics, description):
+    """根据项目信息生成用途场景说明"""
+    # 常见AI场景映射
+    scenarios = {
+        'llm': '大语言模型应用',
+        'transformer': 'Transformer模型',
+        'nlp': '自然语言处理',
+        'computer-vision': '计算机视觉',
+        'deep-learning': '深度学习',
+        'machine-learning': '机器学习',
+        'chatbot': '聊天机器人',
+        'agent': 'AI智能体',
+        'rag': '检索增强生成',
+        'fine-tuning': '模型微调',
+        'inference': '模型推理',
+        'training': '模型训练',
+        'diffusion': '图像生成',
+        'stable-diffusion': 'Stable Diffusion相关',
+        'voice': '语音处理',
+        'video': '视频处理',
+        'recommendation': '推荐系统',
+        'embedding': '向量嵌入',
+        'vector-database': '向量数据库',
+        'prompt': '提示工程',
+        'multi-agent': '多智能体系统',
+    }
+
+    # 根据主题匹配场景
+    detected_scenarios = []
+    for topic in topics:
+        topic_lower = topic.lower().replace('-', '')
+        for key, value in scenarios.items():
+            if key.replace('-', '') in topic_lower:
+                detected_scenarios.append(value)
+                break
+
+    # 去重并限制数量
+    detected_scenarios = list(dict.fromkeys(detected_scenarios))[:3]
+
+    if detected_scenarios:
+        return ' | '.join(detected_scenarios)
+    else:
+        # 根据名称推断
+        name_lower = name.lower()
+        if 'llm' in name_lower or 'gpt' in name_lower:
+            return '大语言模型相关'
+        elif 'chat' in name_lower or 'bot' in name_lower:
+            return '聊天对话系统'
+        elif 'agent' in name_lower:
+            return 'AI智能体'
+        elif 'train' in name_lower:
+            return '模型训练工具'
+        elif 'serve' in name_lower or 'deploy' in name_lower:
+            return '模型部署服务'
+        else:
+            return 'AI工具库'
 
 def get_ai_daily_news(limit=5):
     """从免费API获取每日AI新闻（备用方案）"""
@@ -427,13 +507,30 @@ def format_email_content(news_list, projects, festivals=None):
 
     # 添加GitHub项目
     for project in projects:
+        # 用途场景标签
+        use_case_tag = ""
+        if project.get('use_case'):
+            use_case_tag = f'<span class="tag" style="background: #e67e22;">📌 {project["use_case"]}</span>'
+
+        # 语言和fork信息
+        lang = project.get('language', 'Unknown')
+        forks = project.get('forks', 0)
+        meta_info = f"<span class='tag'>{lang}</span>"
+        if forks > 0:
+            meta_info += f" <span class='tag' style='background: #95a5a6;'>🍴 {forks}</span>"
+
         content += f"""
             <div class="project-item">
-                <h3>{project['name']} <span class="stars">⭐ {project['stars']}</span></h3>
-                <p>{project.get('description', '暂无描述')}</p>
+                <h3>
+                    <a href="{project['url']}" target="_blank" style="color: #333; text-decoration: none;">
+                        {project['name']} <span class="stars">⭐ {project['stars']}</span>
+                    </a>
+                </h3>
+                {use_case_tag}
+                <p style="margin: 10px 0;">{project.get('description', '暂无描述')}</p>
                 <p>
-                    <span class="tag">{project.get('language', 'Unknown')}</span>
-                    <a href="{project['url']}" target="_blank">查看项目 →</a>
+                    {meta_info}
+                    <a href="{project['url']}" target="_blank" style="color: #28a745; font-weight: bold; margin-left: 10px;">查看项目 →</a>
                 </p>
             </div>
         """
@@ -481,8 +578,25 @@ def format_wecom_message(news_list, projects, festivals=None):
 
     content += "\n### 🔥 GitHub热门AI项目\n\n"
     for i, project in enumerate(projects[:3], 1):
-        content += f"{i}. **{project['name']}** ⭐ {project['stars']}\n"
-        content += f"   > {project.get('description', '暂无描述')[:60]}...\n\n"
+        # 项目名称和星标
+        content += f"{i}. **[{project['name']}]({project['url']})** ⭐ {project['stars']}\n"
+
+        # 用途场景
+        if project.get('use_case'):
+            content += f"   > 📌 **用途**：{project['use_case']}\n"
+
+        # 项目描述
+        desc = project.get('description', '暂无描述')
+        if desc and desc != '暂无描述':
+            content += f"   > 📝 {desc[:100]}...\n"
+
+        # 语言和标签
+        lang = project.get('language', 'Unknown')
+        if lang and lang != 'Unknown':
+            content += f"   > 💻 {lang}"
+        if project.get('forks', 0) > 0:
+            content += f" | 🍴 {project['forks']}"
+        content += "\n\n"
 
     content += "\n---\n📧 详细内容已发送至邮箱"
 
