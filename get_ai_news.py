@@ -19,6 +19,13 @@ from email.header import Header
 from datetime import datetime
 from bs4 import BeautifulSoup
 import feedparser
+try:
+    from googletrans import Translator
+    translator = Translator()
+    TRANSLATION_AVAILABLE = True
+except:
+    TRANSLATION_AVAILABLE = False
+    print("⚠️ 翻译库未安装，将使用原文（如需翻译功能，请运行: pip install googletrans==4.0.0-rc1）")
 
 # ==================== 配置区域 ====================
 
@@ -127,6 +134,37 @@ EMAIL_CONFIG = {
 # 企业微信 Webhook（从环境变量读取）
 WECOM_WEBHOOK = os.getenv('WECOM_WEBHOOK')
 
+# 翻译配置
+ENABLE_TRANSLATION = os.getenv('ENABLE_TRANSLATION', 'true').lower() == 'true'
+
+# ==================== 翻译功能 ====================
+
+def translate_text(text, max_length=500):
+    """翻译文本到中文"""
+    if not TRANSLATION_AVAILABLE or not ENABLE_TRANSLATION:
+        return text
+
+    try:
+        # 截断过长的文本
+        if len(text) > max_length:
+            text = text[:max_length]
+
+        # 翻译
+        result = translator.translate(text, src='en', dest='zh-cn')
+        return result.text
+    except Exception as e:
+        print(f"  ⚠️ 翻译失败: {e}，使用原文")
+        return text
+
+def translate_news_title(title):
+    """翻译新闻标题"""
+    # 检查是否包含中文
+    has_chinese = any('\u4e00' <= char <= '\u9fff' for char in title)
+    if has_chinese:
+        return title  # 已经是中文，不翻译
+
+    return translate_text(title)
+
 # ==================== 节日提醒 ====================
 
 def get_today_festival():
@@ -212,9 +250,16 @@ def get_ai_news_from_rss(limit=5):
                         if keyword.lower() in title_lower or keyword.lower() in desc_lower
                     )
 
+                    # 清理描述
+                    clean_desc = BeautifulSoup(description, 'html.parser').get_text()[:200] + '...'
+
+                    # 翻译标题
+                    translated_title = translate_news_title(title)
+
                     all_news.append({
-                        'title': title,
-                        'description': BeautifulSoup(description, 'html.parser').get_text()[:200] + '...',
+                        'title': translated_title,  # 使用翻译后的标题
+                        'title_en': title,  # 保留英文标题
+                        'description': clean_desc,
                         'link': link,
                         'source': source['name'],
                         'category': source['category'],
@@ -352,14 +397,23 @@ def format_email_content(news_list, projects, festivals=None):
 
     # 添加新闻内容
     for news in news_list:
+        # 标题：如果有英文原文，显示双语
+        if news.get('title_en') and news['title'] != news['title_en']:
+            title_html = f"""
+                <h3>{news['title']}</h3>
+                <p style="color: #666; font-size: 14px;">原文：{news['title_en']}</p>
+            """
+        else:
+            title_html = f"<h3>{news['title']}</h3>"
+
         content += f"""
             <div class="news-item">
-                <h3>{news['title']}</h3>
+                {title_html}
                 <p>{news.get('description', '暂无描述')}</p>
                 <p>
                     <span class="tag">{news.get('category', '新闻')}</span>
                     <span class="tag">{news.get('source', '未知来源')}</span>
-                    <a href="{news['link']}" target="_blank">阅读全文 →</a>
+                    <a href="{news['link']}" target="_blank" style="color: #667eea; font-weight: bold;">阅读全文 →</a>
                 </p>
             </div>
         """
@@ -415,8 +469,14 @@ def format_wecom_message(news_list, projects, festivals=None):
 
     content += "### 📰 今日AI要闻\n\n"
     for i, news in enumerate(news_list[:5], 1):
-        content += f"{i}. **{news['title']}**\n"
-        content += f"   > {news.get('description', '暂无描述')[:60]}...\n"
+        # 标题：如果有英文原文，显示双语
+        if news.get('title_en') and news['title'] != news['title_en']:
+            content += f"{i}. [{news['title']}]({news['link']})\n"
+            content += f"   > 原文：{news['title_en']}\n"
+        else:
+            content += f"{i}. [{news['title']}]({news['link']})\n"
+
+        content += f"   > {news.get('description', '暂无描述')[:80]}...\n"
         content += f"   <font color='info'>{news.get('source', '新闻')}</font>\n\n"
 
     content += "\n### 🔥 GitHub热门AI项目\n\n"
