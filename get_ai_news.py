@@ -126,7 +126,7 @@ EMAIL_CONFIG = {
     'to': os.getenv('EMAIL_TO'),
     'from': os.getenv('EMAIL_FROM'),
     'smtp_host': os.getenv('SMTP_HOST'),
-    'smtp_port': int(os.getenv('SMTP_PORT', '587')),
+    'smtp_port': int(os.getenv('SMTP_PORT') or '587'),  # 处理空字符串
     'username': os.getenv('SMTP_USER'),
     'password': os.getenv('SMTP_PASSWORD'),
 }
