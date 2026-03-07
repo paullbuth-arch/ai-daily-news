@@ -410,7 +410,7 @@ def format_wecom_message(news_list, projects, festivals=None):
         for festival in festivals:
             content += f"> **{festival['name']}** ({festival['type']})\n"
             if festival.get('note'):
-                content += f> {festival['note']}\n"
+                content += f"> {festival['note']}\n"
         content += "\n"
 
     content += "### 📰 今日AI要闻\n\n"
