@@ -45,13 +45,15 @@ def install_dependencies():
             try:
                 subprocess.check_call([
                     sys.executable, "-m", "pip", "install",
-                    package, "-q", "--target", "/tmp/python", "--upgrade"
-                ])
-                # 将安装路径添加到sys.path
-                sys.path.insert(0, '/tmp/python/lib/python3.10/site-packages')
+                    package, "-q", "--target", "/opt/python", "--upgrade"
+                ], stderr=subprocess.DEVNULL)
+                # 将安装路径添加到sys.path最前面
+                sys.path.insert(0, '/opt/python/lib/python3.10/site-packages')
                 print(f"  ✅ {package} 安装成功")
             except Exception as e:
                 print(f"  ❌ {package} 安装失败: {e}")
+
+    print("📦 依赖包安装完成")
 
 def handler(event, context):
     """
