@@ -36,3 +36,16 @@ Thumbs.db
 
 # Logs
 *.log
+
+# 敏感信息 - 部署脚本（包含AccessKey）
+deploy_*.py
+aliyun_deploy.py
+deploy_fc*.py
+*s
+*.yaml
+code.zip
+code/
+
+# 阿里云CLI
+aliyun-cli.tgz
+aliyun/
