@@ -8,13 +8,60 @@
 import sys
 import os
 
+def install_dependencies():
+    """
+    自动安装依赖包
+    阿里云函数计算不会自动安装requirements.txt
+    需要在函数启动时手动安装
+    """
+    import subprocess
+
+    print("📦 正在安装依赖包...")
+
+    packages = [
+        'beautifulsoup4',
+        'lxml',
+        'feedparser',
+        'googletrans==4.0.0-rc1',
+        'requests',
+        'html5lib',
+        'urllib3'
+    ]
+
+    for package in packages:
+        try:
+            # 尝试导入，如果失败则安装
+            if package == 'beautifulsoup4':
+                import bs4
+            elif package == 'lxml':
+                import lxml
+            elif package == 'feedparser':
+                import feedparser
+            elif 'googletrans' in package:
+                import googletrans
+            print(f"  ✅ {package} 已安装")
+        except ImportError:
+            print(f"  ⬇️  正在安装 {package}...")
+            try:
+                subprocess.check_call([
+                    sys.executable, "-m", "pip", "install",
+                    package, "-q", "--target", "/tmp/python", "--upgrade"
+                ])
+                # 将安装路径添加到sys.path
+                sys.path.insert(0, '/tmp/python/lib/python3.10/site-packages')
+                print(f"  ✅ {package} 安装成功")
+            except Exception as e:
+                print(f"  ❌ {package} 安装失败: {e}")
+
 def handler(event, context):
     """
     阿里云函数计算入口函数
     """
-    # 导入主程序
+    # 先安装依赖
+    install_dependencies()
+
+    # 导入你的主程序
     try:
-        # 导入你的新闻推送程序
         from get_ai_news import main
 
         # 设置环境变量（也可以在阿里云控制台配置）
