@@ -1,0 +1,52 @@
+name: 每日AI新闻推送
+
+on:
+  schedule:
+    # 北京时间 9:20 = UTC 1:20
+    - cron: '20 1 * * *'
+    # 北京时间 12:20 = UTC 4:20
+    - cron: '20 4 * * *'
+    # 北京时间 15:50 = UTC 7:50
+    - cron: '50 7 * * *'
+  # 支持手动触发测试
+  workflow_dispatch:
+
+jobs:
+  send-daily-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python 环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: 安装依赖
+        run: |
+          pip install requests beautifulsoup4 feedparser
+
+      - name: 获取 AI 新闻并推送
+        env:
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+          WECOM_WEBHOOK: ${{ secrets.WECOM_WEBHOOK }}
+        run: python get_ai_news.py
+
+      - name: 如果失败发送通知
+        if: failure()
+        run: |
+          curl -X POST '${{ secrets.WECOM_WEBHOOK }}' \
+            -H 'Content-Type: application/json' \
+            -d '{
+              "msgtype": "text",
+              "text": {
+                "content": "⚠️ 每日AI新闻推送失败，请检查日志"
+              }
+            }'
