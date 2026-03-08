@@ -13,6 +13,7 @@ import sys
 import json
 import smtplib
 import requests
+import random
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
@@ -219,11 +220,20 @@ def get_today_festival():
 # ==================== 新闻获取 ====================
 
 def get_ai_news_from_rss(limit=5):
-    """从RSS源获取AI相关新闻（优化版）"""
+    """从RSS源获取AI相关新闻（随机选择新闻源）"""
     print("📰 开始获取RSS新闻...")
+
+    # 随机选择50%-70%的新闻源
+    sample_size = random.randint(len(RSS_SOURCES) // 2, int(len(RSS_SOURCES) * 0.7))
+    selected_sources = random.sample(RSS_SOURCES, sample_size)
+
+    print(f"  🎲 本次随机选择了 {sample_size} 个新闻源:")
+    for source in selected_sources:
+        print(f"     - {source['name']}")
+
     all_news = []
 
-    for source in RSS_SOURCES:
+    for source in selected_sources:
         try:
             print(f"  正在获取: {source['name']}")
             feed = feedparser.parse(source['url'])
@@ -277,11 +287,20 @@ def get_ai_news_from_rss(limit=5):
     return all_news[:10]  # 返回最多10条
 
 def get_github_ai_projects(limit=5):
-    """从GitHub获取热门AI项目（含详细描述）"""
+    """从GitHub获取热门AI项目（随机选择主题）"""
     print("🐙 开始获取GitHub热门AI项目...")
+
+    # 随机选择50%-70%的主题
+    sample_size = random.randint(len(GITHUB_TOPICS) // 2, int(len(GITHUB_TOPICS) * 0.7))
+    selected_topics = random.sample(GITHUB_TOPICS, sample_size)
+
+    print(f"  🎲 本次随机选择了 {sample_size} 个主题:")
+    for topic in selected_topics:
+        print(f"     - {topic}")
+
     projects = []
 
-    for topic in GITHUB_TOPICS:
+    for topic in selected_topics:
         try:
             print(f"  正在搜索主题: {topic}")
             params = {
