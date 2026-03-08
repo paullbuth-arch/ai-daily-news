@@ -71,7 +71,7 @@ def handler(event, context):
     """阿里云函数计算入口"""
     from get_ai_news import main
 
-    os.environ['WECOM_WEBHOOK'] = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=11dd60d2-d449-420b-9287-a8556147431f'
+    os.environ['WECOM_WEBHOOK'] = 'https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY_HERE'
     os.environ['ENABLE_TRANSLATION'] = 'true'
 
     try:
@@ -112,7 +112,7 @@ def handler(event, context):
 
 | 变量名 | 值 |
 |--------|-----|
-| WECOM_WEBHOOK | https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=11dd60d2-d449-420b-9287-a8556147431f |
+| WECOM_WEBHOOK | https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY_HERE |
 | ENABLE_TRANSLATION | true |
 
 5. 点击 **"保存"**

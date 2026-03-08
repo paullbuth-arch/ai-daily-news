@@ -85,7 +85,7 @@
 在阿里云函数 `daily-news-push` 中已配置：
 
 ```bash
-WECOM_WEBHOOK = https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=11dd60d2-d449-420b-9287-a8556147431f
+WECOM_WEBHOOK = https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY_HERE
 ENABLE_TRANSLATION = true
 ```
 
@@ -107,7 +107,7 @@ ENABLE_TRANSLATION = true
 
 **Webhook地址**：
 ```
-https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=11dd60d2-d449-420b-9287-a8556147431f
+https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=YOUR_WEBHOOK_KEY_HERE
 ```
 
 ### 修改企业微信
