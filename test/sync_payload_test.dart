@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ipad_boss_app/main.dart' as app;
 import 'package:ipad_boss_app/storage.dart';
+import 'package:ipad_boss_app/utils/utils.dart';
 
 void main() {
   late Directory tmp;
@@ -29,7 +30,7 @@ void main() {
     settings['aiConfig'] = {'model': 'glm-4.7-flash'};
     await storage.saveSettings(settings);
 
-    final payload = app.storagePayloadForSync(storage);
+    final payload = storagePayloadForSync(storage);
     final syncSettings = payload['settings'] as Map<String, dynamic>;
 
     expect(syncSettings.containsKey('auth_token'), false);
@@ -51,7 +52,7 @@ void main() {
       },
     });
 
-    final localSettings = app.snapshotLocalOnlySettings(storage);
+    final localSettings = snapshotLocalOnlySettings(storage);
     storage.setFullData({
       'devices': [],
       'orders': [],
@@ -70,7 +71,7 @@ void main() {
     });
     await storage.save();
 
-    await app.restoreLocalOnlySettings(storage, localSettings);
+    await restoreLocalOnlySettings(storage, localSettings);
     final settings = storage.getSettings();
 
     expect(settings['auth_token'], 'local-token');
@@ -83,43 +84,67 @@ void main() {
     expect(settings['aiConfig'], {'model': 'remote-model'});
   });
 
-  test('retired ERP collections are excluded from sync data', () async {
-    final storage = Storage('${tmp.path}/data.json');
-    await storage.load();
-    storage.setFullData({
-      'devices': [],
-      'orders': [],
-      'agents': [],
-      'repairOrders': [],
-      'repairParts': [],
-      'settings': {},
-      'purchaseOrders': [{'id': 'old-purchase'}],
-      'qcReports': [{'id': 'old-qc'}],
-      'allocations': [{'id': 'old-allocation'}],
-      'rentals': [{'id': 'old-rental'}],
-      'installmentPlans': [{'id': 'old-installment'}],
-      'deposits': [{'id': 'old-deposit'}],
-      'warehouses': [{'id': 'old-warehouse'}],
-      'transfers': [{'id': 'old-transfer'}],
-      'inventoryCounts': [{'id': 'old-count'}],
-      'otherInOuts': [{'id': 'old-other'}],
-    });
+  test(
+    'restored report collections are retained while retired ERP collections are excluded',
+    () async {
+      final storage = Storage('${tmp.path}/data.json');
+      await storage.load();
+      storage.setFullData({
+        'devices': [],
+        'orders': [],
+        'agents': [],
+        'repairOrders': [],
+        'repairParts': [],
+        'settings': {},
+        'purchaseOrders': [
+          {'id': 'old-purchase'},
+        ],
+        'qcReports': [
+          {'id': 'old-qc'},
+        ],
+        'allocations': [
+          {'id': 'old-allocation'},
+        ],
+        'rentals': [
+          {'id': 'old-rental'},
+        ],
+        'installmentPlans': [
+          {'id': 'old-installment'},
+        ],
+        'deposits': [
+          {'id': 'old-deposit'},
+        ],
+        'warehouses': [
+          {'id': 'old-warehouse'},
+        ],
+        'transfers': [
+          {'id': 'old-transfer'},
+        ],
+        'inventoryCounts': [
+          {'id': 'old-count'},
+        ],
+        'otherInOuts': [
+          {'id': 'old-other'},
+        ],
+      });
 
-    final payload = storage.toFullMap();
+      final payload = storage.toFullMap();
 
-    for (final key in [
-      'purchaseOrders',
-      'qcReports',
-      'allocations',
-      'rentals',
-      'installmentPlans',
-      'deposits',
-      'warehouses',
-      'transfers',
-      'inventoryCounts',
-      'otherInOuts',
-    ]) {
-      expect(payload.containsKey(key), false);
-    }
-  });
+      expect(payload.containsKey('purchaseOrders'), true);
+      expect(payload.containsKey('qcReports'), true);
+
+      for (final key in [
+        'allocations',
+        'rentals',
+        'installmentPlans',
+        'deposits',
+        'warehouses',
+        'transfers',
+        'inventoryCounts',
+        'otherInOuts',
+      ]) {
+        expect(payload.containsKey(key), false);
+      }
+    },
+  );
 }

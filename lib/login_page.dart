@@ -1,8 +1,10 @@
 // 登录/注册页面（邮箱 + 验证码）
 import 'package:flutter/material.dart';
+import 'theme/colors.dart';
 import 'api_service.dart';
 import 'auth_service.dart';
 import 'main.dart';
+import 'pages/shell.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({Key? key}) : super(key: key);

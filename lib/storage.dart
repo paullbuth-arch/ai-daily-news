@@ -10,8 +10,6 @@ class Storage {
   Storage(this._path);
 
   static const Set<String> _retiredCollections = {
-    'purchaseOrders',
-    'qcReports',
     'allocations',
     'rentals',
     'installmentPlans',
@@ -23,13 +21,15 @@ class Storage {
   };
 
   Map<String, dynamic> _emptyData() => {
-        'devices': [],
-        'orders': [],
-        'agents': [],
-        'repairOrders': [],
-        'repairParts': [],
-        'settings': {},
-      };
+    'devices': [],
+    'orders': [],
+    'agents': [],
+    'repairOrders': [],
+    'repairParts': [],
+    'purchaseOrders': [],
+    'qcReports': [],
+    'settings': {},
+  };
 
   void _dropRetiredCollections() {
     for (final key in _retiredCollections) {
@@ -122,6 +122,70 @@ class Storage {
     }
   }
 
+  // ====== 采购单（报表数据） ======
+  List<PurchaseOrder> getPurchaseOrders() {
+    final list = _cache['purchaseOrders'] as List? ?? [];
+    return list
+        .map((e) => PurchaseOrder.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<PurchaseOrder> addPurchaseOrder(PurchaseOrder p) async {
+    final list = getPurchaseOrders();
+    list.insert(0, p);
+    _cache['purchaseOrders'] = list.map((e) => e.toJson()).toList();
+    await _flush();
+    return p;
+  }
+
+  Future<void> updatePurchaseOrder(PurchaseOrder p) async {
+    final list = getPurchaseOrders();
+    final idx = list.indexWhere((e) => e.id == p.id);
+    if (idx >= 0) {
+      list[idx] = p;
+      _cache['purchaseOrders'] = list.map((e) => e.toJson()).toList();
+      await _flush();
+    }
+  }
+
+  Future<void> deletePurchaseOrder(String id) async {
+    final list = getPurchaseOrders().where((e) => e.id != id).toList();
+    _cache['purchaseOrders'] = list.map((e) => e.toJson()).toList();
+    await _flush();
+  }
+
+  // ====== 质检报告（报表数据） ======
+  List<QCReport> getQCReports() {
+    final list = _cache['qcReports'] as List? ?? [];
+    return list
+        .map((e) => QCReport.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  QCReport? getQCReportByDevice(String deviceId) {
+    final reports =
+        getQCReports().where((r) => r.deviceId == deviceId).toList();
+    return reports.isEmpty ? null : reports.first;
+  }
+
+  Future<QCReport> addQCReport(QCReport r) async {
+    final list = getQCReports();
+    list.insert(0, r);
+    _cache['qcReports'] = list.map((e) => e.toJson()).toList();
+    await _flush();
+    return r;
+  }
+
+  Future<void> updateQCReport(QCReport r) async {
+    final list = getQCReports();
+    final idx = list.indexWhere((e) => e.id == r.id);
+    if (idx >= 0) {
+      list[idx] = r;
+      _cache['qcReports'] = list.map((e) => e.toJson()).toList();
+      await _flush();
+    }
+  }
+
   // ====== 代理 ======
   List<Agent> getAgents() {
     final list = _cache['agents'] as List? ?? [];
@@ -155,7 +219,9 @@ class Storage {
   // ====== 维修工单 ======
   List<RepairOrder> getRepairOrders() {
     final list = _cache['repairOrders'] as List? ?? [];
-    return list.map((e) => RepairOrder.fromJson(e as Map<String, dynamic>)).toList();
+    return list
+        .map((e) => RepairOrder.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<RepairOrder> addRepairOrder(RepairOrder r) async {
@@ -193,7 +259,8 @@ class Storage {
     final devices = getDevices();
     final orders = getOrders();
     final today = DateTime.now();
-    final todayStr = '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+    final todayStr =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
 
     int gmv = 0, grossProfit = 0, orderCount = 0;
     final channelGmv = <String, int>{};
@@ -244,7 +311,8 @@ class Storage {
     final now = DateTime.now();
     for (int i = days - 1; i >= 0; i--) {
       final d = now.subtract(Duration(days: i));
-      final ds = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+      final ds =
+          '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
       int gmv = 0, profit = 0;
       for (final o in orders) {
         if (o.status == 'cancelled') continue;
@@ -283,7 +351,8 @@ class Storage {
   int getYesterdayProfit() {
     final orders = getOrders();
     final y = DateTime.now().subtract(const Duration(days: 1));
-    final ys = '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
+    final ys =
+        '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
     int profit = 0;
     for (final o in orders) {
       if (o.status == 'cancelled') continue;
@@ -296,7 +365,8 @@ class Storage {
   int getYesterdayOrderCount() {
     final orders = getOrders();
     final y = DateTime.now().subtract(const Duration(days: 1));
-    final ys = '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
+    final ys =
+        '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
     int n = 0;
     for (final o in orders) {
       if (o.status == 'cancelled') continue;
@@ -309,7 +379,8 @@ class Storage {
   int getYesterdayGmv() {
     final orders = getOrders();
     final y = DateTime.now().subtract(const Duration(days: 1));
-    final ys = '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
+    final ys =
+        '${y.year}-${y.month.toString().padLeft(2, '0')}-${y.day.toString().padLeft(2, '0')}';
     int gmv = 0;
     for (final o in orders) {
       if (o.status == 'cancelled') continue;
@@ -353,8 +424,9 @@ class Storage {
       }
       (c['channels'] as Set<String>).add(o.channel);
     }
-    return map.values.toList()
-      ..sort((a, b) => (b['totalAmount'] as int).compareTo(a['totalAmount'] as int));
+    return map.values.toList()..sort(
+      (a, b) => (b['totalAmount'] as int).compareTo(a['totalAmount'] as int),
+    );
   }
 
   /// 按型号聚合利润
@@ -379,11 +451,16 @@ class Storage {
 
   /// 库存年龄分布：{0-7天, 8-15天, 16-30天, 30+天}
   Map<String, int> getInventoryAgeDist() {
-    final devices = getDevices().where((d) => d.status == 'in_stock' || d.status == 'listed').toList();
+    final devices =
+        getDevices()
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
     return {
       '0-7天': devices.where((d) => d.stockDays <= 7).length,
-      '8-15天': devices.where((d) => d.stockDays > 7 && d.stockDays <= 15).length,
-      '16-30天': devices.where((d) => d.stockDays > 15 && d.stockDays <= 30).length,
+      '8-15天':
+          devices.where((d) => d.stockDays > 7 && d.stockDays <= 15).length,
+      '16-30天':
+          devices.where((d) => d.stockDays > 15 && d.stockDays <= 30).length,
       '30天+': devices.where((d) => d.stockDays > 30).length,
     };
   }
@@ -397,7 +474,10 @@ class Storage {
 
   /// 平均周转天数。已售设备 sellDate - purchaseDate 均值
   int getAvgTurnoverDays() {
-    final devices = getDevices().where((d) => d.status == 'sold' && d.sellDate != null).toList();
+    final devices =
+        getDevices()
+            .where((d) => d.status == 'sold' && d.sellDate != null)
+            .toList();
     if (devices.isEmpty) return 0;
     int total = 0, n = 0;
     for (final d in devices) {
@@ -413,12 +493,18 @@ class Storage {
 
   /// 按型号聚合周转天数（已售设备）
   List<Map<String, dynamic>> getTurnoverByModel() {
-    final devices = getDevices().where((d) => d.status == 'sold' && d.sellDate != null).toList();
+    final devices =
+        getDevices()
+            .where((d) => d.status == 'sold' && d.sellDate != null)
+            .toList();
     final map = <String, Map<String, dynamic>>{};
     for (final d in devices) {
       int days = 0;
       try {
-        days = DateTime.parse(d.sellDate!).difference(DateTime.parse(d.purchaseDate)).inDays;
+        days =
+            DateTime.parse(
+              d.sellDate!,
+            ).difference(DateTime.parse(d.purchaseDate)).inDays;
       } catch (_) {}
       final key = d.model;
       if (!map.containsKey(key)) {
@@ -428,11 +514,19 @@ class Storage {
       m['count'] = (m['count'] as int) + 1;
       m['totalDays'] = (m['totalDays'] as int) + days;
     }
-    final result = map.values.map((m) => {
-      'model': m['model'],
-      'count': m['count'],
-      'avgDays': (m['count'] as int) > 0 ? (m['totalDays'] as int) ~/ (m['count'] as int) : 0,
-    }).toList();
+    final result =
+        map.values
+            .map(
+              (m) => {
+                'model': m['model'],
+                'count': m['count'],
+                'avgDays':
+                    (m['count'] as int) > 0
+                        ? (m['totalDays'] as int) ~/ (m['count'] as int)
+                        : 0,
+              },
+            )
+            .toList();
     result.sort((a, b) => (a['avgDays'] as int).compareTo(b['avgDays'] as int));
     return result;
   }
@@ -445,24 +539,46 @@ class Storage {
     for (final d in devices) {
       final key = d.purchaseChannel.isEmpty ? '未知渠道' : d.purchaseChannel;
       if (!map.containsKey(key)) {
-        map[key] = {'channel': key, 'count': 0, 'profit': 0, 'revenue': 0, 'afterSaleCount': 0};
+        map[key] = {
+          'channel': key,
+          'count': 0,
+          'profit': 0,
+          'revenue': 0,
+          'afterSaleCount': 0,
+        };
       }
       final m = map[key]!;
       m['count'] = (m['count'] as int) + 1;
       m['profit'] = (m['profit'] as int) + d.netProfit;
       m['revenue'] = (m['revenue'] as int) + d.sellPrice;
       // 售后判定：该设备关联的订单有 afterSaleCost 或状态为 aftersale
-      final hasAfterSale = orders.any((o) => o.deviceId == d.id && (o.afterSaleCost != null && o.afterSaleCost! > 0 || o.status == 'aftersale'));
+      final hasAfterSale = orders.any(
+        (o) =>
+            o.deviceId == d.id &&
+            (o.afterSaleCost != null && o.afterSaleCost! > 0 ||
+                o.status == 'aftersale'),
+      );
       if (hasAfterSale) m['afterSaleCount'] = (m['afterSaleCount'] as int) + 1;
     }
-    final result = map.values.map((m) => {
-      'channel': m['channel'],
-      'count': m['count'],
-      'profit': m['profit'],
-      'revenue': m['revenue'],
-      'avgProfit': (m['count'] as int) > 0 ? (m['profit'] as int) ~/ (m['count'] as int) : 0,
-      'afterSaleRate': (m['count'] as int) > 0 ? (m['afterSaleCount'] as int) / (m['count'] as int) : 0.0,
-    }).toList();
+    final result =
+        map.values
+            .map(
+              (m) => {
+                'channel': m['channel'],
+                'count': m['count'],
+                'profit': m['profit'],
+                'revenue': m['revenue'],
+                'avgProfit':
+                    (m['count'] as int) > 0
+                        ? (m['profit'] as int) ~/ (m['count'] as int)
+                        : 0,
+                'afterSaleRate':
+                    (m['count'] as int) > 0
+                        ? (m['afterSaleCount'] as int) / (m['count'] as int)
+                        : 0.0,
+              },
+            )
+            .toList();
     result.sort((a, b) => (b['profit'] as int).compareTo(a['profit'] as int));
     return result;
   }
@@ -471,9 +587,15 @@ class Storage {
   double getCapitalTurnoverRate() {
     final now = DateTime.now();
     final ms = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final orders = getOrders().where((o) => o.status != 'cancelled' && o.createdAt.startsWith(ms)).toList();
+    final orders =
+        getOrders()
+            .where((o) => o.status != 'cancelled' && o.createdAt.startsWith(ms))
+            .toList();
     final monthSales = orders.fold<int>(0, (a, o) => a + o.amount);
-    final inStockDevices = getDevices().where((d) => d.status == 'in_stock' || d.status == 'listed').toList();
+    final inStockDevices =
+        getDevices()
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
     if (inStockDevices.isEmpty) return 0;
     final capital = inStockDevices.fold<int>(0, (a, d) => a + d.purchaseCost);
     if (capital == 0) return 0;
@@ -484,18 +606,33 @@ class Storage {
   Map<String, dynamic> getModelAnalysis(String model) {
     final all = getDevices().where((d) => d.model == model).toList();
     final sold = all.where((d) => d.status == 'sold').toList();
-    final inStock = all.where((d) => d.status == 'in_stock' || d.status == 'listed').toList();
+    final inStock =
+        all
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
     final stagnant = inStock.where((d) => d.isStagnant).length;
 
     int salesCount = sold.length;
-    int avgProfit = sold.isEmpty ? 0 : sold.fold<int>(0, (a, d) => a + d.netProfit) ~/ sold.length;
-    int avgSell = sold.isEmpty ? 0 : sold.fold<int>(0, (a, d) => a + d.sellPrice) ~/ sold.length;
-    int avgCost = sold.isEmpty ? 0 : sold.fold<int>(0, (a, d) => a + d.purchaseCost) ~/ sold.length;
+    int avgProfit =
+        sold.isEmpty
+            ? 0
+            : sold.fold<int>(0, (a, d) => a + d.netProfit) ~/ sold.length;
+    int avgSell =
+        sold.isEmpty
+            ? 0
+            : sold.fold<int>(0, (a, d) => a + d.sellPrice) ~/ sold.length;
+    int avgCost =
+        sold.isEmpty
+            ? 0
+            : sold.fold<int>(0, (a, d) => a + d.purchaseCost) ~/ sold.length;
 
     int totalDays = 0, n = 0;
     for (final d in sold) {
       try {
-        totalDays += DateTime.parse(d.sellDate!).difference(DateTime.parse(d.purchaseDate)).inDays;
+        totalDays +=
+            DateTime.parse(
+              d.sellDate!,
+            ).difference(DateTime.parse(d.purchaseDate)).inDays;
         n++;
       } catch (_) {}
     }
@@ -512,8 +649,9 @@ class Storage {
       supMap[k]!['count'] = (supMap[k]!['count'] as int) + 1;
       supMap[k]!['profit'] = (supMap[k]!['profit'] as int) + d.netProfit;
     }
-    final suppliers = supMap.values.toList()
-      ..sort((a, b) => (b['profit'] as int).compareTo(a['profit'] as int));
+    final suppliers =
+        supMap.values.toList()
+          ..sort((a, b) => (b['profit'] as int).compareTo(a['profit'] as int));
 
     return {
       'model': model,
@@ -521,13 +659,56 @@ class Storage {
       'inStockCount': inStock.length,
       'stagnantCount': stagnant,
       'stagnantRate': stagnantRate,
-      'avgProfit': avgProfit,        // 分
-      'avgSellPrice': avgSell,       // 分
-      'avgPurchaseCost': avgCost,    // 分
+      'avgProfit': avgProfit, // 分
+      'avgSellPrice': avgSell, // 分
+      'avgPurchaseCost': avgCost, // 分
       'avgTurnoverDays': avgTurnover,
-      'suppliers': suppliers,        // [{channel,count,profit}]
+      'suppliers': suppliers, // [{channel,count,profit}]
       'hasHistory': salesCount > 0,
     };
+  }
+
+  /// 库存预警数据（统计报表使用）
+  List<Map<String, dynamic>> checkAlerts() {
+    final msgs = <Map<String, dynamic>>[];
+    final devices = getDevices();
+    final inStock =
+        devices
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
+
+    final modelCount = <String, int>{};
+    for (final d in inStock) {
+      modelCount[d.model] = (modelCount[d.model] ?? 0) + 1;
+    }
+    for (final entry in modelCount.entries) {
+      if (entry.value <= 5) {
+        msgs.add({
+          'type': 'low_stock',
+          'model': entry.key,
+          'count': entry.value,
+          'threshold': 5,
+        });
+      }
+    }
+
+    final staleInStock = inStock.where((d) => d.stockDays >= 15).toList();
+    if (staleInStock.isNotEmpty) {
+      final modelStale = <String, int>{};
+      for (final d in staleInStock) {
+        modelStale[d.model] = (modelStale[d.model] ?? 0) + 1;
+      }
+      for (final entry in modelStale.entries) {
+        msgs.add({
+          'type': 'stagnant',
+          'model': entry.key,
+          'count': entry.value,
+          'days': 15,
+        });
+      }
+    }
+
+    return msgs;
   }
 
   // ====== 市场行情（华强北批发价，每日手动录入） ======
@@ -541,10 +722,14 @@ class Storage {
   }
 
   /// 获取某型号近 N 天行情历史（升序）
-  List<Map<String, dynamic>> getMarketPriceHistory(String model, {int days = 30}) {
+  List<Map<String, dynamic>> getMarketPriceHistory(
+    String model, {
+    int days = 30,
+  }) {
     final prices = _getMarketPricesMap()[model] as List?;
     if (prices == null) return [];
-    final list = prices.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    final list =
+        prices.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     if (list.length > days) return list.sublist(list.length - days);
     return list;
   }
@@ -554,7 +739,11 @@ class Storage {
     final settings = getSettings();
     final mp = _getMarketPricesMap();
     final today = _todayStr();
-    final list = (mp[model] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+    final list =
+        (mp[model] as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ??
+        [];
     // 同日覆盖
     if (list.isNotEmpty && list.last['date'] == today) {
       list.last['price'] = priceFen;
@@ -628,9 +817,47 @@ class Storage {
 
   // ====== ???? ======
 
+  /// 质检统计：各品级数量 + 通过率
+  Map<String, dynamic> getQCStats() {
+    final reports = getQCReports();
+    final passed = reports.where((r) => r.conclusion == '通过').length;
+    final byGrade = <String, int>{};
+    for (final r in reports) {
+      byGrade[r.grade] = (byGrade[r.grade] ?? 0) + 1;
+    }
+    return {
+      'total': reports.length,
+      'passed': passed,
+      'passRate': reports.isEmpty ? 0.0 : passed / reports.length,
+      'byGrade': byGrade,
+    };
+  }
+
+  /// 质检缺陷分布
+  Map<String, int> getQCDefects() {
+    final reports = getQCReports();
+    final defects = <String, int>{};
+    for (final r in reports) {
+      if (r.screenCondition != '完美') defects['屏幕'] = (defects['屏幕'] ?? 0) + 1;
+      if (r.frameCondition != '完美') defects['边框'] = (defects['边框'] ?? 0) + 1;
+      if (r.backCondition != '完美') defects['背板'] = (defects['背板'] ?? 0) + 1;
+      if (r.cameraCondition != '正常') defects['摄像头'] = (defects['摄像头'] ?? 0) + 1;
+      if (!r.hasFaceId) defects['Face ID'] = (defects['Face ID'] ?? 0) + 1;
+      if (!r.hasTouchId) defects['Touch ID'] = (defects['Touch ID'] ?? 0) + 1;
+      if (!r.wifiOk) defects['WiFi'] = (defects['WiFi'] ?? 0) + 1;
+      if (!r.bluetoothOk) defects['蓝牙'] = (defects['蓝牙'] ?? 0) + 1;
+      if (!r.microphoneOk) defects['麦克风'] = (defects['麦克风'] ?? 0) + 1;
+      if (!r.speakerOk) defects['扬声器'] = (defects['扬声器'] ?? 0) + 1;
+    }
+    return defects;
+  }
+
   Map<String, dynamic> getRepairStats() {
     final repairs = getRepairOrders();
-    final byType = <String, dynamic>{'count': <String, int>{}, 'cost': <String, int>{}};
+    final byType = <String, dynamic>{
+      'count': <String, int>{},
+      'cost': <String, int>{},
+    };
     final byStatus = <String, int>{};
     int totalCost = 0;
     for (final r in repairs) {
@@ -664,7 +891,34 @@ class Storage {
       m['profit'] = (m['profit'] as int) + o.netProfit;
       m['count'] = (m['count'] as int) + 1;
     }
-    return map.values.toList()..sort((a, b) => (b['gmv'] as int).compareTo(a['gmv'] as int));
+    return map.values.toList()
+      ..sort((a, b) => (b['gmv'] as int).compareTo(a['gmv'] as int));
+  }
+
+  /// 采购分析：按平台/供应商聚合
+  List<Map<String, dynamic>> getPurchaseChannelStats() {
+    final pos = getPurchaseOrders();
+    final map = <String, Map<String, dynamic>>{};
+    for (final po in pos) {
+      final key = po.sourcePlatform;
+      if (!map.containsKey(key)) {
+        map[key] = {
+          'platform': key,
+          'count': 0,
+          'totalCost': 0,
+          'returned': 0,
+          'afterSale': 0,
+        };
+      }
+      final m = map[key]!;
+      m['count'] = (m['count'] as int) + 1;
+      m['totalCost'] = (m['totalCost'] as int) + po.totalCost;
+      m['returned'] = (m['returned'] as int) + po.returnedCount;
+      m['afterSale'] = (m['afterSale'] as int) + (po.afterSaleAmount ?? 0);
+    }
+    return map.values.toList()..sort(
+      (a, b) => (b['totalCost'] as int).compareTo(a['totalCost'] as int),
+    );
   }
 
   /// 月度趋势（近12个月）
@@ -704,5 +958,4 @@ class Storage {
       'date': today,
     };
   }
-
 }

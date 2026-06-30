@@ -1,5 +1,6 @@
 // ERP 侧边栏布局 + 库存增强功能
 import 'package:flutter/material.dart';
+import 'theme/colors.dart';
 import 'main.dart' as app;
 
 String yuan(int fen) => '¥${(fen / 100).toStringAsFixed(0)}';
@@ -26,7 +27,7 @@ class _ErpShellState extends State<ErpShell> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 768;
     return Scaffold(
-      backgroundColor: app.C.bg,
+      backgroundColor: C.bg,
       body: Row(children: [
         if (isWide) _buildSidebar(context),
         Expanded(child: widget.child),
@@ -37,13 +38,13 @@ class _ErpShellState extends State<ErpShell> {
   Widget _buildSidebar(BuildContext context) {
     return Container(
       width: 220,
-      decoration: BoxDecoration(color: app.C.card, border: Border(right: BorderSide(color: app.C.line))),
+      decoration: BoxDecoration(color: C.card, border: Border(right: BorderSide(color: C.line))),
       child: Column(children: [
         // Logo区
         Container(padding: const EdgeInsets.fromLTRB(16, 50, 16, 20), child: Row(children: [
-          Container(width: 36, height: 36, decoration: BoxDecoration(gradient: LinearGradient(colors: [app.C.brand2, app.C.brand]), borderRadius: BorderRadius.circular(10)), child: const Center(child: Text('📱', style: TextStyle(fontSize: 16)))),
+          Container(width: 36, height: 36, decoration: BoxDecoration(gradient: LinearGradient(colors: [C.brand2, C.brand]), borderRadius: BorderRadius.circular(10)), child: const Center(child: Text('📱', style: TextStyle(fontSize: 16)))),
           const SizedBox(width: 10),
-          Text('爱管机', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: app.C.t1)),
+          Text('爱管机', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: C.t1)),
         ])),
         // 菜单
         Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: [
@@ -67,11 +68,11 @@ class _ErpShellState extends State<ErpShell> {
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: active ? app.C.brand2.withOpacity(0.12) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: active ? C.brand2.withOpacity(0.12) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
         child: Row(children: [
           Text(icon, style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 10),
-          Text(title, style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: active ? app.C.brand2 : app.C.t1)),
+          Text(title, style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: active ? C.brand2 : C.t1)),
         ]),
       ),
     ));

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'theme/colors.dart';
 import 'main.dart' as app;
-import 'models.dart';
+import 'storage.dart';
+
+final Storage _s = app.gStorage;
 
 String yuan(int fen) => '¥${(fen / 100).toStringAsFixed(0)}';
 
@@ -31,13 +34,13 @@ class _ReportPageState extends State<ReportPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: app.C.bg,
+      backgroundColor: C.bg,
       appBar: AppBar(
         title: const Text(
           '统计报表',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: app.C.card,
+        backgroundColor: C.card,
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 18),
@@ -45,16 +48,19 @@ class _ReportPageState extends State<ReportPage>
         ),
         bottom: TabBar(
           controller: _tabCtrl,
-          isScrollable: true,
-          labelColor: app.C.brand,
-          unselectedLabelColor: app.C.t2,
-          indicatorColor: app.C.brand,
+          indicatorColor: C.brand2,
+          labelColor: C.brand2,
+          unselectedLabelColor: C.t2,
+          labelStyle: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
         ),
       ),
       body: TabBarView(
         controller: _tabCtrl,
-        children: const [
+        children: [
           _OpsReport(),
           _StockReport(),
           _QCReport(),
@@ -67,115 +73,127 @@ class _ReportPageState extends State<ReportPage>
   }
 }
 
+// ====== 1. 运营报表 ======
 class _OpsReport extends StatelessWidget {
-  const _OpsReport();
-
   @override
   Widget build(BuildContext context) {
-    final storage = app.gStorage;
-    final s = storage.computeStats();
-    final monthly = storage.getMonthlyTrend();
-    final avgProfit = storage.getAvgProfit();
-    final turnoverRate = storage.getCapitalTurnoverRate();
-    final yesterdayProfit = storage.getYesterdayProfit();
-    final yesterdayOrders = storage.getYesterdayOrderCount();
-    final yesterdayGmv = storage.getYesterdayGmv();
+    final s = _s.computeStats();
+    final monthly = _s.getMonthlyTrend();
+    final yesterdayProfit = _s.getYesterdayProfit();
+    final yesterdayOrders = _s.getYesterdayOrderCount();
+    final yesterdayGmv = _s.getYesterdayGmv();
+    final avgProfit = _s.getAvgProfit();
+    final turnoverRate = _s.getCapitalTurnoverRate();
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        _section('今日概览', [
+        // 今日概览
+        _reportSection('📊 今日运营概览', [
           _kpiGrid([
             _kpiItem(
-              'GMV',
+              '今日GMV',
               yuan(s.gmv),
               '昨日${yuan(yesterdayGmv)}',
-              app.C.brand2,
+              s.gmv >= yesterdayGmv ? C.green : C.red,
             ),
             _kpiItem(
-              '毛利',
+              '今日毛利',
               yuan(s.grossProfit),
               '昨日${yuan(yesterdayProfit)}',
-              s.grossProfit >= yesterdayProfit ? app.C.green : app.C.red,
+              s.grossProfit >= yesterdayProfit ? C.green : C.red,
             ),
-            _kpiItem('订单', '${s.orderCount}', '昨日$yesterdayOrders', app.C.blue),
             _kpiItem(
-              '均利',
+              '今日订单',
+              '${s.orderCount}',
+              '昨日$yesterdayOrders',
+              C.brand2,
+            ),
+            _kpiItem(
+              '平均单台利',
               yuan(avgProfit),
-              '周转率${turnoverRate.toStringAsFixed(2)}',
-              app.C.orange,
+              '资金周转${turnoverRate.toStringAsFixed(2)}',
+              C.orange,
             ),
           ]),
         ]),
-        _section('库存与资金', [
-          _row(
+        const SizedBox(height: 12),
+        // 月度趋势
+        _reportSection('📈 近12月趋势', [
+          ...monthly.map(
+            (m) => _trendRow(
+              m['month'] as String,
+              m['gmv'] as int,
+              m['profit'] as int,
+              m['count'] as int,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        // 关键KPI
+        _reportSection('🎯 关键指标', [
+          _kpiRow(
             '在售库存',
             '${s.inStockCount} 台',
             '资金占用 ${yuan(s.capitalOccupied)}',
           ),
-          _row(
+          _kpiRow(
             '滞销设备',
             '${s.stagnantCount} 台',
             '占比 ${s.inStockCount > 0 ? (s.stagnantCount * 100 / s.inStockCount).toStringAsFixed(0) : 0}%',
           ),
-          _row('待发货', '${s.pendingCount} 单', '在途 ${s.shippedCount} 单'),
-          _row('待处理', '${s.pendingQcCount} 台', '未定价设备'),
+          _kpiRow('待发货', '${s.pendingCount} 单', '在途 ${s.shippedCount} 单'),
+          _kpiRow('待质检', '${s.pendingQcCount} 台', '未定价需处理'),
         ]),
-        if (monthly.isNotEmpty)
-          _section('近 12 月趋势', [
-            ...monthly
-                .take(12)
-                .map(
-                  (m) => _row(
-                    m['month'] as String,
-                    yuan(m['gmv'] as int),
-                    '毛利 ${yuan(m['profit'] as int)} · ${m['count']} 单',
-                  ),
-                ),
-          ]),
+        const SizedBox(height: 20),
+        const Text(
+          '数据说明：GMV为成交总额，毛利已扣除售后费用、佣金、物流等成本',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: Color(0xFF888888)),
+        ),
+        const SizedBox(height: 40),
       ],
     );
   }
 }
 
+// ====== 2. 库存报表 ======
 class _StockReport extends StatelessWidget {
-  const _StockReport();
-
   @override
   Widget build(BuildContext context) {
-    final devices = app.gStorage.getDevices();
+    final devices = _s.getDevices();
     final inStock =
         devices
             .where((d) => d.status == 'in_stock' || d.status == 'listed')
             .toList();
-    final sold = devices.where((d) => d.status == 'sold').toList();
-    final totalCapital = inStock.fold<int>(0, (s, d) => s + d.purchaseCost);
-    final stagnant = inStock.where((d) => d.isStagnant).toList();
-
-    final byModel = <String, int>{};
+    final ageDist = _s.getInventoryAgeDist();
+    final turnoverByModel = _s.getTurnoverByModel().take(10).toList();
+    final alerts = _s.checkAlerts();
+    final modelCount = <String, int>{};
     for (final d in inStock) {
-      byModel[d.model] = (byModel[d.model] ?? 0) + 1;
+      modelCount[d.model] = (modelCount[d.model] ?? 0) + 1;
     }
-    final modelRows =
-        byModel.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final topModels =
+        modelCount.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final totalCapital = inStock.fold<int>(0, (s, d) => s + d.purchaseCost);
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        _section('库存总览', [
+        // KPI
+        _reportSection('📦 库存概览', [
           _kpiGrid([
             _kpiItem(
-              '在售',
+              '在售台数',
               '${inStock.length}',
               '资金${yuan(totalCapital)}',
-              app.C.brand2,
+              C.brand2,
             ),
-            _kpiItem('已售', '${sold.length}', '历史累计', app.C.green),
             _kpiItem(
               '滞销',
-              '${stagnant.length}',
-              '超 15 天',
-              stagnant.isEmpty ? app.C.green : app.C.red,
+              '${(ageDist['16-30天'] ?? 0) + (ageDist['30天+'] ?? 0)} 台',
+              '预警${alerts.length}条',
+              C.orange,
             ),
             _kpiItem(
               '平均库龄',
@@ -183,386 +201,882 @@ class _StockReport extends StatelessWidget {
                   ? '0天'
                   : '${(inStock.fold<int>(0, (s, d) => s + d.stockDays) / inStock.length).round()}天',
               '',
-              app.C.orange,
+              C.blue,
+            ),
+            _kpiItem(
+              '资金周转率',
+              _s.getCapitalTurnoverRate().toStringAsFixed(2),
+              '',
+              C.green,
             ),
           ]),
         ]),
-        if (modelRows.isNotEmpty)
-          _section('型号分布', [
-            ...modelRows
-                .take(12)
-                .map(
-                  (e) => _row(
-                    e.key,
-                    '${e.value} 台',
-                    '${(e.value * 100 / inStock.length).toStringAsFixed(0)}%',
+        const SizedBox(height: 12),
+        // 库存年龄
+        _reportSection('⏳ 库存年龄分布', [
+          ...ageDist.entries.map((e) {
+            final total = ageDist.values.fold<int>(0, (a, b) => a + b);
+            final pct = total > 0 ? e.value / total : 0.0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        e.key,
+                        style: TextStyle(fontSize: 12, color: C.t2),
+                      ),
+                      Text(
+                        '${e.value}台',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: C.t1,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-          ]),
-      ],
-    );
-  }
-}
-
-class _QCReport extends StatelessWidget {
-  const _QCReport();
-
-  @override
-  Widget build(BuildContext context) {
-    final devices = app.gStorage.getDevices();
-    final inStock = devices.where(_isStockDevice).toList();
-    final pending = inStock.where((d) => d.sellPrice <= 0).toList();
-    final idRisk = devices.where((d) => !d.idLockClean).length;
-    final lowBattery = devices.where((d) => d.batteryHealth < 80).length;
-
-    final gradeMap = <String, int>{'A': 0, 'B': 0, 'C': 0, 'D': 0};
-    for (final d in devices) {
-      final grade = _gradeForDevice(d);
-      gradeMap[grade] = (gradeMap[grade] ?? 0) + 1;
-    }
-    final aRate =
-        devices.isEmpty ? 0 : ((gradeMap['A'] ?? 0) * 100 / devices.length);
-
-    final defectRows =
-        <MapEntry<String, int>>[
-          MapEntry('ID锁风险', idRisk),
-          MapEntry('电池低于 80%', lowBattery),
-          MapEntry('未定价库存', pending.length),
-          MapEntry(
-            '有维修成本',
-            devices.where((d) => (d.repairCost ?? 0) > 0).length,
-          ),
-          MapEntry('循环次数偏高', devices.where((d) => d.cycleCount >= 800).length),
-        ].where((e) => e.value > 0).toList();
-
-    final recent =
-        devices.toList()..sort(
-          (a, b) => _safeDate(b.createdAt).compareTo(_safeDate(a.createdAt)),
-        );
-
-    return ListView(
-      padding: const EdgeInsets.all(14),
-      children: [
-        _section('质检总览', [
-          _kpiGrid([
-            _kpiItem('设备数', '${devices.length}', '按现有库存资料判定', app.C.brand2),
-            _kpiItem(
-              '待判定',
-              '${pending.length}',
-              '在库且未定价',
-              pending.isEmpty ? app.C.green : app.C.orange,
-            ),
-            _kpiItem(
-              'A 品率',
-              '${aRate.toStringAsFixed(0)}%',
-              'A品 ${gradeMap['A'] ?? 0} 台',
-              app.C.green,
-            ),
-            _kpiItem(
-              '风险项',
-              '${idRisk + lowBattery}',
-              'ID锁/低电池',
-              idRisk + lowBattery == 0 ? app.C.green : app.C.red,
-            ),
-          ]),
-        ]),
-        _section('品级判定', [
-          ...gradeMap.entries.map((e) {
-            final pct =
-                devices.isEmpty
-                    ? '0'
-                    : (e.value * 100 / devices.length).toStringAsFixed(0);
-            return _row(
-              '${e.key} 品',
-              '${e.value} 台',
-              '$pct% · ${_gradeHint(e.key)}',
+                  const SizedBox(height: 4),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: pct,
+                      backgroundColor: C.bg,
+                      valueColor: AlwaysStoppedAnimation(
+                        e.key.contains('30')
+                            ? C.red
+                            : (e.key.contains('16')
+                                ? C.orange
+                                : (e.key.contains('8')
+                                    ? C.brand2
+                                    : C.green)),
+                      ),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
             );
           }),
         ]),
-        if (defectRows.isNotEmpty)
-          _section('异常分布', [
-            ...defectRows.map((e) {
-              final pct =
-                  devices.isEmpty
-                      ? '0'
-                      : (e.value * 100 / devices.length).toStringAsFixed(0);
-              return _row(e.key, '${e.value} 台', '$pct%');
+        const SizedBox(height: 12),
+        // 型号排行
+        if (topModels.isNotEmpty)
+          _reportSection('📱 型号库存排行', [
+            ...topModels
+                .take(10)
+                .toList()
+                .asMap()
+                .entries
+                .map(
+                  (e) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${e.key + 1}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: e.key < 3 ? C.brand2 : C.t3,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            e.value.key,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: C.t1,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          '${e.value.value}台',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: C.brand2,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          yuan(
+                            topModels
+                                    .firstWhere((tm) => tm.key == e.value.key)
+                                    .value *
+                                (devices
+                                    .where(
+                                      (d) =>
+                                          d.model == e.value.key &&
+                                          (d.status == 'in_stock' ||
+                                              d.status == 'listed'),
+                                    )
+                                    .fold<int>(
+                                      0,
+                                      (s, d) => s + d.purchaseCost,
+                                    )),
+                          ),
+                          style: TextStyle(fontSize: 10, color: C.t3),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+          ]),
+        const SizedBox(height: 12),
+        // 周转排行
+        if (turnoverByModel.isNotEmpty)
+          _reportSection('⚡ 周转排行 (快→慢)', [
+            ...turnoverByModel.asMap().entries.map((e) {
+              final m = e.value;
+              final days = m['avgDays'] as int;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${e.key + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: days <= 15 ? C.green : C.t3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        m['model'] as String,
+                        style: TextStyle(fontSize: 12, color: C.t1),
+                      ),
+                    ),
+                    Text(
+                      '$days天',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color:
+                            days <= 15
+                                ? C.green
+                                : (days <= 30 ? C.orange : C.red),
+                      ),
+                    ),
+                  ],
+                ),
+              );
             }),
           ]),
-        if (recent.isNotEmpty)
-          _section('最近入库判定', [
-            ...recent.take(10).map((d) {
-              final grade = _gradeForDevice(d);
-              final tags = [
-                d.condition,
-                '电池${d.batteryHealth}%',
-                d.idLockClean ? 'ID干净' : 'ID风险',
-              ];
-              return _row('${d.model} ${d.capacity}', grade, tags.join(' · '));
-            }),
-          ]),
+        const SizedBox(height: 40),
       ],
     );
   }
 }
 
-class _RepairReport extends StatelessWidget {
-  const _RepairReport();
-
+// ====== 3. 质检报表 ======
+class _QCReport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final stats = app.gStorage.getRepairStats();
-    final byType = stats['byType'] as Map<String, dynamic>;
-    final countByType = byType['count'] as Map<String, int>;
-    final costByType = byType['cost'] as Map<String, int>;
-    final byStatus = stats['byStatus'] as Map<String, int>;
+    final qcStats = _s.getQCStats();
+    final defects = _s.getQCDefects();
+    final byGrade = qcStats['byGrade'] as Map<String, int>;
+    final total = qcStats['total'] as int;
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        _section('维修总览', [
+        _reportSection('🔍 质检总览', [
           _kpiGrid([
-            _kpiItem('维修单', '${stats['total']}', '累计', app.C.brand2),
-            _kpiItem('总成本', yuan(stats['totalCost'] as int), '维修支出', app.C.red),
+            _kpiItem('总质检', '$total', '通过${qcStats['passed']}', C.brand2),
             _kpiItem(
-              '均成本',
-              yuan(stats['avgCost'] as int),
-              '单台平均',
-              app.C.orange,
+              '通过率',
+              '${((qcStats['passRate'] as double) * 100).toStringAsFixed(0)}%',
+              total > 0 ? 'A品${byGrade['A'] ?? 0}台' : '',
+              C.green,
+            ),
+            _kpiItem(
+              '需维修',
+              '${(byGrade['C'] ?? 0) + (byGrade['D'] ?? 0)}',
+              'D品${byGrade['D'] ?? 0}台',
+              C.orange,
+            ),
+            _kpiItem(
+              'A品率',
+              total > 0
+                  ? '${((byGrade['A'] ?? 0) / total * 100).toStringAsFixed(0)}%'
+                  : '0%',
+              '',
+              C.blue,
             ),
           ]),
         ]),
-        if (countByType.isNotEmpty)
-          _section('维修类型', [
-            ...countByType.entries.map(
-              (e) => _row(
-                e.key,
-                '${e.value} 单',
-                '成本 ${yuan(costByType[e.key] ?? 0)}',
-              ),
-            ),
+        const SizedBox(height: 12),
+        // 品级分布
+        if (total > 0)
+          _reportSection('📊 品级分布', [
+            ...['A', 'B', 'C', 'D'].map((g) {
+              final cnt = byGrade[g] ?? 0;
+              final pct = cnt / total;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color:
+                                g == 'A'
+                                    ? C.green
+                                    : g == 'B'
+                                    ? C.blue
+                                    : g == 'C'
+                                    ? C.orange
+                                    : C.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Center(
+                            child: Text(
+                              g,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '$cnt 台',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: C.t1,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${(pct * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(fontSize: 12, color: C.t2),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        backgroundColor: C.bg,
+                        valueColor: AlwaysStoppedAnimation(
+                          g == 'A'
+                              ? C.green
+                              : g == 'B'
+                              ? C.blue
+                              : g == 'C'
+                              ? C.orange
+                              : C.red,
+                        ),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ]),
-        if (byStatus.isNotEmpty)
-          _section('状态分布', [
-            ...byStatus.entries.map((e) => _row(e.key, '${e.value} 单', '')),
+        const SizedBox(height: 12),
+        // 缺陷分布
+        if (defects.isNotEmpty)
+          _reportSection('⚠️ 缺陷分布 TOP 6', [
+            ...() {
+              final sorted =
+                  defects.entries.toList()
+                    ..sort((a, b) => b.value.compareTo(a.value));
+              return sorted
+                  .take(6)
+                  .toList()
+                  .asMap()
+                  .entries
+                  .map(
+                    (e) => Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 22,
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${e.key + 1}',
+                              style: TextStyle(fontSize: 11, color: C.t3),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              e.value.key,
+                              style: TextStyle(fontSize: 12, color: C.t1),
+                            ),
+                          ),
+                          Text(
+                            '${e.value.value}次',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: C.red,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+            }(),
           ]),
+        const SizedBox(height: 40),
       ],
     );
   }
 }
 
-class _SalesReport extends StatelessWidget {
-  const _SalesReport();
-
+// ====== 4. 维修报表 ======
+class _RepairReport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final orders =
-        app.gStorage.getOrders().where((o) => o.status != 'cancelled').toList();
-    final channelStats = app.gStorage.getSalesChannelStats();
-    final totalGmv = orders.fold<int>(0, (s, o) => s + o.amount);
-    final totalProfit = orders.fold<int>(0, (s, o) => s + o.netProfit);
-    final grossMargin = totalGmv > 0 ? totalProfit / totalGmv * 100 : 0.0;
+    final stats = _s.getRepairStats();
+    final repairs = _s.getRepairOrders();
+    final byType = stats['byType'] as Map<String, dynamic>;
+    final byStatus = stats['byStatus'] as Map<String, int>;
+    final typeCountMap = byType['count'] as Map<String, int>;
+    final typeCostMap = byType['cost'] as Map<String, int>;
+    final total = stats['total'] as int;
+    final totalCost = stats['totalCost'] as int;
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        _section('销售总览', [
+        _reportSection('🔧 维修总览', [
           _kpiGrid([
-            _kpiItem('订单数', '${orders.length}', '有效订单', app.C.brand2),
-            _kpiItem('累计 GMV', yuan(totalGmv), '', app.C.blue),
+            _kpiItem('维修工单', '$total', '总额${yuan(totalCost)}', C.orange),
+            _kpiItem(
+              '平均成本',
+              yuan(stats['avgCost'] as int),
+              total > 0 ? '${(total / repairs.length).round()}台' : '',
+              C.brand2,
+            ),
+            _kpiItem(
+              '完成',
+              '${byStatus['完成'] ?? 0}',
+              '进行中${byStatus['进行中'] ?? 0}',
+              C.green,
+            ),
+            _kpiItem(
+              '待修',
+              '${byStatus['待修'] ?? 0}',
+              '${total > 0 ? '完成率${((byStatus['完成'] ?? 0) / total * 100).toStringAsFixed(0)}%' : ''}',
+              C.orange,
+            ),
+          ]),
+        ]),
+        const SizedBox(height: 12),
+        // 维修类型分布
+        if (typeCountMap.isNotEmpty)
+          _reportSection('📊 维修类型分布', [
+            ...typeCountMap.entries.map((e) {
+              final cost = typeCostMap[e.key] ?? 0;
+              final pct = total > 0 ? e.value / total : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          e.key,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: C.t1,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${e.value}次',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: C.brand2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          yuan(cost),
+                          style: TextStyle(fontSize: 11, color: C.t3),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        backgroundColor: C.bg,
+                        valueColor: const AlwaysStoppedAnimation(
+                          Color(0xFFFF9500),
+                        ),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ]),
+        const SizedBox(height: 12),
+        // 状态分布
+        if (byStatus.isNotEmpty)
+          _reportSection('📋 维修状态', [
+            ...byStatus.entries.map((e) {
+              final pct = total > 0 ? e.value / total : 0.0;
+              final c =
+                  e.key == '完成'
+                      ? C.green
+                      : e.key == '进行中'
+                      ? C.brand2
+                      : C.orange;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: c,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      e.key,
+                      style: TextStyle(fontSize: 12, color: C.t1),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${e.value} (${(pct * 100).toStringAsFixed(0)}%)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: c,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ]),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+}
+
+// ====== 5. 销售报表 ======
+class _SalesReport extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final channelStats = _s.getSalesChannelStats();
+    final monthly = _s.getMonthlyTrend();
+    final profitByModel = _s.getProfitByModel().take(10).toList();
+    final devices = _s.getDevices();
+    final sold = devices.where((d) => d.status == 'sold').length;
+    final totalRevenue = devices
+        .where((d) => d.status == 'sold')
+        .fold<int>(0, (s, d) => s + d.sellPrice);
+    final totalProfit = devices
+        .where((d) => d.status == 'sold')
+        .fold<int>(0, (s, d) => s + d.netProfit);
+    final grossMargin =
+        totalRevenue > 0 ? (totalProfit / totalRevenue * 100) : 0.0;
+
+    return ListView(
+      padding: const EdgeInsets.all(14),
+      children: [
+        _reportSection('💰 销售总览', [
+          _kpiGrid([
+            _kpiItem(
+              '累计售出',
+              '$sold 台',
+              '营收${yuan(totalRevenue)}',
+              C.brand2,
+            ),
             _kpiItem(
               '累计毛利',
               yuan(totalProfit),
               '毛利率${grossMargin.toStringAsFixed(1)}%',
-              app.C.green,
+              C.green,
             ),
+            _kpiItem(
+              '平均售价',
+              sold > 0 ? yuan(totalRevenue ~/ sold) : '¥0',
+              '均利${sold > 0 ? yuan(totalProfit ~/ sold) : "¥0"}',
+              C.blue,
+            ),
+            _kpiItem('平均周转', '${_s.getAvgTurnoverDays()}天', '', C.orange),
           ]),
         ]),
+        const SizedBox(height: 12),
+        // 渠道分析
         if (channelStats.isNotEmpty)
-          _section('渠道 GMV', [
+          _reportSection('📊 渠道GMV分析', [
             ...channelStats.map((c) {
-              final gmv = c['gmv'] as int;
-              final pct =
-                  totalGmv > 0
-                      ? (gmv * 100 / totalGmv).toStringAsFixed(0)
-                      : '0';
-              return _row(
-                c['channel'] as String,
-                yuan(gmv),
-                '$pct% · ${c['count']} 单 · 毛利 ${yuan(c['profit'] as int)}',
+              final totalGmv = channelStats.fold<int>(
+                0,
+                (s, e) => s + (e['gmv'] as int),
+              );
+              final pct = totalGmv > 0 ? (c['gmv'] as int) / totalGmv : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          c['channel'] as String,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: C.t1,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          yuan(c['gmv'] as int),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: C.brand2,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${(pct * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(fontSize: 11, color: C.t3),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width - 130,
+                            child: LinearProgressIndicator(
+                              value: pct,
+                              backgroundColor: C.bg,
+                              valueColor: const AlwaysStoppedAnimation(
+                                Color(0xFF34C759),
+                              ),
+                              minHeight: 6,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${c['count']}单',
+                          style: TextStyle(fontSize: 10, color: C.t3),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               );
             }),
           ]),
+        const SizedBox(height: 12),
+        // 月度趋势
+        _reportSection('📈 月度销售趋势', [
+          ...monthly.map(
+            (m) => _trendRow(
+              m['month'] as String,
+              m['gmv'] as int,
+              m['profit'] as int,
+              m['count'] as int,
+            ),
+          ),
+        ]),
+        const SizedBox(height: 12),
+        // 利润排行
+        if (profitByModel.isNotEmpty)
+          _reportSection('🏆 型号利润排行', [
+            ...profitByModel.asMap().entries.map((e) {
+              final m = e.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${e.key + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: e.key < 3 ? C.brand2 : C.t3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        m['model'] as String,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: C.t1,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${m['count']}台',
+                      style: TextStyle(fontSize: 10, color: C.t2),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      yuan(m['profit'] as int),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color:
+                            (m['profit'] as int) >= 0 ? C.green : C.red,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ]),
+        const SizedBox(height: 40),
       ],
     );
   }
 }
 
+// ====== 6. 采购分析报表 ======
 class _PurchaseReport extends StatelessWidget {
-  const _PurchaseReport();
-
   @override
   Widget build(BuildContext context) {
-    final devices = app.gStorage.getDevices();
-    final totalCost = devices.fold<int>(0, (s, d) => s + d.purchaseCost);
-    final avgCost = devices.isEmpty ? 0 : totalCost ~/ devices.length;
-    final now = DateTime.now();
-    final monthPrefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
-    final monthDevices =
-        devices
-            .where(
-              (d) =>
-                  d.purchaseDate.startsWith(monthPrefix) ||
-                  d.createdAt.startsWith(monthPrefix),
-            )
-            .toList();
-    final inStockCapital = devices
-        .where(_isStockDevice)
-        .fold<int>(0, (s, d) => s + d.purchaseCost);
-
-    final channelMap = <String, Map<String, int>>{};
-    for (final d in devices) {
-      final channel =
-          d.purchaseChannel.trim().isEmpty ? '未知渠道' : d.purchaseChannel.trim();
-      channelMap.putIfAbsent(
-        channel,
-        () => {'count': 0, 'cost': 0, 'sold': 0, 'profit': 0},
-      );
-      final row = channelMap[channel]!;
-      row['count'] = row['count']! + 1;
-      row['cost'] = row['cost']! + d.purchaseCost;
-      if (d.status == 'sold') {
-        row['sold'] = row['sold']! + 1;
-        row['profit'] = row['profit']! + d.netProfit;
-      }
-    }
-    final channelRows =
-        channelMap.entries.toList()
-          ..sort((a, b) => b.value['cost']!.compareTo(a.value['cost']!));
-
-    final recent =
-        devices.toList()..sort((a, b) {
-          final byPurchase = _safeDate(
-            b.purchaseDate,
-          ).compareTo(_safeDate(a.purchaseDate));
-          if (byPurchase != 0) return byPurchase;
-          return _safeDate(b.createdAt).compareTo(_safeDate(a.createdAt));
-        });
+    final pos = _s.getPurchaseOrders();
+    final channelStats = _s.getPurchaseChannelStats();
+    final suppliers = _s.getSupplierStats();
+    final totalCost = pos.fold<int>(0, (s, p) => s + p.totalCost);
+    final totalReturned = pos.fold<int>(0, (s, p) => s + p.returnedCount);
+    final totalAfterSale = pos.fold<int>(
+      0,
+      (s, p) => s + (p.afterSaleAmount ?? 0),
+    );
 
     return ListView(
       padding: const EdgeInsets.all(14),
       children: [
-        _section('采购总览', [
+        _reportSection('📥 采购总览', [
           _kpiGrid([
-            _kpiItem('采购台数', '${devices.length}', '历史入库', app.C.brand2),
-            _kpiItem('采购成本', yuan(totalCost), '累计投入', app.C.orange),
-            _kpiItem('均采购价', yuan(avgCost), '单台平均', app.C.blue),
             _kpiItem(
-              '本月入库',
-              '${monthDevices.length}',
-              '在库资金 ${yuan(inStockCapital)}',
-              app.C.green,
+              '采购单',
+              '${pos.length}',
+              '总额${yuan(totalCost)}',
+              C.brand2,
+            ),
+            _kpiItem(
+              '退货',
+              '$totalReturned 件',
+              pos.isEmpty
+                  ? ''
+                  : '退货率${pos.fold<int>(0, (s, p) => s + p.deviceCount) > 0 ? (totalReturned / pos.fold<int>(0, (s, p) => s + p.deviceCount) * 100).toStringAsFixed(1) : 0}%',
+              C.red,
+            ),
+            _kpiItem(
+              '售后议价',
+              yuan(totalAfterSale),
+              pos.length > 0 ? '均${yuan(totalAfterSale ~/ (pos.length))}' : '',
+              C.orange,
+            ),
+            _kpiItem(
+              '平均单额',
+              pos.isEmpty ? '¥0' : yuan(totalCost ~/ pos.length),
+              '',
+              C.blue,
             ),
           ]),
         ]),
-        if (channelRows.isNotEmpty)
-          _section('渠道结构', [
-            ...channelRows.take(12).map((e) {
-              final data = e.value;
-              final count = data['count']!;
-              final avg = count > 0 ? data['cost']! ~/ count : 0;
-              final soldRate =
-                  count > 0
-                      ? (data['sold']! * 100 / count).toStringAsFixed(0)
-                      : '0';
-              return _row(
-                e.key,
-                '${count} 台',
-                '成本${yuan(data['cost']!)} · 均价${yuan(avg)} · 售出$soldRate%',
+        const SizedBox(height: 12),
+        // 采购渠道分析
+        if (channelStats.isNotEmpty)
+          _reportSection('🛒 采购渠道分析', [
+            ...channelStats.map((c) {
+              final totalVal = channelStats.fold<int>(
+                0,
+                (s, e) => s + (e['totalCost'] as int),
+              );
+              final pct =
+                  totalVal > 0 ? (c['totalCost'] as int) / totalVal : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(
+                          c['platform'] as String,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: C.t1,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          yuan(c['totalCost'] as int),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: C.brand2,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(3),
+                      child: LinearProgressIndicator(
+                        value: pct,
+                        backgroundColor: C.bg,
+                        valueColor: const AlwaysStoppedAnimation(
+                          Color(0xFFAF52DE),
+                        ),
+                        minHeight: 6,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Row(
+                        children: [
+                          Text(
+                            '${c['count']}单',
+                            style: TextStyle(fontSize: 10, color: C.t3),
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            '退货${c['returned']}件',
+                            style: TextStyle(fontSize: 10, color: C.red),
+                          ),
+                          if ((c['afterSale'] as int) > 0) ...[
+                            const SizedBox(width: 12),
+                            Text(
+                              '议价${yuan(c['afterSale'] as int)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: C.orange,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               );
             }),
           ]),
-        if (channelRows.any((e) => e.value['sold']! > 0))
-          _section('渠道收益', [
-            ...channelRows.where((e) => e.value['sold']! > 0).take(12).map((e) {
-              final data = e.value;
-              final avgProfit =
-                  data['sold']! > 0 ? data['profit']! ~/ data['sold']! : 0;
-              return _row(
-                e.key,
-                yuan(data['profit']!),
-                '${data['sold']} 台已售 · 均利 ${yuan(avgProfit)}',
+        const SizedBox(height: 12),
+        // 供应商利润分析
+        if (suppliers.isNotEmpty)
+          _reportSection('🏭 供应商利润分析', [
+            ...suppliers.asMap().entries.map((e) {
+              final m = e.value;
+              final profitVal = m['profit'] as int;
+              final revenue = m['revenue'] as int;
+              final margin = revenue > 0 ? profitVal / revenue * 100 : 0.0;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 22,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${e.key + 1}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: e.key < 3 ? const Color(0xFFAF52DE) : C.t3,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            m['channel'] as String,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: C.t1,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            '${m['count']}台 · 利润率${margin.toStringAsFixed(0)}%',
+                            style: TextStyle(fontSize: 9, color: C.t3),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      yuan(profitVal),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: profitVal >= 0 ? C.green : C.red,
+                      ),
+                    ),
+                  ],
+                ),
               );
             }),
           ]),
-        if (recent.isNotEmpty)
-          _section('最近采购', [
-            ...recent.take(10).map((d) {
-              final channel =
-                  d.purchaseChannel.trim().isEmpty
-                      ? '未知渠道'
-                      : d.purchaseChannel.trim();
-              return _row(
-                '${d.model} ${d.capacity}',
-                yuan(d.purchaseCost),
-                '$channel · ${_dateText(d.purchaseDate)}',
-              );
-            }),
-          ]),
+        const SizedBox(height: 40),
       ],
     );
   }
 }
 
-bool _isStockDevice(Device d) => d.status == 'in_stock' || d.status == 'listed';
-
-String _gradeForDevice(Device d) {
-  if (!d.idLockClean) return 'D';
-  final condition = d.condition.trim();
-  final topCondition =
-      condition.contains('全新') ||
-      condition.contains('99') ||
-      condition.contains('98') ||
-      condition.contains('95');
-  if (d.batteryHealth >= 90 && topCondition) return 'A';
-  if (d.batteryHealth >= 80) return 'B';
-  return 'C';
-}
-
-String _gradeHint(String grade) {
-  switch (grade) {
-    case 'A':
-      return '高成色/高电池/ID干净';
-    case 'B':
-      return '可正常销售';
-    case 'C':
-      return '低电池或成色偏弱';
-    case 'D':
-      return 'ID锁风险';
-  }
-  return '';
-}
-
-DateTime _safeDate(String value) {
-  try {
-    return DateTime.parse(value);
-  } catch (_) {
-    return DateTime.fromMillisecondsSinceEpoch(0);
-  }
-}
-
-String _dateText(String value) {
-  if (value.length >= 10) return value.substring(0, 10);
-  return '日期未知';
-}
-
-Widget _section(String title, List<Widget> children) => Container(
-  margin: const EdgeInsets.only(bottom: 12),
+// ========== 报表通用组件 ==========
+Widget _reportSection(String title, List<Widget> children) => Container(
   padding: const EdgeInsets.all(14),
   decoration: BoxDecoration(
-    color: app.C.card,
-    borderRadius: BorderRadius.circular(12),
-    border: Border.all(color: app.C.line),
+    color: C.card,
+    borderRadius: BorderRadius.circular(14),
+    border: Border.all(color: C.line),
   ),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,110 +1085,136 @@ Widget _section(String title, List<Widget> children) => Container(
         title,
         style: TextStyle(
           fontSize: 14,
-          fontWeight: FontWeight.w800,
-          color: app.C.t1,
+          fontWeight: FontWeight.w700,
+          color: C.t1,
         ),
       ),
-      const SizedBox(height: 10),
+      const SizedBox(height: 12),
       ...children,
     ],
   ),
 );
 
-Widget _kpiGrid(List<Widget> items) => LayoutBuilder(
-  builder: (context, box) {
-    final cols = box.maxWidth >= 700 ? 4 : 2;
-    return GridView.count(
-      crossAxisCount: cols,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisSpacing: 8,
-      mainAxisSpacing: 8,
-      childAspectRatio: cols == 4 ? 2.3 : 2.0,
-      children: items,
-    );
-  },
+Widget _kpiGrid(List<Widget> items) => GridView.count(
+  shrinkWrap: true,
+  physics: const NeverScrollableScrollPhysics(),
+  crossAxisCount: 2,
+  mainAxisSpacing: 8,
+  crossAxisSpacing: 8,
+  childAspectRatio: 2.2,
+  children: items,
 );
 
 Widget _kpiItem(String label, String value, String sub, Color color) =>
     Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: app.C.bg,
+        color: color.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: app.C.line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          Text(label, style: TextStyle(fontSize: 9, color: C.t3)),
+          const SizedBox(height: 2),
           Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontSize: 10.5, color: app.C.t2),
-          ),
-          const SizedBox(height: 3),
-          FittedBox(
-            alignment: Alignment.centerLeft,
-            fit: BoxFit.scaleDown,
-            child: Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
-                color: color,
-              ),
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: color,
             ),
           ),
-          if (sub.isNotEmpty)
-            Text(
-              sub,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontSize: 9.5, color: app.C.t3),
-            ),
+          if (sub.isNotEmpty) ...[
+            const SizedBox(height: 1),
+            Text(sub, style: TextStyle(fontSize: 9, color: C.t3)),
+          ],
         ],
       ),
     );
 
-Widget _row(String label, String value, String sub) => Padding(
+Widget _kpiRow(String label, String value, String sub) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
     children: [
       Expanded(
-        child: Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            fontSize: 12,
-            color: app.C.t1,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+        child: Text(label, style: TextStyle(fontSize: 13, color: C.t1)),
       ),
-      const SizedBox(width: 10),
       Text(
         value,
         style: TextStyle(
-          fontSize: 12.5,
-          color: app.C.t1,
+          fontSize: 14,
           fontWeight: FontWeight.w800,
+          color: C.brand2,
         ),
       ),
-      if (sub.isNotEmpty) ...[
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            sub,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.right,
-            style: TextStyle(fontSize: 10.5, color: app.C.t3),
-          ),
-        ),
-      ],
+      const SizedBox(width: 10),
+      Text(sub, style: TextStyle(fontSize: 10, color: C.t3)),
     ],
   ),
 );
+
+Widget _trendRow(String month, int gmv, int profit, int count) {
+  const maxVal = 500000; // 假设最大50万用于进度条
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            SizedBox(
+              width: 55,
+              child: Text(
+                month.length > 7 ? month.substring(5) : month,
+                style: TextStyle(fontSize: 11, color: C.t2),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                  value: maxVal > 0 ? (gmv / maxVal).clamp(0.0, 1.0) : 0.0,
+                  backgroundColor: C.bg,
+                  valueColor: AlwaysStoppedAnimation(C.brand2),
+                  minHeight: 5,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            SizedBox(
+              width: 65,
+              child: Text(
+                yuan(gmv),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: C.t1,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 50,
+              child: Text(
+                yuan(profit),
+                style: TextStyle(
+                  fontSize: 10,
+                  color: profit >= 0 ? C.green : C.red,
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 25,
+              child: Text(
+                '$count单',
+                style: TextStyle(fontSize: 9, color: C.t3),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
