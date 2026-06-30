@@ -25,6 +25,8 @@ ios/Flutter/Flutter.podspec
 
 # Dev environment
 dev_env/
+portable_build_env/
+portable_build_env.zip
 
 # OS files
 *.swp
