@@ -1,12 +1,7 @@
 // ERP 侧边栏布局 + 库存增强功能
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'main.dart' as app;
-import 'models.dart';
-import 'storage.dart';
-import 'erp_pages.dart';
 
-final Storage _s = app.gStorage;
 String yuan(int fen) => '¥${(fen / 100).toStringAsFixed(0)}';
 void toast(BuildContext c, String m) => ScaffoldMessenger.of(c).showSnackBar(SnackBar(content: Text(m, style: const TextStyle(fontSize: 13)), duration: const Duration(seconds: 2)));
 
@@ -22,7 +17,6 @@ class ErpShell extends StatefulWidget {
 
 class _ErpShellState extends State<ErpShell> {
   String _currentPage = 'dashboard';
-  int _selectedNavIndex = 0;
 
   void navTo(String page) {
     setState(() { _currentPage = page; });
@@ -54,20 +48,12 @@ class _ErpShellState extends State<ErpShell> {
         // 菜单
         Expanded(child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: [
           _navItem('📊', '经营看板', 'dashboard'),
-          _navItem('📥', '采购管理', 'purchase'),
           _navItem('📱', '库存管理', 'inventory'),
           _navItem('📦', '销售管理', 'sales'),
           _navItem('💰', '财务管理', 'finance'),
           _navItem('👥', '客户管理', 'customer'),
           _navItem('🔧', '维修管理', 'repair'),
-          _navItem('🔍', '质检管理', 'qc'),
-          _navItem('📤', '分货管理', 'allocation'),
-          _navItem('📚', '租借管理', 'rental'),
-          _navItem('💳', '分期付款', 'installment'),
-          _navItem('💰', '预付定金', 'deposit'),
           _navItem('📊', '统计报表', 'reports'),
-          _navItem('🔍', '机器追踪', 'tracking'),
-          _navItem('🔔', '库存预警', 'alerts'),
           _navItem('⚙️', '系统设置', 'settings'),
         ])),
       ]),

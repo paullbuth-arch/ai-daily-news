@@ -338,4 +338,32 @@ void main() {
       expect((a['suppliers'] as List).length, 2);
     });
   });
+
+  group('Storage 经营统计口径', () {
+    late Directory tmp;
+    setUp(() async => tmp = await Directory.systemTemp.createTemp('boss_stats_'));
+    tearDown(() async => tmp.delete(recursive: true));
+
+    test('客户汇总排除已作废订单', () async {
+      final st = Storage('${tmp.path}/customers.json');
+      await st.load();
+      await st.addOrder(Order(id: 'o1', deviceId: 'd1', deviceName: 'iPad', buyer: '张三', channel: '闲鱼', amount: 100000, profit: 10000, status: 'done', createdAt: '2026-06-01'));
+      await st.addOrder(Order(id: 'o2', deviceId: 'd2', deviceName: 'iPad', buyer: '张三', channel: '闲鱼', amount: 50000, profit: 5000, status: 'cancelled', createdAt: '2026-06-02'));
+      final customers = st.getCustomers();
+      expect(customers.length, 1);
+      expect(customers.first['count'], 1);
+      expect(customers.first['totalAmount'], 100000);
+    });
+
+    test('资金周转率使用当前在售库存总资金作分母', () async {
+      final st = Storage('${tmp.path}/turnover.json');
+      await st.load();
+      final now = DateTime.now();
+      final day = '${now.year}-${now.month.toString().padLeft(2, '0')}-01';
+      await st.addDevice(Device(id: 'd1', serial: 'F1', model: 'iPad Air 5', capacity: '64G', color: '银色', network: 'WiFi', condition: '95新', purchaseCost: 100000, purchaseDate: day, createdAt: day, status: 'listed'));
+      await st.addDevice(Device(id: 'd2', serial: 'F2', model: 'iPad Air 5', capacity: '64G', color: '银色', network: 'WiFi', condition: '95新', purchaseCost: 300000, purchaseDate: day, createdAt: day, status: 'in_stock'));
+      await st.addOrder(Order(id: 'o1', deviceId: 's1', deviceName: 'iPad', buyer: '李四', channel: '闲鱼', amount: 200000, profit: 20000, status: 'done', createdAt: day));
+      expect(st.getCapitalTurnoverRate(), 0.5);
+    });
+  });
 }

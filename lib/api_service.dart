@@ -1,10 +1,17 @@
 // API 服务层 —— 与后端通信
 import 'dart:convert';
 import 'dart:io';
-import 'storage.dart';
 
 class ApiService {
   static const String baseUrl = 'https://deepsell.wiki';
+
+  static Map<String, dynamic> _decodeJsonObject(String raw) {
+    if (raw.trim().isEmpty) return {};
+    final decoded = json.decode(raw);
+    if (decoded is Map<String, dynamic>) return decoded;
+    if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    return {'data': decoded};
+  }
 
   // ====== HTTP 请求 ======
   static Future<Map<String, dynamic>> _request({
@@ -30,16 +37,15 @@ class ApiService {
         // Multipart upload
         final boundary = 'boundary_${DateTime.now().millisecondsSinceEpoch}';
         req.headers.set('Content-Type', 'multipart/form-data; boundary=$boundary');
-        final sink = req as HttpClientRequest;
         // Write each file
         for (final file in files) {
-          sink.write('--$boundary\r\n');
-          sink.write('Content-Disposition: form-data; name="files"; filename="${file.uri.pathSegments.last}"\r\n');
-          sink.write('Content-Type: image/jpeg\r\n\r\n');
-          sink.add(await file.readAsBytes());
-          sink.write('\r\n');
+          req.write('--$boundary\r\n');
+          req.write('Content-Disposition: form-data; name="files"; filename="${file.uri.pathSegments.last}"\r\n');
+          req.write('Content-Type: image/jpeg\r\n\r\n');
+          req.add(await file.readAsBytes());
+          req.write('\r\n');
         }
-        sink.write('--$boundary--\r\n');
+        req.write('--$boundary--\r\n');
       } else if (body != null) {
         req.headers.contentType = ContentType.json;
         req.write(json.encode(body));
@@ -50,11 +56,11 @@ class ApiService {
       client.close();
 
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        return json.decode(raw) as Map<String, dynamic>;
+        return _decodeJsonObject(raw);
       }
       // Try to parse error
       try {
-        final err = json.decode(raw) as Map<String, dynamic>;
+        final err = _decodeJsonObject(raw);
         return {'error': err['error'] ?? '请求失败(${resp.statusCode})'};
       } catch (_) {
         return {'error': '请求失败(${resp.statusCode})'};
@@ -96,8 +102,17 @@ class ApiService {
   // ====== 数据 API ======
 
   /// 获取业务数据
-  static Future<Map<String, dynamic>?> fetchData(String token) async {
+  static Future<Map<String, dynamic>> fetchDataResult(String token) async {
     final r = await _request(method: 'GET', path: '/api/data', token: token);
+    final error = r['error'] as String?;
+    if (error != null && error.contains('404')) {
+      r['statusCode'] ??= 404;
+    }
+    return r;
+  }
+
+  static Future<Map<String, dynamic>?> fetchData(String token) async {
+    final r = await fetchDataResult(token);
     if (r['error'] != null) return null;
     return r;
   }

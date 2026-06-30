@@ -3,12 +3,13 @@ import 'package:ipad_boss_app/ai_service.dart';
 
 void main() {
   group('AiConfig', () {
-    test('defaultConfig 含 DeepSeek 三件套', () {
+    test('defaultConfig 含 BigModel GLM 默认配置', () {
       final d = AiConfig.defaultConfig();
-      expect(d.baseUrl, 'https://api.deepseek.com/anthropic');
-      expect(d.apiKey, startsWith('sk-'));
-      expect(d.model, 'deepseek-v4-flash');
-      expect(d.protocol, 'anthropic');
+      expect(d.providerName, 'GLM (智谱)');
+      expect(d.baseUrl, 'https://open.bigmodel.cn/api/paas/v4/chat/completions');
+      expect(d.apiKey, isNotEmpty);
+      expect(d.model, 'glm-4.7-flash');
+      expect(d.protocol, 'openai');
     });
 
     test('fromMap(null) 回退默认值', () {
@@ -23,7 +24,7 @@ void main() {
       expect(e.baseUrl, AiConfig.defaultConfig().baseUrl); // 空回退
       expect(e.apiKey, 'sk-x'); // 非空保留
       expect(e.model, AiConfig.defaultConfig().model); // 空回退
-      expect(e.protocol, 'anthropic'); // 空回退默认
+      expect(e.protocol, 'openai'); // 空回退默认
     });
 
     test('fromMap 全字段非空时 effective 全保留', () {
@@ -67,8 +68,8 @@ void main() {
     test('setConfig(defaultConfig) 完整恢复', () {
       AiService.setConfig(AiConfig(model: 'temp'));
       AiService.setConfig(AiConfig.defaultConfig());
-      expect(AiService.effectiveConfig.model, 'deepseek-v4-flash');
-      expect(AiService.effectiveConfig.baseUrl, 'https://api.deepseek.com/anthropic');
+      expect(AiService.effectiveConfig.model, 'glm-4.7-flash');
+      expect(AiService.effectiveConfig.baseUrl, 'https://open.bigmodel.cn/api/paas/v4/chat/completions');
     });
   });
 }

@@ -62,8 +62,8 @@ class SerialDecoder {
     String chip = '';
     modelMap.forEach((key, value) {
       if (model == '未知型号' && s.contains(key)) {
-        model = value[0] as String;
-        chip = value[1] as String;
+        model = value[0];
+        chip = value[1];
       }
     });
 
@@ -72,10 +72,12 @@ class SerialDecoder {
     final last2 = s.substring(s.length - 2);
     if (last2.contains('LL')) capacity = '64G';
     final capacityMap = {'0': '64G', '1': '256G', '2': '512G', '3': '1TB', '4': '128G', 'D': '256G', 'E': '512G', 'R': '64G'};
+    final mappedCapacity = capacityMap[s[s.length - 1]];
+    if (mappedCapacity != null) capacity = mappedCapacity;
     // 简化：基于序列号哈希做合理推断
     final hash = s.hashCode.abs();
     final caps = ['64G', '128G', '256G', '512G'];
-    capacity = caps[hash % caps.length];
+    if (mappedCapacity == null) capacity = caps[hash % caps.length];
 
     // 颜色
     final colors = ['深空灰', '银色', '星光色', '粉色', '紫色', '蓝色'];

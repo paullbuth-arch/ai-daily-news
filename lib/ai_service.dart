@@ -19,10 +19,17 @@ class ModelProvider {
   const ModelProvider(this.name, this.baseUrl, this.modelsUrl);
 }
 
+const String kDefaultAiProviderName = 'GLM (智谱)';
+const String kDefaultAiBaseUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+const String kDefaultAiModelsUrl = 'https://open.bigmodel.cn/api/paas/v4/models';
+const String kDefaultAiModel = 'glm-4.7-flash';
+const String kDefaultAiVisionModel = 'glm-4.6v-flash';
+const String kDefaultAiApiKey = '7caa9ea50e4247c9ac479d0f1d457c04.eh8Big07dnQ3NjV6';
+
 const List<ModelProvider> kModelProviders = [
+  ModelProvider(kDefaultAiProviderName, kDefaultAiBaseUrl, kDefaultAiModelsUrl),
   ModelProvider('DeepSeek', 'https://api.deepseek.com/v1/chat/completions', 'https://api.deepseek.com/v1/models'),
   ModelProvider('MiniMax', 'https://api.minimax.chat/v1/chat/completions', 'https://api.minimax.chat/v1/models'),
-  ModelProvider('GLM (智谱)', 'https://open.bigmodel.cn/api/paas/v4/chat/completions', 'https://open.bigmodel.cn/api/paas/v4/models'),
   ModelProvider('Kimi (月之暗面)', 'https://api.moonshot.cn/v1/chat/completions', 'https://api.moonshot.cn/v1/models'),
   ModelProvider('Qwen (通义千问)', 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions', 'https://dashscope.aliyuncs.com/compatible-mode/v1/models'),
 ];
@@ -34,15 +41,23 @@ class AiConfig {
   final String baseUrl;
   final String apiKey;
   final String model; // 自定义模型名（空=未配置）
+  final String protocol;
 
   const AiConfig({
     this.providerName = '',
     this.baseUrl = '',
     this.apiKey = '',
     this.model = '',
+    this.protocol = '',
   });
 
-  factory AiConfig.defaultConfig() => const AiConfig();
+  factory AiConfig.defaultConfig() => const AiConfig(
+        providerName: kDefaultAiProviderName,
+        baseUrl: kDefaultAiBaseUrl,
+        apiKey: kDefaultAiApiKey,
+        model: kDefaultAiModel,
+        protocol: 'openai',
+      );
 
   factory AiConfig.fromMap(Map<String, dynamic>? m) {
     if (m == null) return AiConfig.defaultConfig();
@@ -51,6 +66,18 @@ class AiConfig {
       baseUrl: (m['baseUrl'] as String?) ?? '',
       apiKey: (m['apiKey'] as String?) ?? '',
       model: (m['model'] as String?) ?? '',
+      protocol: (m['protocol'] as String?) ?? '',
+    );
+  }
+
+  AiConfig get effective {
+    final d = AiConfig.defaultConfig();
+    return AiConfig(
+      providerName: providerName.isNotEmpty ? providerName : d.providerName,
+      baseUrl: baseUrl.isNotEmpty ? baseUrl : d.baseUrl,
+      apiKey: apiKey.isNotEmpty ? apiKey : d.apiKey,
+      model: model.isNotEmpty ? model : d.model,
+      protocol: protocol.isNotEmpty ? protocol : d.protocol,
     );
   }
 
@@ -59,6 +86,7 @@ class AiConfig {
         'baseUrl': baseUrl,
         'apiKey': apiKey,
         'model': model,
+        'protocol': protocol,
       };
 
   bool get isConfigured => apiKey.isNotEmpty && baseUrl.isNotEmpty && model.isNotEmpty;
@@ -172,7 +200,7 @@ class AiService {
   static AiConfig _config = AiConfig.defaultConfig();
   static AiConfig get config => _config;
   static void setConfig(AiConfig c) => _config = c;
-  static AiConfig get effectiveConfig => _config;
+  static AiConfig get effectiveConfig => _config.effective;
 
   static Future<Map<String, dynamic>> _callOpenAI({
     required String systemPrompt,
@@ -198,11 +226,20 @@ class AiService {
         ...messages,
       ];
 
+      final hasImage = messages.any((m) {
+        final content = m['content'];
+        return content is List && content.any((item) => item is Map && item['type'] == 'image_url');
+      });
+      final useBigModelVision = hasImage && cfg.baseUrl.contains('open.bigmodel.cn');
       final body = <String, dynamic>{
-        'model': cfg.model,
+        'model': useBigModelVision ? kDefaultAiVisionModel : cfg.model,
         'max_tokens': maxTokens,
         'messages': msgs,
       };
+      if (cfg.baseUrl.contains('open.bigmodel.cn')) {
+        body['temperature'] = 0.7;
+        if (!hasImage) body['thinking'] = {'type': 'enabled'};
+      }
       req.write(json.encode(body));
 
       final resp = await req.close().timeout(const Duration(seconds: 90));

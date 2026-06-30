@@ -35,6 +35,7 @@ class UpdateService {
   /// 当前版本信息（从 pubspec.yaml 读取）
   static String get currentVersion => '2.1.0';
   static int get currentBuild => 12;
+  static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
   /// [checkUrl] 指向一个返回 JSON 的 API：{"version":"1.6.1","buildNumber":7,"apkUrl":"https://...","changelog":"..."}
@@ -47,7 +48,9 @@ class UpdateService {
       client.connectionTimeout = const Duration(seconds: 15);
       client.userAgent = 'ipadboss-update-checker';
       // 不验证 SSL 证书（兼容低版本 Android 证书库）
-      client.badCertificateCallback = (cert, host, port) => true;
+      if (allowInsecureCertificates) {
+        client.badCertificateCallback = (cert, host, port) => true;
+      }
       final req = await client.getUrl(uri);
       req.headers.set('Accept', 'application/json');
       final resp = await req.close();
@@ -81,7 +84,9 @@ class UpdateService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
       // 不验证 SSL 证书（兼容低版本 Android）
-      client.badCertificateCallback = (cert, host, port) => true;
+      if (allowInsecureCertificates) {
+        client.badCertificateCallback = (cert, host, port) => true;
+      }
       final req = await client.getUrl(uri);
       req.headers.set('Accept', '*/*');
       final resp = await req.close();
