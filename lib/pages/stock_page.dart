@@ -1,44 +1,52 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../theme/colors.dart';
 import '../components/index.dart';
+import '../theme/colors.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
-import 'scan_page.dart';
 import 'detail_page.dart';
+import 'scan_page.dart';
 
 class StockPage extends StatefulWidget {
   const StockPage({Key? key}) : super(key: key);
+
   @override
   State<StockPage> createState() => StockPageState();
 }
 
 class StockPageState extends State<StockPage> {
   int chipIndex = 0;
-  final chips = ['全部', 'iPad Pro', 'iPad Air', '数字系列', 'iPad mini'];
   String searchKw = '';
+  final chips = ['全部', 'iPad Pro', 'iPad Air', '数字系列', 'iPad mini'];
 
   void refresh() => setState(() {});
 
   List<Device> get filtered {
-    var list = gStorage
-        .getDevices()
-        .where((d) => d.status == 'in_stock' || d.status == 'listed')
-        .toList();
+    var list =
+        gStorage
+            .getDevices()
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
     if (chipIndex > 0) {
       final kw = chips[chipIndex];
-      list = list.where((d) =>
-          d.model.contains(kw.replaceAll('iPad ', '')) || d.model.contains(kw)
-      ).toList();
+      list =
+          list
+              .where(
+                (d) =>
+                    d.model.contains(kw.replaceAll('iPad ', '')) ||
+                    d.model.contains(kw),
+              )
+              .toList();
     }
-    if (searchKw.isNotEmpty) {
-      list = list.where((d) =>
-          d.model.toLowerCase().contains(searchKw.toLowerCase()) ||
-          d.serial.toLowerCase().contains(searchKw.toLowerCase()) ||
-          d.capacity.toLowerCase().contains(searchKw.toLowerCase())
-      ).toList();
+    if (searchKw.trim().isNotEmpty) {
+      final kw = searchKw.toLowerCase();
+      list =
+          list.where((d) {
+            return d.model.toLowerCase().contains(kw) ||
+                d.serial.toLowerCase().contains(kw) ||
+                d.capacity.toLowerCase().contains(kw);
+          }).toList();
     }
     return list;
   }
@@ -46,352 +54,489 @@ class StockPageState extends State<StockPage> {
   @override
   Widget build(BuildContext context) {
     final devices = filtered;
-    final allInStock = gStorage
-        .getDevices()
-        .where((d) => d.status == 'in_stock' || d.status == 'listed')
-        .toList();
-    final totalCost = allInStock.fold(0, (s, d) => s + d.purchaseCost);
+    final all =
+        gStorage
+            .getDevices()
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
+    final cost = all.fold<int>(0, (s, d) => s + d.purchaseCost);
+    final stagnant = all.where((d) => d.isStagnant).length;
 
     return PageScaffold(
-      title: Text(
-        '库存管理',
+      title: const Text(
+        'My stock',
         style: TextStyle(
-          fontSize: 24, fontWeight: FontWeight.w900, color: C.t1, letterSpacing: 0.5,
+          fontSize: 25,
+          fontWeight: FontWeight.w900,
+          color: C.t1,
         ),
       ),
       subtitle: Text(
-        '在售${allInStock.length}台 · 成本占用${yuan(totalCost)}',
-        style: TextStyle(fontSize: 12, color: C.t2, fontWeight: FontWeight.w500),
-      ),
-      action: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const ScanPage()),
-          ).then((_) => refresh()),
-          borderRadius: BorderRadius.circular(C.radiusMd),
-          child: Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              gradient: C.cyanGradient,
-              borderRadius: BorderRadius.circular(C.radiusMd),
-              boxShadow: [
-                BoxShadow(
-                  color: C.cyan.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.black, size: 20),
-          ),
+        '在售 ${all.length} 台 · 成本占用 ${yuan(cost)}',
+        style: const TextStyle(
+          fontSize: 12,
+          color: C.t2,
+          fontWeight: FontWeight.w700,
         ),
+      ),
+      action: RoundIconButton(
+        icon: Icons.add_rounded,
+        color: Colors.black,
+        background: Colors.white,
+        onTap:
+            () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ScanPage()),
+            ).then((_) => refresh()),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ─── 顶部指标 ───
-          Padding(
-            padding: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
-            child: Row(
-              children: [
-                Expanded(child: _metricCard(
-                  '在售', '${allInStock.where((d) => d.status == 'listed').length}',
-                  C.cyan, Icons.sell_outlined,
-                )),
-                const SizedBox(width: 8),
-                Expanded(child: _metricCard(
-                  '未定价', '${allInStock.where((d) => d.sellPrice <= 0).length}',
-                  C.neonOrange, Icons.price_change_outlined,
-                )),
-                const SizedBox(width: 8),
-                Expanded(child: _metricCard(
-                  '滞销', '${allInStock.where((d) => d.isStagnant).length}',
-                  C.neonRed, Icons.warning_amber_rounded,
-                )),
-              ],
-            ),
-          ),
-
-          // ─── 搜索栏 ───
-          Padding(
-            padding: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: C.bgCard,
-                borderRadius: BorderRadius.circular(C.radiusMd),
-                border: Border.all(color: C.border, width: 0.8),
-                boxShadow: C.elevationSm,
-              ),
-              child: TextField(
-                onChanged: (v) => setState(() => searchKw = v),
-                style: TextStyle(color: C.t1, fontSize: 13),
-                decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded, color: C.t3, size: 19),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 28),
-                  suffixIcon: searchKw.isNotEmpty
-                      ? GestureDetector(
-                          onTap: () => setState(() => searchKw = ''),
-                          child: Icon(Icons.close_rounded, color: C.t3, size: 18),
-                        )
-                      : null,
-                  border: InputBorder.none,
-                  hintText: '搜索型号、序列号、容量',
-                  hintStyle: TextStyle(color: C.t3, fontSize: 13),
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 13),
+          Row(
+            children: [
+              Expanded(
+                child: _StockStat(
+                  label: '在售',
+                  value: '${all.where((d) => d.status == 'listed').length}',
+                  color: C.cyan,
                 ),
               ),
-            ),
-          ),
-
-          // ─── 筛选标签 ───
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: C.sp16),
-              itemCount: chips.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) {
-                final on = chipIndex == i;
-                return GestureDetector(
-                  onTap: () => setState(() => chipIndex = i),
-                  child: AnimatedContainer(
-                    duration: C.fast,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: on ? C.cyan.withOpacity(0.1) : C.bgCard,
-                      borderRadius: BorderRadius.circular(C.radiusMd),
-                      border: Border.all(
-                        color: on ? C.cyan.withOpacity(0.3) : C.border,
-                        width: on ? 1.2 : 0.8,
-                      ),
-                      boxShadow: on ? [
-                        BoxShadow(
-                          color: C.cyan.withOpacity(0.1),
-                          blurRadius: 8, offset: const Offset(0, 2),
-                        ),
-                      ] : C.elevationSm,
-                    ),
-                    child: Text(
-                      chips[i],
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: on ? C.cyan : C.t2,
-                        fontWeight: on ? FontWeight.w800 : FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StockStat(
+                  label: '未定价',
+                  value: '${all.where((d) => d.sellPrice <= 0).length}',
+                  color: C.mint,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StockStat(
+                  label: '滞销',
+                  value: '$stagnant',
+                  color: C.red,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
-
-          // ─── 设备列表 ───
+          _SearchField(
+            value: searchKw,
+            onChanged: (v) => setState(() => searchKw = v),
+            onClear: () => setState(() => searchKw = ''),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 42,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: chips.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder:
+                  (_, i) => _FilterPill(
+                    label: chips[i],
+                    selected: chipIndex == i,
+                    onTap: () => setState(() => chipIndex = i),
+                  ),
+            ),
+          ),
+          const SizedBox(height: 16),
           if (devices.isEmpty)
-            _emptyStock()
+            _EmptyStock(
+              onScan: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ScanPage()),
+                ).then((_) => refresh());
+              },
+            )
           else
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: C.sp16),
-              child: Column(
-                children: devices.map((d) => _deviceListItem(d)).toList(),
-              ),
+            LayoutBuilder(
+              builder: (context, box) {
+                final columns = box.maxWidth >= 720 ? 2 : 1;
+                return GridView.builder(
+                  itemCount: devices.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: columns,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: columns == 1 ? 1.55 : 1.35,
+                  ),
+                  itemBuilder:
+                      (_, i) => _DeviceProjectCard(
+                        device: devices[i],
+                        onTap:
+                            () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DetailPage(device: devices[i]),
+                              ),
+                            ).then((_) => refresh()),
+                      ),
+                );
+              },
             ),
         ],
       ),
     );
   }
+}
 
-  Widget _metricCard(String label, String value, Color color, IconData icon) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-    decoration: BoxDecoration(
-      color: C.bgCard,
-      borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.border, width: 0.8),
-      boxShadow: C.elevationSm,
-    ),
-    child: Row(
+class _StockStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _StockStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(13),
+    radius: 18,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 32, height: 32,
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: color.withOpacity(0.2)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: C.t2,
+            fontWeight: FontWeight.w800,
           ),
-          child: Icon(icon, size: 16, color: color),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: color),
-                ),
-              ),
-              Text(
-                label,
-                style: TextStyle(fontSize: 10, color: C.t2, fontWeight: FontWeight.w600),
-              ),
-            ],
+        const SizedBox(height: 6),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 23,
+            color: color,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ],
     ),
   );
+}
 
-  Widget _emptyStock() => Padding(
-    padding: const EdgeInsets.only(top: 60),
-    child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64, height: 64,
-            decoration: BoxDecoration(
-              color: C.cyan.withOpacity(0.06),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: C.cyan.withOpacity(0.15)),
-            ),
-            child: Icon(Icons.inventory_2_outlined, color: C.t3, size: 28),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            '暂无库存',
-            style: TextStyle(color: C.t1, fontSize: 16, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '扫码收货后会出现在这里',
-            style: TextStyle(color: C.t2, fontSize: 12),
-          ),
-          const SizedBox(height: 16),
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () => Navigator.push(
-                context, MaterialPageRoute(builder: (_) => const ScanPage()),
-              ).then((_) => refresh()),
-              borderRadius: BorderRadius.circular(C.radiusMd),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  gradient: C.cyanGradient,
-                  borderRadius: BorderRadius.circular(C.radiusMd),
-                  boxShadow: [
-                    BoxShadow(color: C.cyan.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3)),
-                  ],
+class _SearchField extends StatelessWidget {
+  final String value;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _SearchField({
+    required this.value,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.symmetric(horizontal: 13),
+    radius: 22,
+    child: TextField(
+      onChanged: onChanged,
+      style: const TextStyle(
+        color: C.t1,
+        fontSize: 14,
+        fontWeight: FontWeight.w700,
+      ),
+      decoration: InputDecoration(
+        border: InputBorder.none,
+        icon: const Icon(Icons.search_rounded, color: C.t2),
+        hintText: '搜索型号、序列号、容量',
+        suffixIcon:
+            value.isEmpty
+                ? null
+                : IconButton(
+                  onPressed: onClear,
+                  icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
                 ),
-                child: const Text(
-                  '立即扫码收货',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     ),
   );
+}
 
-  Widget _deviceListItem(Device d) {
-    final hasImg = d.imagePath != null && d.imagePath!.isNotEmpty;
-    final firstImg = hasImg ? d.imagePath!.split(';').first : null;
-    final goodCond = d.condition.contains('99') || d.condition.contains('95') || d.condition.contains('全新');
-    final statusColor = d.isStagnant ? C.neonRed : C.cyan;
-    return GestureDetector(
-      onTap: () => Navigator.push(
-        context, MaterialPageRoute(builder: (_) => DetailPage(device: d)),
-      ).then((_) => refresh()),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
+class _FilterPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _FilterPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: AnimatedContainer(
+        duration: C.fast,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: C.bgCard,
-          borderRadius: BorderRadius.circular(C.radiusMd),
-          border: Border.all(color: C.border, width: 0.8),
-          boxShadow: C.cardShadow,
+          color: selected ? C.cyan : Colors.white.withOpacity(0.07),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: Colors.white.withOpacity(0.08)),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 左侧图片
-            ClipRRect(
-              borderRadius: BorderRadius.circular(C.radiusSm),
-              child: SizedBox(
-                width: 120,
-                height: 120,
-                child: firstImg != null
-                    ? Image.file(
-                        File(firstImg), fit: BoxFit.cover,
-                        width: 120, height: 120,
-                      )
-                    : Container(
-                        color: C.bgCardMuted,
-                        child: Center(
-                          child: Icon(Icons.tablet_mac_rounded, color: C.t3, size: 40),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: selected ? Colors.black : C.t2,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _DeviceProjectCard extends StatelessWidget {
+  final Device device;
+  final VoidCallback onTap;
+
+  const _DeviceProjectCard({required this.device, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _firstImage(device);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: const Color(0xF00D1017),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            boxShadow: C.cardShadow,
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (image != null)
+                  Image.file(image, fit: BoxFit.cover)
+                else
+                  CustomPaint(painter: _DeviceBackdropPainter(device.model)),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.18),
+                          Colors.black.withOpacity(0.78),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 13,
+                  right: 13,
+                  child: Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.42),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.more_horiz_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 14,
+                  right: 14,
+                  bottom: 14,
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.36),
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${device.model} ${device.capacity}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: C.t1,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            StatusChip(
+                              _statusText(device),
+                              _statusColor(device),
+                            ),
+                          ],
                         ),
-                      ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // 右侧信息
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 型号
-                  Text(
-                    d.model,
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.t1),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  // 配置信息
-                  Text(
-                    '${d.capacity} · ${d.color} · ${d.network}',
-                    style: TextStyle(fontSize: 12, color: C.t2),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  // 电池健康度
-                  Text(
-                    '电池健康 ${d.batteryHealth}% · 库龄${d.stockDays}天',
-                    style: TextStyle(fontSize: 11, color: C.t3),
-                  ),
-                  const Spacer(),
-                  // 价格和标签行
-                  Row(
-                    children: [
-                      Text(
-                        d.sellPrice > 0 ? yuan(d.sellPrice) : '未定价',
-                        style: TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w900,
-                          color: d.sellPrice > 0 ? C.cyan : C.neonOrange,
+                        const SizedBox(height: 7),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${device.condition} · ${device.color} · ${device.stockDays}天',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: C.t2,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              device.sellPrice > 0
+                                  ? yuan(device.sellPrice)
+                                  : '待定价',
+                              style: const TextStyle(
+                                color: C.cyan,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const Spacer(),
-                      StatusChip(d.condition, goodCond ? C.neonGreen : C.neonOrange),
-                      const SizedBox(width: 6),
-                      StatusChip(
-                        d.isStagnant ? '滞销' : '在售',
-                        d.isStagnant ? C.neonRed : C.neonGreen,
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+
+  File? _firstImage(Device d) {
+    final raw = d.imagePath;
+    if (raw == null || raw.isEmpty) return null;
+    final paths = raw.split(';').where((p) => p.trim().isNotEmpty).toList();
+    if (paths.isEmpty) return null;
+    final path = paths.first;
+    final file = File(path);
+    return file.existsSync() ? file : null;
+  }
+
+  String _statusText(Device d) {
+    if (d.isStagnant) return '滞销';
+    if (d.sellPrice <= 0) return '未定价';
+    return d.status == 'listed' ? '在售' : '库存';
+  }
+
+  Color _statusColor(Device d) {
+    if (d.isStagnant) return C.red;
+    if (d.sellPrice <= 0) return C.orange;
+    return d.status == 'listed' ? C.cyan : C.mint;
+  }
+}
+
+class _DeviceBackdropPainter extends CustomPainter {
+  final String seed;
+  const _DeviceBackdropPainter(this.seed);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final hue = seed.hashCode.isEven ? C.cyan : C.purple;
+    final bg =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [hue.withOpacity(0.36), C.bgCard, C.bgDeep],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, bg);
+
+    final tabletPaint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.13)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 8;
+    final rect = Rect.fromCenter(
+      center: Offset(size.width * 0.52, size.height * 0.38),
+      width: size.width * 0.52,
+      height: size.height * 0.46,
+    );
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(24)),
+      tabletPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DeviceBackdropPainter oldDelegate) =>
+      oldDelegate.seed != seed;
+}
+
+class _EmptyStock extends StatelessWidget {
+  final VoidCallback onScan;
+  const _EmptyStock({required this.onScan});
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(22),
+    radius: 24,
+    child: Column(
+      children: [
+        Container(
+          width: 58,
+          height: 58,
+          decoration: const BoxDecoration(
+            color: C.cyan,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.qr_code_scanner_rounded,
+            color: Colors.black,
+            size: 28,
+          ),
+        ),
+        const SizedBox(height: 14),
+        const Text(
+          '暂无库存设备',
+          style: TextStyle(
+            color: C.t1,
+            fontSize: 16,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          '先收一台设备，库存卡片会出现在这里',
+          style: TextStyle(color: C.t2, fontSize: 12),
+        ),
+        const SizedBox(height: 16),
+        primaryBtn('扫码收货', onScan, icon: Icons.add_rounded),
+      ],
+    ),
+  );
 }

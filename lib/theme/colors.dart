@@ -1,143 +1,146 @@
 import 'package:flutter/material.dart';
 
-/// 全局主题模式（强制暗色主题）
+/// 全局主题模式。
+///
+/// 默认使用深色，因为店主常在店内、仓库和夜间快速扫状态。
 ThemeMode gThemeMode = ThemeMode.dark;
 
-/// ═══════════════════════════════════════════════
-/// 机掌柜 · 暗黑科技设计系统 (Cyber-Industrial)
-/// 极暗背景 + 霓虹光效 + 工业网格 + 呼吸动画
-/// ═══════════════════════════════════════════════
+/// 机掌柜视觉系统。
+///
+/// 方向：深色石墨背景、磨砂玻璃面板、柔和青蓝/浅紫/薄荷功能色。
 class C {
-  // ────────────── 核心背景 ──────────────
-  static const bgDeep = Color(0xFF050507);       // 极暗背景
-  static const bgCard = Color(0xFF0c0e14);       // 卡片背景
-  static const bgCardMuted = Color(0xFF111318);  // 弱卡片
-  static const bgSurface = Color(0xFF151920);    // 表面层
-  static const bgElevated = Color(0xFF1a1e2a);   // 悬浮层
+  static const bgDeep = Color(0xFF202228);
+  static const bg = bgDeep;
+  static const bgCard = Color(0xFF11141B);
+  static const bgCardMuted = Color(0xFF181C25);
+  static const bgSurface = Color(0xFF242934);
+  static const bgElevated = Color(0xFF2C323E);
 
-  // ────────────── 边框 & 分割 ──────────────
-  static const border = Color(0xFF1a1d28);       // 边框线
-  static const borderGlow = Color(0xFF2a2d3a); // 发光边框
-  static const divider = Color(0xFF1c1f2a);      // 分割线
+  static const nav = Color(0xE60B0D12);
+  static const navBorder = Color(0xFF2A303B);
+  static const border = Color(0xFF303744);
+  static const borderGlow = Color(0xFF46505F);
+  static const divider = Color(0xFF242A34);
 
-  // ────────────── 文字层级 ──────────────
-  static const t1 = Color(0xFFE0E2E8);           // 主文字
-  static const t2 = Color(0xFF8B8F99);           // 次要
-  static const t3 = Color(0xFF4A4D55);           // 弱化
-  static const tMuted = Color(0xFF3a3d45);       // 极弱
+  static const t1 = Color(0xFFF4F7FB);
+  static const t2 = Color(0xFFB6BFCC);
+  static const t3 = Color(0xFF7C8795);
+  static const tMuted = Color(0xFF596371);
 
-  // ────────────── 导航 ──────────────
-  static const nav = Color(0xFF0a0c14);          // 导航栏
-  static const navBorder = Color(0xFF1a1d28);   // 导航边框
+  static const cyan = Color(0xFF8FEAF2);
+  static const cyanDim = Color(0x268FEAF2);
+  static const purple = Color(0xFFB9B8FF);
+  static const purpleDim = Color(0x26B9B8FF);
+  static const mint = Color(0xFFC5EFA6);
+  static const neonGreen = mint;
+  static const greenDim = Color(0x26C5EFA6);
+  static const neonOrange = Color(0xFFFFD06A);
+  static const orangeDim = Color(0x26FFD06A);
+  static const neonRed = Color(0xFFFF8796);
+  static const redDim = Color(0x26FF8796);
 
-  // ────────────── 霓虹主色 ──────────────
-  static const cyan = Color(0xFF00F0FF);         // 霓虹青
-  static const cyanDim = Color(0x1500F0FF);     // 青色透明
-  static const purple = Color(0xFFB829FF);       // 霓虹紫
-  static const purpleDim = Color(0x15B829FF);     // 紫色透明
-  static const neonGreen = Color(0xFF00FF9D);    // 霓虹绿
-  static const greenDim = Color(0x1500FF9D);    // 绿色透明
-  static const neonOrange = Color(0xFFFF6B35);   // 霓虹橙
-  static const orangeDim = Color(0x15FF6B35);    // 橙色透明
-  static const neonRed = Color(0xFFFF2E63);      // 霓虹红
-  static const redDim = Color(0x15FF2E63);       // 红色透明
+  static const primary = cyan;
+  static const primaryDark = Color(0xFF5BC8D3);
+  static const accent = purple;
+  static const brand = cyan;
+  static const brand2 = purple;
 
-  // ────────────── 语义色（新版兼容） ──────────────
-  static const primary = Color(0xFF00F0FF);      // 主色=青色
-  static const primaryDark = Color(0xFF00C8D4);  // 主色暗
-  static const accent = Color(0xFFB829FF);       // 强调色=紫色
-  static const brand = Color(0xFF00F0FF);        // 品牌兼容
-  static const brand2 = Color(0xFF4A4D55);       // 品牌2兼容
+  static const green = Color(0xFF76DCA6);
+  static const red = neonRed;
+  static const orange = neonOrange;
+  static const blue = Color(0xFF9BC7FF);
+  static const pink = Color(0xFFFFA4CF);
+  static const teal = Color(0xFF6ED7CC);
 
-  // ────────────── 语义色 ──────────────
-  static const green = Color(0xFF00FF9D);
-  static const red = Color(0xFFFF2E63);
-  static const orange = Color(0xFFFF6B35);
-  static const blue = Color(0xFF4F8BFF);
-  static const pink = Color(0xFFFF5AAE);
-  static const teal = Color(0xFF14B8A6);
-
-  // ────────────── 渐变 ──────────────
-  // ────────────── 旧版兼容渐变 ──────────────
   static const metricGradient = LinearGradient(
-    colors: [Color(0xFF00F0FF), Color(0xFFB829FF)],
+    colors: [Color(0xFF8FEAF2), Color(0xFFB9B8FF)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const heroGradient = LinearGradient(
-    colors: [Color(0xFF00F0FF), Color(0xFFB829FF), Color(0xFF4F8BFF)],
+    colors: [Color(0xFF232B35), Color(0xFF11141B)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const cyanGradient = LinearGradient(
-    colors: [Color(0xFF00F0FF), Color(0xFF00C8D4)],
+    colors: [Color(0xFFB7F4F8), Color(0xFF81DDE8)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const successGradient = LinearGradient(
-    colors: [Color(0xFF00FF9D), Color(0xFF34D399)],
+    colors: [Color(0xFFC5EFA6), Color(0xFF76DCA6)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const dangerGradient = LinearGradient(
-    colors: [Color(0xFFFF2E63), Color(0xFFFF6B6B)],
+    colors: [Color(0xFFFF9AA7), Color(0xFFFF6578)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
   static const purpleGradient = LinearGradient(
-    colors: [Color(0xFFB829FF), Color(0xFF7C3AED)],
+    colors: [Color(0xFFD9D6FF), Color(0xFFAAA8F2)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
 
-  // ────────────── 阴影 ──────────────
+  static const glassGradient = LinearGradient(
+    colors: [Color(0x662D3440), Color(0x3311151D)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: const Color(0xFF000000).withOpacity(0.4),
-      blurRadius: 16,
-      offset: const Offset(0, 4),
+      color: const Color(0xFF000000).withOpacity(0.26),
+      blurRadius: 18,
+      offset: const Offset(0, 10),
     ),
   ];
 
   static List<BoxShadow> get elevationSm => [
     BoxShadow(
-      color: const Color(0xFF000000).withOpacity(0.2),
-      blurRadius: 8,
-      offset: const Offset(0, 2),
+      color: const Color(0xFF000000).withOpacity(0.18),
+      blurRadius: 10,
+      offset: const Offset(0, 5),
     ),
   ];
 
   static List<BoxShadow> get glowCyan => [
-    BoxShadow(color: cyan.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 0)),
+    BoxShadow(
+      color: cyan.withOpacity(0.16),
+      blurRadius: 18,
+      offset: const Offset(0, 0),
+    ),
   ];
 
   static List<BoxShadow> get glowPurple => [
-    BoxShadow(color: purple.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 0)),
+    BoxShadow(
+      color: purple.withOpacity(0.14),
+      blurRadius: 18,
+      offset: const Offset(0, 0),
+    ),
   ];
 
-  // ────────────── 向后兼容属性 ──────────────
-  static Color get bg => bgDeep;
   static Color get card => bgCard;
   static Color get cardMuted => bgCardMuted;
   static Color get surface => bgSurface;
   static Color get line => border;
-  static Color get selected => cyan.withOpacity(0.1);
+  static Color get selected => cyan.withOpacity(0.14);
   static Color get selectedText => cyan;
-
-  // ────────────── 旧版兼容 ──────────────
   static Color get primaryLight => cyanDim;
   static Color get accentLight => purpleDim;
+
+  static const radiusXs = 6.0;
   static const radiusSm = 8.0;
   static const radiusMd = 12.0;
   static const radiusLg = 16.0;
   static const radiusXl = 20.0;
 
-  // ────────────── 间距 ──────────────
   static const sp4 = 4.0;
   static const sp8 = 8.0;
   static const sp12 = 12.0;
@@ -147,8 +150,7 @@ class C {
   static const sp24 = 24.0;
   static const sp32 = 32.0;
 
-  // ────────────── 动效时长 ──────────────
   static const Duration fast = Duration(milliseconds: 150);
-  static const Duration normal = Duration(milliseconds: 250);
-  static const Duration slow = Duration(milliseconds: 400);
+  static const Duration normal = Duration(milliseconds: 220);
+  static const Duration slow = Duration(milliseconds: 320);
 }

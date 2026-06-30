@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import 'page_scaffold.dart';
 
-/// 标准卡片容器（微阴影 + 细边框）
 class AppCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
@@ -25,21 +25,18 @@ class AppCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: margin ?? const EdgeInsets.only(bottom: C.sp12),
-    padding: padding ?? const EdgeInsets.all(C.sp16),
-    decoration: BoxDecoration(
-      color: customGradient != null || gradient ? null : (bgColor ?? C.card),
-      gradient: customGradient ?? (gradient ? C.heroGradient : null),
-      borderRadius: BorderRadius.circular(radius),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: noShadow ? null : C.cardShadow,
+  Widget build(BuildContext context) => Padding(
+    padding: margin ?? const EdgeInsets.only(bottom: C.sp12),
+    child: GlassPanel(
+      padding: padding ?? const EdgeInsets.all(C.sp16),
+      radius: radius,
+      color: bgColor,
+      gradient: customGradient ?? (gradient ? C.glassGradient : null),
+      child: child,
     ),
-    child: child,
   );
 }
 
-/// 标准页面卡片（带左右 margin）
 class PageCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
@@ -53,65 +50,51 @@ class PageCard extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.symmetric(horizontal: C.sp16, vertical: 6),
-    padding: padding ?? const EdgeInsets.all(C.sp16),
-    decoration: BoxDecoration(
-      color: C.card,
-      borderRadius: BorderRadius.circular(C.radiusLg),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: noShadow ? null : C.cardShadow,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: C.sp12),
+    child: GlassPanel(
+      padding: padding ?? const EdgeInsets.all(C.sp16),
+      child: child,
     ),
-    child: child,
   );
 }
 
-/// 渐变英雄卡片（用于首页核心指标）
 class HeroCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
   final EdgeInsets? margin;
 
-  const HeroCard({
-    Key? key,
-    required this.child,
-    this.padding,
-    this.margin,
-  }) : super(key: key);
+  const HeroCard({Key? key, required this.child, this.padding, this.margin})
+    : super(key: key);
 
   @override
-  Widget build(BuildContext context) => Container(
-    margin: margin ?? const EdgeInsets.symmetric(horizontal: C.sp16, vertical: 6),
-    padding: padding ?? const EdgeInsets.all(C.sp20),
-    decoration: BoxDecoration(
-      gradient: C.heroGradient,
-      borderRadius: BorderRadius.circular(C.radiusXl),
-      boxShadow: [
-        BoxShadow(
-          color: C.primary.withOpacity(0.3),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
+  Widget build(BuildContext context) => Padding(
+    padding: margin ?? const EdgeInsets.only(bottom: C.sp12),
+    child: GlassPanel(
+      padding: padding ?? const EdgeInsets.all(C.sp20),
+      radius: C.radiusXl,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF2A313B), Color(0xFF10131A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderColor: Colors.white24,
+      child: child,
     ),
-    child: child,
   );
 }
 
-/// 兼容旧版 CardBox
 class CardBox extends StatelessWidget {
   final Widget child;
   const CardBox({Key? key, required this.child}) : super(key: key);
+
   @override
-  Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: C.card,
-      borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: C.elevationSm,
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: C.radiusMd,
+      child: child,
     ),
-    child: child,
   );
 }
