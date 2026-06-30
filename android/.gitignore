@@ -1,0 +1,12 @@
+# Gradle 构建缓存
+/.gradle
+/captures/
+/local.properties
+
+# 自动生成（构建时再生成）
+GeneratedPluginRegistrant.java
+
+# 签名密钥（个人项目保留以便换机器用同一签名；如需公开代码请改为不提交）
+# key.properties
+# **/*.keystore
+# **/*.jks
