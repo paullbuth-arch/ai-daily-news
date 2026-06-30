@@ -1,0 +1,8 @@
+# Copy this file to android/local.properties only if you need to configure paths manually.
+# The build script tools/build_apk.ps1 normally writes android/local.properties for you.
+#
+# Relative paths here are resolved from the android/ directory.
+
+sdk.dir=../../dev_env/android-sdk
+flutter.sdk=../../dev_env/flutter
+flutter.buildMode=release

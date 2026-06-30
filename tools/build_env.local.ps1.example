@@ -1,0 +1,10 @@
+# Copy this file to tools/build_env.local.ps1 when your local SDK paths do not
+# match the portable dev_env layout. The local file is ignored by Git.
+
+$RepoRootForLocalEnv = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$LocalDevEnv = Join-Path $RepoRootForLocalEnv "..\dev_env"
+$LocalFlutterSdk = Join-Path $LocalDevEnv "flutter"
+
+# Optional overrides when JDK or Android SDK are not under $LocalDevEnv.
+# $LocalJdk = Join-Path $LocalDevEnv "jdk-17.0.13+11"
+# $LocalAndroidSdk = Join-Path $LocalDevEnv "android-sdk"

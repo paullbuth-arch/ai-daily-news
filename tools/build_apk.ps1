@@ -9,6 +9,25 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$HasDevEnvParam = $PSBoundParameters.ContainsKey("DevEnv")
+$HasFlutterSdkParam = $PSBoundParameters.ContainsKey("FlutterSdk")
+
+$LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
+if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
+  $LocalDevEnv = ""
+  $LocalFlutterSdk = ""
+  $LocalJdk = ""
+  $LocalAndroidSdk = ""
+  . $LocalConfig
+
+  if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
+  if (-not $HasFlutterSdkParam -and $LocalFlutterSdk) { $FlutterSdk = $LocalFlutterSdk }
+  if ($LocalJdk) { $env:JAVA_HOME = $LocalJdk }
+  if ($LocalAndroidSdk) {
+    $env:ANDROID_HOME = $LocalAndroidSdk
+    $env:ANDROID_SDK_ROOT = $LocalAndroidSdk
+  }
+}
 
 function Resolve-FirstExistingDir {
   param([string[]]$Candidates)
@@ -17,6 +36,27 @@ function Resolve-FirstExistingDir {
       return (Resolve-Path -LiteralPath $item).Path
     }
   }
+  return $null
+}
+
+function Resolve-FlutterSdk {
+  param([string[]]$Candidates)
+
+  $resolved = Resolve-FirstExistingDir $Candidates
+  if ($resolved) { return $resolved }
+
+  $flutterCommand = Get-Command flutter.bat -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $flutterCommand) {
+    $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -First 1
+  }
+  if ($flutterCommand -and $flutterCommand.Source) {
+    $binDir = Split-Path -Parent $flutterCommand.Source
+    $rootDir = Split-Path -Parent $binDir
+    if (Test-Path -LiteralPath (Join-Path $rootDir "bin\flutter.bat")) {
+      return (Resolve-Path -LiteralPath $rootDir).Path
+    }
+  }
+
   return $null
 }
 
@@ -43,8 +83,7 @@ function To-PropertiesPath {
 if (-not $DevEnv) {
   $DevEnv = Resolve-FirstExistingDir @(
     (Join-Path $ProjectRoot "dev_env"),
-    (Join-Path $ProjectRoot "..\dev_env"),
-    "D:\V881\padtest\dev_env"
+    (Join-Path $ProjectRoot "..\dev_env")
   )
 } elseif (Test-Path -LiteralPath $DevEnv -PathType Container) {
   $DevEnv = (Resolve-Path -LiteralPath $DevEnv).Path
@@ -54,10 +93,9 @@ $DevEnvFlutter = ""
 if ($DevEnv) { $DevEnvFlutter = Join-Path $DevEnv "flutter" }
 
 if (-not $FlutterSdk) {
-  $FlutterSdk = Resolve-FirstExistingDir @(
+  $FlutterSdk = Resolve-FlutterSdk @(
     $DevEnvFlutter,
-    $env:FLUTTER_HOME,
-    "G:\flutter"
+    $env:FLUTTER_HOME
   )
 } elseif (Test-Path -LiteralPath $FlutterSdk -PathType Container) {
   $FlutterSdk = (Resolve-Path -LiteralPath $FlutterSdk).Path
@@ -107,8 +145,33 @@ Push-Location $ProjectRoot
 try {
   & $Flutter --version
 
-  if (-not $SkipPubGet) {
+  $PackageConfig = Join-Path $ProjectRoot ".dart_tool\package_config.json"
+  $ShouldPubGet = -not $SkipPubGet
+  if ($SkipPubGet) {
+    if (-not (Test-Path -LiteralPath $PackageConfig -PathType Leaf)) {
+      $ShouldPubGet = $true
+      Write-Host "Dependencies are not initialized yet; running flutter pub get once."
+    } else {
+      $packageConfigTime = (Get-Item -LiteralPath $PackageConfig).LastWriteTimeUtc
+      $dependencyFiles = @(
+        (Join-Path $ProjectRoot "pubspec.yaml"),
+        (Join-Path $ProjectRoot "pubspec.lock")
+      ) | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf }
+
+      foreach ($file in $dependencyFiles) {
+        if ((Get-Item -LiteralPath $file).LastWriteTimeUtc -gt $packageConfigTime) {
+          $ShouldPubGet = $true
+          Write-Host "Dependency files changed; running flutter pub get."
+          break
+        }
+      }
+    }
+  }
+
+  if ($ShouldPubGet) {
     & $Flutter pub get
+  } else {
+    Write-Host "Skipping flutter pub get."
   }
 
   if ($RunTests) {

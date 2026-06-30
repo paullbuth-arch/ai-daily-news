@@ -6,6 +6,25 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$HasDevEnvParam = $PSBoundParameters.ContainsKey("DevEnv")
+$HasFlutterSdkParam = $PSBoundParameters.ContainsKey("FlutterSdk")
+
+$LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
+if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
+  $LocalDevEnv = ""
+  $LocalFlutterSdk = ""
+  $LocalJdk = ""
+  $LocalAndroidSdk = ""
+  . $LocalConfig
+
+  if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
+  if (-not $HasFlutterSdkParam -and $LocalFlutterSdk) { $FlutterSdk = $LocalFlutterSdk }
+  if ($LocalJdk) { $env:JAVA_HOME = $LocalJdk }
+  if ($LocalAndroidSdk) {
+    $env:ANDROID_HOME = $LocalAndroidSdk
+    $env:ANDROID_SDK_ROOT = $LocalAndroidSdk
+  }
+}
 
 function Resolve-FirstExistingDir {
   param([string[]]$Candidates)
@@ -14,6 +33,27 @@ function Resolve-FirstExistingDir {
       return (Resolve-Path -LiteralPath $item).Path
     }
   }
+  return $null
+}
+
+function Resolve-FlutterSdk {
+  param([string[]]$Candidates)
+
+  $resolved = Resolve-FirstExistingDir $Candidates
+  if ($resolved) { return $resolved }
+
+  $flutterCommand = Get-Command flutter.bat -ErrorAction SilentlyContinue | Select-Object -First 1
+  if (-not $flutterCommand) {
+    $flutterCommand = Get-Command flutter -ErrorAction SilentlyContinue | Select-Object -First 1
+  }
+  if ($flutterCommand -and $flutterCommand.Source) {
+    $binDir = Split-Path -Parent $flutterCommand.Source
+    $rootDir = Split-Path -Parent $binDir
+    if (Test-Path -LiteralPath (Join-Path $rootDir "bin\flutter.bat")) {
+      return (Resolve-Path -LiteralPath $rootDir).Path
+    }
+  }
+
   return $null
 }
 
@@ -35,8 +75,7 @@ function Find-Jdk {
 if (-not $DevEnv) {
   $DevEnv = Resolve-FirstExistingDir @(
     (Join-Path $ProjectRoot "dev_env"),
-    (Join-Path $ProjectRoot "..\dev_env"),
-    "D:\V881\padtest\dev_env"
+    (Join-Path $ProjectRoot "..\dev_env")
   )
 } elseif (Test-Path -LiteralPath $DevEnv -PathType Container) {
   $DevEnv = (Resolve-Path -LiteralPath $DevEnv).Path
@@ -46,10 +85,9 @@ $DevEnvFlutter = ""
 if ($DevEnv) { $DevEnvFlutter = Join-Path $DevEnv "flutter" }
 
 if (-not $FlutterSdk) {
-  $FlutterSdk = Resolve-FirstExistingDir @(
+  $FlutterSdk = Resolve-FlutterSdk @(
     $DevEnvFlutter,
-    $env:FLUTTER_HOME,
-    "G:\flutter"
+    $env:FLUTTER_HOME
   )
 } elseif (Test-Path -LiteralPath $FlutterSdk -PathType Container) {
   $FlutterSdk = (Resolve-Path -LiteralPath $FlutterSdk).Path
@@ -79,7 +117,7 @@ $Checks | Format-Table Name, Ok, Required, Path -AutoSize
 $failed = $Checks | Where-Object { -not $_.Ok }
 if ($failed) {
   Write-Host ""
-  Write-Error "Build environment is incomplete. See docs/便携构建环境.md."
+  Write-Error "Build environment is incomplete. See docs/portable build environment guide or BUILD_APK.md."
 }
 
 Write-Host ""
