@@ -152,6 +152,7 @@ class _LoginPageState extends State<LoginPage> {
     padding: const EdgeInsets.all(22),
     radius: 28,
     color: const Color(0xEA0A0D14),
+    realtimeBlur: true,
     child: Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,6 +321,7 @@ class _BrandStage extends StatelessWidget {
           padding: const EdgeInsets.all(20),
           radius: 36,
           color: const Color(0xF006080D),
+          realtimeBlur: true,
           child: SizedBox(
             height: 520,
             child: Column(
@@ -342,7 +344,7 @@ class _BrandStage extends StatelessWidget {
                 ),
                 const Spacer(),
                 const Text(
-                  'iPad resale\ncockpit',
+                  '二手 iPad\n经营舱',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: C.t1,
@@ -365,7 +367,7 @@ class _BrandStage extends StatelessWidget {
                   children: const [
                     Expanded(
                       child: _StagePill(
-                        label: 'Scan',
+                        label: '收货',
                         color: C.cyan,
                         icon: Icons.qr_code_scanner_rounded,
                       ),
@@ -373,7 +375,7 @@ class _BrandStage extends StatelessWidget {
                     SizedBox(width: 10),
                     Expanded(
                       child: _StagePill(
-                        label: 'Profit',
+                        label: '利润',
                         color: C.purple,
                         icon: Icons.show_chart_rounded,
                       ),
@@ -388,17 +390,17 @@ class _BrandStage extends StatelessWidget {
       Positioned(
         left: -36,
         top: 78,
-        child: _FloatingBadge(color: C.mint, title: 'Stock', value: 'live'),
+        child: _FloatingBadge(color: C.mint, title: '库存', value: '实时'),
       ),
       Positioned(
         right: -26,
         top: 142,
-        child: _FloatingBadge(color: C.purple, title: 'Margin', value: 'clear'),
+        child: _FloatingBadge(color: C.purple, title: '毛利', value: '清晰'),
       ),
       Positioned(
         right: 34,
         bottom: 92,
-        child: _FloatingBadge(color: C.cyan, title: 'Orders', value: 'fast'),
+        child: _FloatingBadge(color: C.cyan, title: '订单', value: '快速'),
       ),
     ],
   );

@@ -13,7 +13,6 @@
 //     *_service.dart      ← 各服务层
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'theme/colors.dart';
 import 'storage.dart';
@@ -152,7 +151,10 @@ class _IpadBossAppState extends State<IpadBossApp> {
         fillColor: C.bgSurface.withOpacity(0.72),
         hintStyle: const TextStyle(color: C.t3, fontSize: 13),
         labelStyle: const TextStyle(color: C.t2, fontSize: 13),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: radius,
           borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
@@ -235,12 +237,27 @@ const List<Map<String, String>> iPadModels = [
 
 const List<String> iPadCapacities = ['64G', '128G', '256G', '512G', '1TB'];
 const List<String> iPadColors = [
-  '深空灰', '银色', '星光色', '粉色', '紫色', '蓝色', '玫瑰金', '金色', '绿色', '黄色',
+  '深空灰',
+  '银色',
+  '星光色',
+  '粉色',
+  '紫色',
+  '蓝色',
+  '玫瑰金',
+  '金色',
+  '绿色',
+  '黄色',
 ];
 const List<String> iPadNetworks = ['WiFi', 'WiFi+蜂窝'];
 const List<String> iPadConditions = ['全新', '99新', '95新', '9成新', '8成新', '7成新'];
 const List<String> PurchaseChannels = [
-  '华强北同行', '回收商A', '回收商B', '同行调货', '闲鱼回收', '线下收购', '海外代购',
+  '华强北同行',
+  '回收商A',
+  '回收商B',
+  '同行调货',
+  '闲鱼回收',
+  '线下收购',
+  '海外代购',
 ];
 
 // ═══════════════════════════════════════════════
@@ -258,60 +275,158 @@ Future<void> seedDemoData() async {
   final d4 = now.subtract(const Duration(days: 36));
   final d5 = now.subtract(const Duration(days: 1));
 
-  await gStorage.addDevice(Device(
-    id: 'demo1', serial: 'F9XNL3C0JCD6', model: 'iPad Pro 12.9 2021',
-    capacity: '256G', color: '深空灰', network: 'WiFi+蜂窝', condition: '95新',
-    batteryHealth: 92, cycleCount: 118, idLockClean: true,
-    purchaseCost: 395000, purchaseChannel: '华强北同行', purchaseDate: _fmt(d1),
-    sellPrice: 458000, status: 'listed', createdAt: _fmt(d1),
-  ));
-  await gStorage.addDevice(Device(
-    id: 'demo2', serial: 'F2XKL2P0JWD8', model: 'iPad Air 5',
-    capacity: '64G', color: '星光色', network: 'WiFi', condition: '9成新',
-    batteryHealth: 89, cycleCount: 156, idLockClean: true,
-    purchaseCost: 235000, purchaseChannel: '回收商A', purchaseDate: _fmt(d2),
-    sellPrice: 298000, status: 'listed', createdAt: _fmt(d2),
-  ));
-  await gStorage.addDevice(Device(
-    id: 'demo3', serial: 'F3WLM3Q0KRE2', model: 'iPad Pro 11 2022',
-    capacity: '128G', color: '银色', network: 'WiFi', condition: '99新',
-    batteryHealth: 98, cycleCount: 32, idLockClean: true,
-    purchaseCost: 470000, purchaseChannel: '同行调货', purchaseDate: _fmt(d3),
-    sellPrice: 568000, status: 'sold', sellChannel: '闲鱼', sellDate: _fmt(now),
-    repairCost: 8000, platformFee: 2000, logisticsCost: 3000,
-    buyerContact: '微信·李', createdAt: _fmt(d3),
-  ));
-  await gStorage.addDevice(Device(
-    id: 'demo4', serial: 'F4VNM4R0LSF3', model: 'iPad 10',
-    capacity: '64G', color: '银色', network: 'WiFi', condition: '8成新',
-    batteryHealth: 85, cycleCount: 210, idLockClean: true,
-    purchaseCost: 190000, purchaseChannel: '回收商B', purchaseDate: _fmt(d4),
-    sellPrice: 228000, status: 'listed', createdAt: _fmt(d4),
-  ));
-  await gStorage.addDevice(Device(
-    id: 'demo5', serial: 'F5VNM5R0LSF4', model: 'iPad mini 6',
-    capacity: '256G', color: '粉色', network: 'WiFi', condition: '95新',
-    batteryHealth: 96, cycleCount: 45, idLockClean: true,
-    purchaseCost: 300000, purchaseChannel: '回收商A', purchaseDate: _fmt(d5),
-    sellPrice: 368000, status: 'in_stock', createdAt: _fmt(d5),
-  ));
-  await gStorage.addOrder(Order(
-    id: 'o1', deviceId: 'demo3', deviceName: 'iPad Pro 11 2022 128G',
-    buyer: '微信·李', channel: '闲鱼', amount: 568000, profit: 85000,
-    status: 'shipped', createdAt: _fmt(now) + ' 14:32',
-  ));
-  await gStorage.addOrder(Order(
-    id: 'o2', deviceId: 'demo3', deviceName: 'iPad 9 64G',
-    buyer: '抖音·王', channel: '抖音', amount: 168000, profit: 28000,
-    status: 'pending', createdAt: _fmt(now) + ' 10:15',
-  ));
-  await gStorage.addAgent(Agent(
-    id: 'a1', name: '小陈', phone: '138****8888',
-    commissionRate: 0.08, totalGmv: 168000, createdAt: _fmt(d2),
-  ));
-  await gStorage.addRepairOrder(RepairOrder(
-    id: 'r1', deviceId: 'demo3', deviceName: 'iPad Pro 11 2022',
-    type: '换电池', cost: 8000, status: '完成', note: '原装电池',
-    createdAt: _fmt(d3),
-  ));
+  await gStorage.addDevice(
+    Device(
+      id: 'demo1',
+      serial: 'F9XNL3C0JCD6',
+      model: 'iPad Pro 12.9 2021',
+      capacity: '256G',
+      color: '深空灰',
+      network: 'WiFi+蜂窝',
+      condition: '95新',
+      batteryHealth: 92,
+      cycleCount: 118,
+      idLockClean: true,
+      purchaseCost: 395000,
+      purchaseChannel: '华强北同行',
+      purchaseDate: _fmt(d1),
+      sellPrice: 458000,
+      status: 'listed',
+      createdAt: _fmt(d1),
+    ),
+  );
+  await gStorage.addDevice(
+    Device(
+      id: 'demo2',
+      serial: 'F2XKL2P0JWD8',
+      model: 'iPad Air 5',
+      capacity: '64G',
+      color: '星光色',
+      network: 'WiFi',
+      condition: '9成新',
+      batteryHealth: 89,
+      cycleCount: 156,
+      idLockClean: true,
+      purchaseCost: 235000,
+      purchaseChannel: '回收商A',
+      purchaseDate: _fmt(d2),
+      sellPrice: 298000,
+      status: 'listed',
+      createdAt: _fmt(d2),
+    ),
+  );
+  await gStorage.addDevice(
+    Device(
+      id: 'demo3',
+      serial: 'F3WLM3Q0KRE2',
+      model: 'iPad Pro 11 2022',
+      capacity: '128G',
+      color: '银色',
+      network: 'WiFi',
+      condition: '99新',
+      batteryHealth: 98,
+      cycleCount: 32,
+      idLockClean: true,
+      purchaseCost: 470000,
+      purchaseChannel: '同行调货',
+      purchaseDate: _fmt(d3),
+      sellPrice: 568000,
+      status: 'sold',
+      sellChannel: '闲鱼',
+      sellDate: _fmt(now),
+      repairCost: 8000,
+      platformFee: 2000,
+      logisticsCost: 3000,
+      buyerContact: '微信·李',
+      createdAt: _fmt(d3),
+    ),
+  );
+  await gStorage.addDevice(
+    Device(
+      id: 'demo4',
+      serial: 'F4VNM4R0LSF3',
+      model: 'iPad 10',
+      capacity: '64G',
+      color: '银色',
+      network: 'WiFi',
+      condition: '8成新',
+      batteryHealth: 85,
+      cycleCount: 210,
+      idLockClean: true,
+      purchaseCost: 190000,
+      purchaseChannel: '回收商B',
+      purchaseDate: _fmt(d4),
+      sellPrice: 228000,
+      status: 'listed',
+      createdAt: _fmt(d4),
+    ),
+  );
+  await gStorage.addDevice(
+    Device(
+      id: 'demo5',
+      serial: 'F5VNM5R0LSF4',
+      model: 'iPad mini 6',
+      capacity: '256G',
+      color: '粉色',
+      network: 'WiFi',
+      condition: '95新',
+      batteryHealth: 96,
+      cycleCount: 45,
+      idLockClean: true,
+      purchaseCost: 300000,
+      purchaseChannel: '回收商A',
+      purchaseDate: _fmt(d5),
+      sellPrice: 368000,
+      status: 'in_stock',
+      createdAt: _fmt(d5),
+    ),
+  );
+  await gStorage.addOrder(
+    Order(
+      id: 'o1',
+      deviceId: 'demo3',
+      deviceName: 'iPad Pro 11 2022 128G',
+      buyer: '微信·李',
+      channel: '闲鱼',
+      amount: 568000,
+      profit: 85000,
+      status: 'shipped',
+      createdAt: _fmt(now) + ' 14:32',
+    ),
+  );
+  await gStorage.addOrder(
+    Order(
+      id: 'o2',
+      deviceId: 'demo3',
+      deviceName: 'iPad 9 64G',
+      buyer: '抖音·王',
+      channel: '抖音',
+      amount: 168000,
+      profit: 28000,
+      status: 'pending',
+      createdAt: _fmt(now) + ' 10:15',
+    ),
+  );
+  await gStorage.addAgent(
+    Agent(
+      id: 'a1',
+      name: '小陈',
+      phone: '138****8888',
+      commissionRate: 0.08,
+      totalGmv: 168000,
+      createdAt: _fmt(d2),
+    ),
+  );
+  await gStorage.addRepairOrder(
+    RepairOrder(
+      id: 'r1',
+      deviceId: 'demo3',
+      deviceName: 'iPad Pro 11 2022',
+      type: '换电池',
+      cost: 8000,
+      status: '完成',
+      note: '原装电池',
+      createdAt: _fmt(d3),
+    ),
+  );
 }

@@ -34,13 +34,13 @@ class _ReportPageState extends State<ReportPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: C.bg,
+      backgroundColor: C.bgDeep,
       appBar: AppBar(
         title: const Text(
           '统计报表',
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        backgroundColor: C.card,
+        backgroundColor: C.bgCard,
         elevation: 0.5,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, size: 18),
@@ -48,8 +48,8 @@ class _ReportPageState extends State<ReportPage>
         ),
         bottom: TabBar(
           controller: _tabCtrl,
-          indicatorColor: C.brand2,
-          labelColor: C.brand2,
+          indicatorColor: C.t3,
+          labelColor: C.t3,
           unselectedLabelColor: C.t2,
           labelStyle: const TextStyle(
             fontSize: 12,
@@ -107,7 +107,7 @@ class _OpsReport extends StatelessWidget {
               '今日订单',
               '${s.orderCount}',
               '昨日$yesterdayOrders',
-              C.brand2,
+              C.t3,
             ),
             _kpiItem(
               '平均单台利',
@@ -149,7 +149,7 @@ class _OpsReport extends StatelessWidget {
         const Text(
           '数据说明：GMV为成交总额，毛利已扣除售后费用、佣金、物流等成本',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 10, color: Color(0xFF888888)),
+          style: TextStyle(fontSize: 10, color: C.t3),
         ),
         const SizedBox(height: 40),
       ],
@@ -187,7 +187,7 @@ class _StockReport extends StatelessWidget {
               '在售台数',
               '${inStock.length}',
               '资金${yuan(totalCapital)}',
-              C.brand2,
+              C.t3,
             ),
             _kpiItem(
               '滞销',
@@ -244,14 +244,14 @@ class _StockReport extends StatelessWidget {
                     borderRadius: BorderRadius.circular(3),
                     child: LinearProgressIndicator(
                       value: pct,
-                      backgroundColor: C.bg,
+                      backgroundColor: C.bgDeep,
                       valueColor: AlwaysStoppedAnimation(
                         e.key.contains('30')
                             ? C.red
                             : (e.key.contains('16')
                                 ? C.orange
                                 : (e.key.contains('8')
-                                    ? C.brand2
+                                    ? C.t3
                                     : C.green)),
                       ),
                       minHeight: 6,
@@ -283,7 +283,7 @@ class _StockReport extends StatelessWidget {
                             '${e.key + 1}',
                             style: TextStyle(
                               fontSize: 11,
-                              color: e.key < 3 ? C.brand2 : C.t3,
+                              color: e.key < 3 ? C.t3 : C.t3,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -303,7 +303,7 @@ class _StockReport extends StatelessWidget {
                           '${e.value.value}台',
                           style: TextStyle(
                             fontSize: 12,
-                            color: C.brand2,
+                            color: C.t3,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -398,7 +398,7 @@ class _QCReport extends StatelessWidget {
       children: [
         _reportSection('🔍 质检总览', [
           _kpiGrid([
-            _kpiItem('总质检', '$total', '通过${qcStats['passed']}', C.brand2),
+            _kpiItem('总质检', '$total', '通过${qcStats['passed']}', C.t3),
             _kpiItem(
               '通过率',
               '${((qcStats['passRate'] as double) * 100).toStringAsFixed(0)}%',
@@ -481,7 +481,7 @@ class _QCReport extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
                         value: pct,
-                        backgroundColor: C.bg,
+                        backgroundColor: C.bgDeep,
                         valueColor: AlwaysStoppedAnimation(
                           g == 'A'
                               ? C.green
@@ -575,7 +575,7 @@ class _RepairReport extends StatelessWidget {
               '平均成本',
               yuan(stats['avgCost'] as int),
               total > 0 ? '${(total / repairs.length).round()}台' : '',
-              C.brand2,
+              C.t3,
             ),
             _kpiItem(
               '完成',
@@ -619,7 +619,7 @@ class _RepairReport extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: C.brand2,
+                            color: C.t3,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -634,9 +634,9 @@ class _RepairReport extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
                         value: pct,
-                        backgroundColor: C.bg,
+                        backgroundColor: C.bgDeep,
                         valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFFFF9500),
+                          C.neonOrange,
                         ),
                         minHeight: 6,
                       ),
@@ -656,7 +656,7 @@ class _RepairReport extends StatelessWidget {
                   e.key == '完成'
                       ? C.green
                       : e.key == '进行中'
-                      ? C.brand2
+                      ? C.t3
                       : C.orange;
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
@@ -722,7 +722,7 @@ class _SalesReport extends StatelessWidget {
               '累计售出',
               '$sold 台',
               '营收${yuan(totalRevenue)}',
-              C.brand2,
+              C.t3,
             ),
             _kpiItem(
               '累计毛利',
@@ -770,7 +770,7 @@ class _SalesReport extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: C.brand2,
+                            color: C.t3,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -789,9 +789,9 @@ class _SalesReport extends StatelessWidget {
                             width: MediaQuery.of(context).size.width - 130,
                             child: LinearProgressIndicator(
                               value: pct,
-                              backgroundColor: C.bg,
+                              backgroundColor: C.bgDeep,
                               valueColor: const AlwaysStoppedAnimation(
-                                Color(0xFF34C759),
+                                C.neonGreen,
                               ),
                               minHeight: 6,
                             ),
@@ -838,7 +838,7 @@ class _SalesReport extends StatelessWidget {
                         '${e.key + 1}',
                         style: TextStyle(
                           fontSize: 11,
-                          color: e.key < 3 ? C.brand2 : C.t3,
+                          color: e.key < 3 ? C.t3 : C.t3,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -902,7 +902,7 @@ class _PurchaseReport extends StatelessWidget {
               '采购单',
               '${pos.length}',
               '总额${yuan(totalCost)}',
-              C.brand2,
+              C.t3,
             ),
             _kpiItem(
               '退货',
@@ -958,7 +958,7 @@ class _PurchaseReport extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
-                            color: C.brand2,
+                            color: C.t3,
                           ),
                         ),
                       ],
@@ -968,9 +968,9 @@ class _PurchaseReport extends StatelessWidget {
                       borderRadius: BorderRadius.circular(3),
                       child: LinearProgressIndicator(
                         value: pct,
-                        backgroundColor: C.bg,
+                        backgroundColor: C.bgDeep,
                         valueColor: const AlwaysStoppedAnimation(
-                          Color(0xFFAF52DE),
+                          C.purple,
                         ),
                         minHeight: 6,
                       ),
@@ -1026,7 +1026,7 @@ class _PurchaseReport extends StatelessWidget {
                         '${e.key + 1}',
                         style: TextStyle(
                           fontSize: 11,
-                          color: e.key < 3 ? const Color(0xFFAF52DE) : C.t3,
+                          color: e.key < 3 ? C.purple : C.t3,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1074,9 +1074,9 @@ class _PurchaseReport extends StatelessWidget {
 Widget _reportSection(String title, List<Widget> children) => Container(
   padding: const EdgeInsets.all(14),
   decoration: BoxDecoration(
-    color: C.card,
+    color: C.bgCard,
     borderRadius: BorderRadius.circular(14),
-    border: Border.all(color: C.line),
+    border: Border.all(color: C.border),
   ),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1146,7 +1146,7 @@ Widget _kpiRow(String label, String value, String sub) => Padding(
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w800,
-          color: C.brand2,
+          color: C.t3,
         ),
       ),
       const SizedBox(width: 10),
@@ -1177,8 +1177,8 @@ Widget _trendRow(String month, int gmv, int profit, int count) {
                 borderRadius: BorderRadius.circular(3),
                 child: LinearProgressIndicator(
                   value: maxVal > 0 ? (gmv / maxVal).clamp(0.0, 1.0) : 0.0,
-                  backgroundColor: C.bg,
-                  valueColor: AlwaysStoppedAnimation(C.brand2),
+                  backgroundColor: C.bgDeep,
+                  valueColor: AlwaysStoppedAnimation(C.t3),
                   minHeight: 5,
                 ),
               ),

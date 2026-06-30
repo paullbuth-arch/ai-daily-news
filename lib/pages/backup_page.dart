@@ -62,7 +62,7 @@ class _BackupPageState extends State<BackupPage> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _stat('${devices.length}', '设备', C.brand2)),
+                    Expanded(child: _stat('${devices.length}', '设备', C.t3)),
                     const SizedBox(width: 8),
                     Expanded(child: _stat('${orders.length}', '订单', C.green)),
                     const SizedBox(width: 8),
@@ -85,7 +85,7 @@ class _BackupPageState extends State<BackupPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             )
           else ...[
@@ -143,9 +143,9 @@ class _BackupPageState extends State<BackupPage> {
   Widget _stat(String n, String l, Color c) => Container(
     padding: EdgeInsets.symmetric(vertical: 10),
     decoration: BoxDecoration(
-      color: C.bg,
+      color: C.bgDeep,
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: C.line),
+      border: Border.all(color: C.border),
     ),
     child: Column(
       children: [
@@ -202,7 +202,7 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             title: Text('确认导入', style: TextStyle(color: C.t1, fontSize: 16)),
             content: Text(
               '导入将覆盖当前所有数据。系统会自动备份当前数据为 .bak 文件，可随时恢复。\n\n确定要导入吗？',
@@ -215,7 +215,7 @@ class _BackupPageState extends State<BackupPage> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text('确定导入', style: TextStyle(color: C.brand2)),
+                child: Text('确定导入', style: TextStyle(color: C.t3)),
               ),
             ],
           ),
@@ -258,7 +258,7 @@ class _BackupPageState extends State<BackupPage> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             title: Text('恢复备份', style: TextStyle(color: C.t1, fontSize: 16)),
             content: Text(
               '将把数据恢复到导入前的状态。当前数据会被覆盖。',

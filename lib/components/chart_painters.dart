@@ -12,7 +12,7 @@ class LineChartPainter extends CustomPainter {
   LineChartPainter(
     this.data,
     this.labels, {
-    this.lineColor = C.primary,
+    this.lineColor = C.cyan,
     this.showArea = true,
   });
 
@@ -31,7 +31,7 @@ class LineChartPainter extends CustomPainter {
 
     // Grid lines
     final gridPaint = Paint()
-      ..color = C.line.withOpacity(0.5)
+      ..color = C.border.withOpacity(0.5)
       ..strokeWidth = 0.5;
     for (int i = 0; i <= 3; i++) {
       final y = padTop + chartH * i / 3;
@@ -83,7 +83,7 @@ class LineChartPainter extends CustomPainter {
 
     // Data points
     final dotPaint = Paint()..color = lineColor;
-    final dotBg = Paint()..color = C.card;
+    final dotBg = Paint()..color = C.bgCard;
     for (final p in points) {
       canvas.drawCircle(p, 5, dotBg);
       canvas.drawCircle(p, 3, dotPaint);

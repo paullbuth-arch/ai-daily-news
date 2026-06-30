@@ -131,7 +131,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: C.brand2,
+                    color: C.t3,
                   ),
                 ),
               ),
@@ -202,7 +202,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     child: Text(
                       '登录',
-                      style: TextStyle(fontSize: 11, color: C.brand2),
+                      style: TextStyle(fontSize: 11, color: C.t3),
                     ),
                   ),
               ],
@@ -219,7 +219,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: C.brand2,
+                        color: C.t3,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -247,8 +247,8 @@ class _SettingsPageState extends State<SettingsPage> {
                 children: [
                   LinearProgressIndicator(
                     value: _updateProgress,
-                    backgroundColor: C.line,
-                    valueColor: AlwaysStoppedAnimation<Color>(C.brand2),
+                    backgroundColor: C.border,
+                    valueColor: AlwaysStoppedAnimation<Color>(C.t3),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -265,7 +265,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 context: context,
                 builder:
                     (ctx) => AlertDialog(
-                      backgroundColor: C.card,
+                      backgroundColor: C.bgCard,
                       title: const Text(
                         '确认清空',
                         style: TextStyle(color: C.red, fontSize: 16),
@@ -345,18 +345,18 @@ class _SettingsPageState extends State<SettingsPage> {
         decoration: BoxDecoration(
           color: on ? C.selected : Colors.transparent,
           borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: on ? C.brand.withOpacity(0.3) : C.line),
+          border: Border.all(color: on ? C.cyan.withOpacity(0.3) : C.border),
         ),
         child: Row(
           children: [
-            Icon(icon, size: 18, color: on ? C.brand : C.t2),
+            Icon(icon, size: 18, color: on ? C.cyan : C.t2),
             SizedBox(width: 10),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: on ? C.brand : C.t1,
+                color: on ? C.cyan : C.t1,
               ),
             ),
             Spacer(),
@@ -365,7 +365,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: C.brand,
+                  color: C.cyan,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -397,7 +397,7 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             title: Text(
               '发现新版本 v${info.version}',
               style: TextStyle(color: C.t1, fontSize: 16),
@@ -435,7 +435,7 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text('立即更新', style: TextStyle(color: C.brand2)),
+                child: Text('立即更新', style: TextStyle(color: C.t3)),
               ),
             ],
           ),
@@ -520,7 +520,7 @@ class _SettingsPageState extends State<SettingsPage> {
         context: context,
         builder:
             (ctx) => AlertDialog(
-              backgroundColor: C.card,
+              backgroundColor: C.bgCard,
               title: Text(
                 '云端已有数据',
                 style: TextStyle(color: C.t1, fontSize: 16),
@@ -536,7 +536,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, 'download'),
-                  child: Text('下载覆盖本地', style: TextStyle(color: C.brand2)),
+                  child: Text('下载覆盖本地', style: TextStyle(color: C.t3)),
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, 'upload'),
@@ -592,7 +592,7 @@ class _SettingsPageState extends State<SettingsPage> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             title: Text('退出登录', style: TextStyle(color: C.t1, fontSize: 16)),
             content: Text(
               '退出后数据将保留在本地，登录后可恢复同步。确定退出？',

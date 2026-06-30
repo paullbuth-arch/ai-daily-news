@@ -119,15 +119,15 @@ class _AiConfigPageState extends State<AiConfigPage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: C.bg,
+                    color: C.bgDeep,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.line),
+                    border: Border.all(color: C.border),
                   ),
                   child: DropdownButton<int>(
                     value: _providerIndex,
                     isExpanded: true,
                     underline: const SizedBox(),
-                    dropdownColor: C.card,
+                    dropdownColor: C.bgCard,
                     style: TextStyle(color: C.t1, fontSize: 14),
                     items: List.generate(
                       _providers.length,
@@ -163,14 +163,14 @@ class _AiConfigPageState extends State<AiConfigPage> {
                     hintText: '输入你的 API 密钥',
                     hintStyle: TextStyle(color: C.t3, fontSize: 12),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.brand2),
+                      borderSide: BorderSide(color: C.t3),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -196,7 +196,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
                         onTap: _doFetchModels,
                         child: Text(
                           '刷新模型列表',
-                          style: TextStyle(fontSize: 10, color: C.brand2),
+                          style: TextStyle(fontSize: 10, color: C.t3),
                         ),
                       ),
                   ],
@@ -216,7 +216,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: C.brand2,
+                        color: C.t3,
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -263,12 +263,12 @@ class _AiConfigPageState extends State<AiConfigPage> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: C.brand2.withOpacity(0.2),
+                        color: C.t3.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
                         '留空=自动选最佳',
-                        style: TextStyle(fontSize: 9, color: C.brand2),
+                        style: TextStyle(fontSize: 9, color: C.t3),
                       ),
                     ),
                   ],
@@ -288,14 +288,14 @@ class _AiConfigPageState extends State<AiConfigPage> {
                     hintText: '留空自动选择',
                     hintStyle: TextStyle(color: C.t3, fontSize: 12),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.brand2),
+                      borderSide: BorderSide(color: C.t3),
                     ),
                   ),
                 ),
@@ -396,7 +396,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             )
           else
@@ -405,8 +405,8 @@ class _AiConfigPageState extends State<AiConfigPage> {
               child: OutlinedButton(
                 onPressed: _testConnection,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: C.brand2,
-                  side: const BorderSide(color: C.brand2),
+                  foregroundColor: C.t3,
+                  side: const BorderSide(color: C.t3),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
@@ -423,7 +423,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             )
           else

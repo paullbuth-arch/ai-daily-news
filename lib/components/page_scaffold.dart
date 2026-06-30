@@ -6,14 +6,18 @@ class AppBackdrop extends StatelessWidget {
   const AppBackdrop({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _BackdropPainter(),
-    child: Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF46484F), Color(0xFF2C3035), Color(0xFF1F2228)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: CustomPaint(
+      painter: _BackdropPainter(),
+      isComplex: true,
+      willChange: false,
+      child: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF46484F), Color(0xFF2C3035), Color(0xFF1F2228)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
         ),
       ),
     ),
@@ -84,6 +88,7 @@ class GlassPanel extends StatelessWidget {
   final double radius;
   final Color? borderColor;
   final VoidCallback? onTap;
+  final bool realtimeBlur;
 
   const GlassPanel({
     Key? key,
@@ -95,32 +100,66 @@ class GlassPanel extends StatelessWidget {
     this.radius = C.radiusLg,
     this.borderColor,
     this.onTap,
+    this.realtimeBlur = false,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final panel = ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-        filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-        child: Container(
-          margin: margin,
-          padding: padding,
-          decoration: BoxDecoration(
-            color:
-                gradient == null ? (color ?? C.bgCard.withOpacity(0.82)) : null,
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(radius),
-            border: Border.all(
-              color: borderColor ?? Colors.white.withOpacity(0.08),
-              width: 1,
+    final content = Container(
+      margin: margin,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        boxShadow: C.cardShadow,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(radius),
+        child: Stack(
+          children: [
+            if (realtimeBlur)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color:
+                      gradient == null
+                          ? (color ?? C.bgCard.withOpacity(0.82))
+                          : null,
+                  gradient:
+                      gradient ??
+                      LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.075),
+                          Colors.white.withOpacity(0.030),
+                          Colors.black.withOpacity(0.10),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                  borderRadius: BorderRadius.circular(radius),
+                ),
+              ),
             ),
-            boxShadow: C.cardShadow,
-          ),
-          child: child,
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _GlassSkinPainter(
+                  radius: radius,
+                  borderColor: borderColor ?? Colors.white.withOpacity(0.09),
+                ),
+                isComplex: false,
+                willChange: false,
+              ),
+            ),
+            Padding(padding: padding, child: child),
+          ],
         ),
       ),
     );
+    final panel = RepaintBoundary(child: content);
     if (onTap == null) return panel;
     return Material(
       color: Colors.transparent,
@@ -131,6 +170,50 @@ class GlassPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GlassSkinPainter extends CustomPainter {
+  final double radius;
+  final Color borderColor;
+
+  const _GlassSkinPainter({required this.radius, required this.borderColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
+
+    final borderPaint =
+        Paint()
+          ..color = borderColor
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    canvas.drawRRect(rrect.deflate(0.5), borderPaint);
+
+    final topHighlight =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [Colors.white.withOpacity(0.16), Colors.transparent],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.42));
+    canvas.drawRRect(rrect, topHighlight);
+
+    final edgeLight =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [Colors.white.withOpacity(0.13), Colors.transparent],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2;
+    canvas.drawRRect(rrect.deflate(1.0), edgeLight);
+  }
+
+  @override
+  bool shouldRepaint(covariant _GlassSkinPainter oldDelegate) =>
+      oldDelegate.radius != radius || oldDelegate.borderColor != borderColor;
 }
 
 class RoundIconButton extends StatelessWidget {
@@ -169,6 +252,36 @@ class RoundIconButton extends StatelessWidget {
   );
 }
 
+class AppLayout {
+  static const wideBreakpoint = 860.0;
+
+  static bool hasSideDock(BuildContext context) =>
+      MediaQuery.of(context).size.width >= wideBreakpoint;
+
+  static double pageHorizontal(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    if (width >= 720) return 20;
+    if (width <= 380) return 14;
+    return 16;
+  }
+
+  static double titleSize(BuildContext context) =>
+      MediaQuery.of(context).size.width <= 390 ? 23 : 25;
+
+  static double scrollBottomPadding(BuildContext context) =>
+      hasSideDock(context) ? 30 : 120;
+
+  static EdgeInsets pagePadding(BuildContext context) {
+    final horizontal = pageHorizontal(context);
+    return EdgeInsets.fromLTRB(
+      horizontal,
+      12,
+      horizontal,
+      scrollBottomPadding(context),
+    );
+  }
+}
+
 class PageScaffold extends StatelessWidget {
   final Widget child;
   final Widget? title;
@@ -186,42 +299,46 @@ class PageScaffold extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => Stack(
-    children: [
-      const AppBackdrop(),
-      SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-          children: [
-            if (title != null || action != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (title != null) title!,
-                          if (subtitle != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 5),
-                              child: subtitle!,
-                            ),
-                        ],
+  Widget build(BuildContext context) {
+    final padding = AppLayout.pagePadding(context);
+    return Stack(
+      children: [
+        const AppBackdrop(),
+        SafeArea(
+          child: ListView(
+            padding: padding,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            children: [
+              if (title != null || action != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (title != null) title!,
+                            if (subtitle != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 5),
+                                child: subtitle!,
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    if (action != null) action!,
-                  ],
+                      if (action != null) action!,
+                    ],
+                  ),
                 ),
-              ),
-            child,
-          ],
+              child,
+            ],
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 Widget appScaffold(

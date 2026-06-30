@@ -3,11 +3,9 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
 import 'sell_page.dart';
-import 'detail_page.dart';
 
 // ====== 滞销预警列表页 ======
 class StagnantListPage extends StatefulWidget {
@@ -24,43 +22,36 @@ class _StagnantListPageState extends State<StagnantListPage> {
     final ctrl = TextEditingController(
       text: d.sellPrice > 0 ? (d.sellPrice / 100).toStringAsFixed(0) : '',
     );
-    final price = await showDialog<int>(
+    final price = await showAppFormDialog<int>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.card,
-            title: Text('降价', style: TextStyle(color: C.t1, fontSize: 16)),
-            content: TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              style: TextStyle(color: C.t1),
-              decoration: InputDecoration(
-                labelText: '新售价(元)',
-                labelStyle: TextStyle(color: C.t2),
-                filled: true,
-                fillColor: C.bg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: C.line),
+      title: '滞销降价',
+      subtitle: '${d.model} ${d.capacity} · 已在库${d.stockDays}天',
+      maxHeightFactor: 0.52,
+      child: Builder(
+        builder:
+            (sheetContext) => Column(
+              children: [
+                AppFormField(
+                  controller: ctrl,
+                  label: '新售价(元)',
+                  icon: Icons.trending_down_rounded,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
                 ),
-              ),
+                const SizedBox(height: 18),
+                AppSheetActions(
+                  primaryLabel: '确定',
+                  primaryColor: C.orange,
+                  onPrimary: () {
+                    final v = (double.tryParse(ctrl.text) ?? 0) * 100;
+                    Navigator.pop(sheetContext, v.toInt());
+                  },
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('取消', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () {
-                  final v = (double.tryParse(ctrl.text) ?? 0) * 100;
-                  Navigator.pop(ctx, v.toInt());
-                },
-                child: Text('确定', style: TextStyle(color: C.brand2)),
-              ),
-            ],
-          ),
+      ),
     );
+    ctrl.dispose();
     if (price != null && price > 0) {
       d.sellPrice = price;
       await gStorage.updateDevice(d);
@@ -100,7 +91,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                 margin: EdgeInsets.only(bottom: 10),
                 padding: EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: C.card,
+                  color: C.bgCard,
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: C.red.withOpacity(0.3)),
                 ),
@@ -113,7 +104,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                           width: 56,
                           height: 56,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF2A3550),
+                            color: C.bgCardMuted,
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child:
@@ -130,7 +121,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                                   : const Center(
                                     child: Icon(
                                       Icons.tablet_mac_rounded,
-                                      color: Colors.white70,
+                                      color: C.t2,
                                       size: 22,
                                     ),
                                   ),
@@ -160,7 +151,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
-                                      color: C.brand2,
+                                      color: C.t3,
                                     ),
                                   ),
                                   SizedBox(width: 8),
@@ -256,7 +247,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                               });
                             },
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: C.brand,
+                              backgroundColor: C.cyan,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(

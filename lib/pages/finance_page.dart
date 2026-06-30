@@ -41,7 +41,7 @@ class _FinancePageState extends State<FinancePage> {
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [C.green, C.brand2]),
+              gradient: LinearGradient(colors: [C.green, C.t3]),
               borderRadius: BorderRadius.circular(18),
             ),
             child: Column(
@@ -196,9 +196,9 @@ class _FinancePageState extends State<FinancePage> {
                       child: Container(
                         padding: EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: C.bg,
+                          color: C.bgDeep,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: C.line),
+                          border: Border.all(color: C.border),
                         ),
                         child: Row(
                           children: [

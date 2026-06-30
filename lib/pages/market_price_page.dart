@@ -196,15 +196,15 @@ class _MarketPricePageState extends State<MarketPricePage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: C.bg,
+                    color: C.bgDeep,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.line),
+                    border: Border.all(color: C.border),
                   ),
                   child: DropdownButton<String>(
                     value: _selectedModel,
                     isExpanded: true,
                     underline: const SizedBox(),
-                    dropdownColor: C.card,
+                    dropdownColor: C.bgCard,
                     hint: Text(
                       '选择型号',
                       style: TextStyle(color: C.t3, fontSize: 14),
@@ -237,10 +237,10 @@ class _MarketPricePageState extends State<MarketPricePage> {
                           labelText: '批发价(元)',
                           labelStyle: TextStyle(color: C.t2, fontSize: 12),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -251,7 +251,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
                       child: ElevatedButton(
                         onPressed: _savePrice,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: C.brand,
+                          backgroundColor: C.cyan,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           shape: RoundedRectangleBorder(
@@ -296,7 +296,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: C.brand2,
+                          color: C.t3,
                         ),
                       ),
                   ],
@@ -314,8 +314,8 @@ class _MarketPricePageState extends State<MarketPricePage> {
                         onPressed: _importing ? null : _importFromFile,
                         icon: const Icon(Icons.file_upload_outlined, size: 18),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: C.brand2,
-                          side: const BorderSide(color: C.brand2),
+                          foregroundColor: C.t3,
+                          side: const BorderSide(color: C.t3),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -362,14 +362,14 @@ class _MarketPricePageState extends State<MarketPricePage> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: C.brand.withOpacity(0.15),
+                              color: C.cyan.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               model,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: C.brand,
+                                color: C.cyan,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),

@@ -114,7 +114,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
                             value: total > 0 ? e.value / total : 0,
-                            backgroundColor: C.bg,
+                            backgroundColor: C.bgDeep,
                             valueColor: AlwaysStoppedAnimation(
                               e.key.contains('30')
                                   ? C.red
@@ -167,7 +167,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                               '${e.key + 1}',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: e.key < 3 ? C.brand2 : C.t3,
+                                color: e.key < 3 ? C.t3 : C.t3,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -403,9 +403,9 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   Widget _kpi(String label, String value, String sub, Color color) => Container(
     padding: EdgeInsets.all(13),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(13),
-      border: Border.all(color: C.line),
+      border: Border.all(color: C.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -72,13 +72,26 @@ Future<bool> confirmAction(
         (ctx) => AlertDialog(
           backgroundColor: C.card,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(C.radiusLg),
+            borderRadius: BorderRadius.circular(24),
+            side: BorderSide(color: Colors.white.withOpacity(0.12)),
           ),
           title: Text(
             title,
-            style: TextStyle(color: C.t1, fontSize: 16, fontWeight: FontWeight.w700),
+            style: TextStyle(
+              color: C.t1,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
           ),
-          content: Text(message, style: TextStyle(color: C.t2, fontSize: 13)),
+          content: Text(
+            message,
+            style: TextStyle(
+              color: C.t2,
+              fontSize: 13,
+              height: 1.45,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -86,10 +99,11 @@ Future<bool> confirmAction(
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(
-                foregroundColor: confirmColor,
+              style: TextButton.styleFrom(foregroundColor: confirmColor),
+              child: Text(
+                confirmText,
+                style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              child: Text(confirmText, style: const TextStyle(fontWeight: FontWeight.w700)),
             ),
           ],
         ),
@@ -131,7 +145,10 @@ Map<String, dynamic> snapshotLocalOnlySettings(dynamic storage) {
   return local;
 }
 
-Future<void> restoreLocalOnlySettings(dynamic storage, Map<String, dynamic> localSettings) async {
+Future<void> restoreLocalOnlySettings(
+  dynamic storage,
+  Map<String, dynamic> localSettings,
+) async {
   final settings = Map<String, dynamic>.from(storage.getSettings());
   for (final key in localOnlySettingKeys) {
     if (localSettings.containsKey(key)) {

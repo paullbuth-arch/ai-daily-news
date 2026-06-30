@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>机掌柜 - 库存管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0A0E14',
+                        primary: '#4A90E2',
+                        accent: '#7C5CFF',
+                        success: '#00E5A0',
+                        warning: '#FF9F43',
+                        danger: '#FF5E7A',
+                        gold: '#FFD166',
+                        t1: '#E8EDF5',
+                        t2: '#8A9BB5',
+                        t3: '#4A5A70',
+                        border: '#1E2A3A',
+                    },
+                    fontFamily: {
+                        sans: ["-apple-system", "'SF Pro Display'", "'PingFang SC'", "sans-serif"],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0A0E14;
+            font-family: -apple-system, 'SF Pro Display', 'PingFang SC', sans-serif;
+            color: #E8EDF5;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .glass-card {
+            background: rgba(13, 17, 23, 0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid #1E2A3A;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+        .blue-gradient {
+            background: linear-gradient(135deg, #4A90E2, #60A5FA);
+        }
+        .hero-gradient {
+            background: linear-gradient(135deg, #4A90E2, #7C5CFF, #4A90E2);
+        }
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.3);
+        }
+        .glow-blue-subtle {
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.12);
+        }
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(124, 92, 255, 0.12);
+        }
+        .search-glow:focus-within {
+            box-shadow: 0 0 20px rgba(74, 144, 226, 0.25);
+        }
+        .chip-active {
+            background: rgba(74, 144, 226, 0.08);
+            border: 1px solid rgba(74, 144, 226, 0.4);
+        }
+        .chip-inactive {
+            background: rgba(30, 42, 58, 0.5);
+            border: 1px solid #1E2A3A;
+        }
+        .filter-scroll::-webkit-scrollbar { display: none; }
+        .filter-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .device-img-placeholder {
+            background: linear-gradient(135deg, #1a2030 0%, #252d3d 100%);
+        }
+        .status-chip {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+        .device-card:hover {
+            background: rgba(20, 27, 37, 0.85);
+            transform: translateY(-1px);
+            transition: all 0.2s ease;
+        }
+        .scan-btn:hover {
+            transform: scale(1.05);
+            transition: transform 0.2s ease;
+        }
+        .scan-btn:active {
+            transform: scale(0.95);
+        }
+        .empty-state {
+            display: none;
+        }
+        .empty-state.show {
+            display: flex;
+        }
+        .device-list.hide {
+            display: none;
+        }
+    </style>
+</head>
+<body class="bg-bg">
+    <!-- App Container (375px iPhone frame) -->
+    <div class="max-w-[375px] mx-auto min-h-screen relative pb-20">
+        <!-- Header -->
+        <div class="px-4 pt-12 pb-3">
+            <div class="flex items-center justify-between">
+                <h1 class="text-[22px] font-bold tracking-tight">库存管理</h1>
+                <span class="blue-gradient text-white text-xs font-semibold px-3 py-1 rounded-full">156台</span>
+            </div>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="px-4 mb-3">
+            <div class="glass-card rounded-xl px-4 py-3 flex items-center gap-3 search-glow transition-all duration-300">
+                <span class="material-icons text-t3 text-xl">search</span>
+                <input type="text" placeholder="搜索型号/序列号" class="bg-transparent text-t1 text-sm flex-1 outline-none placeholder-t3">
+            </div>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="px-4 mb-3">
+            <div class="filter-scroll flex gap-2 overflow-x-auto pb-2">
+                <button class="chip-active px-4 py-2 rounded-full text-xs font-medium text-primary whitespace-nowrap glow-blue-subtle transition-all duration-200" onclick="setActiveFilter(this)">
+                    全部
+                </button>
+                <button class="chip-inactive px-4 py-2 rounded-full text-xs font-medium text-t2 whitespace-nowrap hover:bg-[rgba(30,42,58,0.8)] transition-all duration-200" onclick="setActiveFilter(this)">
+                    iPad Pro
+                </button>
+                <button class="chip-inactive px-4 py-2 rounded-full text-xs font-medium text-t2 whitespace-nowrap hover:bg-[rgba(30,42,58,0.8)] transition-all duration-200" onclick="setActiveFilter(this)">
+                    iPad Air
+                </button>
+                <button class="chip-inactive px-4 py-2 rounded-full text-xs font-medium text-t2 whitespace-nowrap hover:bg-[rgba(30,42,58,0.8)] transition-all duration-200" onclick="setActiveFilter(this)">
+                    数字系列
+                </button>
+                <button class="chip-inactive px-4 py-2 rounded-full text-xs font-medium text-t2 whitespace-nowrap hover:bg-[rgba(30,42,58,0.8)] transition-all duration-200" onclick="setActiveFilter(this)">
+                    iPad mini
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Bar -->
+        <div class="px-4 mb-4">
+            <p class="text-t2 text-[11px]">在库 142台 · 总价值 ¥856,400</p>
+        </div>
+
+        <!-- Device List -->
+        <div class="device-list px-4 space-y-3">
+            <!-- Device Card 1 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_mac</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad Pro 12.9 2022</h3>
+                    <p class="text-t2 text-[12px] mb-2">256GB · 深空灰 · M2芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥5,200</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥6,580</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 12天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 2 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_mac</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad Air 5 2022</h3>
+                    <p class="text-t2 text-[12px] mb-2">64GB · 星光色 · M1芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥3,800</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥4,680</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 5天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 3 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_android</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad 10 2022</h3>
+                    <p class="text-t2 text-[12px] mb-2">256GB · 蓝色 · A14芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥2,900</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥3,580</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 18天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 4 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_mac</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad mini 6 2021</h3>
+                    <p class="text-t2 text-[12px] mb-2">256GB · 紫色 · A15芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥3,200</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥3,980</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 3天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 5 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_mac</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad Pro 11 2023</h3>
+                    <p class="text-t2 text-[12px] mb-2">512GB · 银色 · M4芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥8,500</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥10,200</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-warning/20 text-warning font-medium">预售</span>
+                        <span class="text-t3 text-[11px]">入库 1天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 6 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_mac</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad Air 4 2020</h3>
+                    <p class="text-t2 text-[12px] mb-2">64GB · 玫瑰金 · A14芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥2,600</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥3,280</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 28天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+
+            <!-- Device Card 7 -->
+            <div class="glass-card rounded-xl p-3 flex gap-3 device-card cursor-pointer transition-all duration-200">
+                <div class="w-20 h-20 rounded-lg device-img-placeholder flex items-center justify-center flex-shrink-0">
+                    <span class="material-icons text-t3 text-3xl">tablet_android</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <h3 class="text-[14px] font-semibold text-t1 mb-1 truncate">iPad 9 2021</h3>
+                    <p class="text-t2 text-[12px] mb-2">128GB · 银色 · A13芯片</p>
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <span class="text-t2 text-[13px] font-medium">收 ¥1,800</span>
+                            <span class="text-primary text-[15px] font-bold">售 ¥2,380</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 mt-2">
+                        <span class="status-chip bg-success/20 text-success font-medium">在库</span>
+                        <span class="text-t3 text-[11px]">入库 42天</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <span class="material-icons text-t3 text-xl">chevron_right</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div class="empty-state flex-col items-center justify-center py-16 px-4">
+            <span class="material-icons text-t3 text-6xl mb-4">search_off</span>
+            <p class="text-t2 text-[14px] mb-4">未找到匹配设备</p>
+            <button class="text-primary text-[14px] font-medium" onclick="clearFilter()">清除筛选</button>
+        </div>
+
+        <!-- Bottom Floating Scan Button -->
+        <button class="scan-btn fixed bottom-6 right-4 w-14 h-14 rounded-full blue-gradient flex items-center justify-center glow-blue transition-all duration-200 z-50" style="right: calc(50% - 187px + 16px);">
+            <span class="material-icons text-white text-2xl">qr_code_scanner</span>
+        </button>
+    </div>
+
+    <script>
+        function setActiveFilter(btn) {
+            // Remove active state from all chips
+            document.querySelectorAll('.filter-scroll button').forEach(chip => {
+                chip.classList.remove('chip-active', 'text-primary', 'glow-blue-subtle');
+                chip.classList.add('chip-inactive', 'text-t2');
+            });
+            // Add active state to clicked chip
+            btn.classList.remove('chip-inactive', 'text-t2');
+            btn.classList.add('chip-active', 'text-primary', 'glow-blue-subtle');
+        }
+
+        function clearFilter() {
+            document.querySelector('.device-list').classList.remove('hide');
+            document.querySelector('.empty-state').classList.remove('show');
+            // Reset filter chips
+            document.querySelectorAll('.filter-scroll button').forEach(chip => {
+                chip.classList.remove('chip-active', 'text-primary', 'glow-blue-subtle');
+                chip.classList.add('chip-inactive', 'text-t2');
+            });
+            document.querySelector('.filter-scroll button').classList.remove('chip-inactive', 'text-t2');
+            document.querySelector('.filter-scroll button').classList.add('chip-active', 'text-primary', 'glow-blue-subtle');
+            // Reset search
+            document.querySelector('input').value = '';
+        }
+
+        // Demo: Show empty state when searching for non-existent device
+        document.querySelector('input').addEventListener('input', function(e) {
+            if (e.target.value === 'xyz123') {
+                document.querySelector('.device-list').classList.add('hide');
+                document.querySelector('.empty-state').classList.add('show');
+            } else {
+                document.querySelector('.device-list').classList.remove('hide');
+                document.querySelector('.empty-state').classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

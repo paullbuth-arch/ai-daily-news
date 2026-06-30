@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
 
@@ -36,29 +35,14 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
 
   /// 已完成 → 重新上架（原订单作废，设备回 listed）
   Future<void> _relist() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.card,
-            title: Text('确认重新上架', style: TextStyle(color: C.t1, fontSize: 16)),
-            content: Text(
-              '该订单利润${yuan(order.netProfit)}将从历史统计中扣除，设备回到上架待售状态。确定？',
-              style: TextStyle(color: C.t2, fontSize: 13),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text('取消', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text('重新上架', style: TextStyle(color: C.orange)),
-              ),
-            ],
-          ),
+    final ok = await confirmAction(
+      context,
+      title: '确认重新上架',
+      message: '该订单利润${yuan(order.netProfit)}将从历史统计中扣除，设备回到上架待售状态。确定？',
+      confirmText: '重新上架',
+      confirmColor: C.orange,
     );
-    if (ok != true) return;
+    if (!ok) return;
     order.status = 'cancelled';
     await gStorage.updateOrder(order);
     if (device != null) {
@@ -85,85 +69,63 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     );
     String? selectedReason = order.afterSaleReason;
     final reasons = ['质量问题', '买家反悔', '描述不符', '物流损坏', '其他'];
-    final result = await showDialog<Map<String, dynamic>>(
+    final result = await showAppFormDialog<Map<String, dynamic>>(
       context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder:
-                (ctx, setS) => AlertDialog(
-                  backgroundColor: C.card,
-                  title: Text(
-                    '售后录入',
-                    style: TextStyle(color: C.t1, fontSize: 16),
+      title: '售后录入',
+      subtitle: '费用会从当前订单净利和利润统计中扣除',
+      maxHeightFactor: 0.66,
+      child: StatefulBuilder(
+        builder:
+            (sheetContext, setS) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '售后原因',
+                  style: TextStyle(
+                    color: C.t2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '录入后将从当月/年度总利润中扣除',
-                        style: TextStyle(color: C.t2, fontSize: 11),
-                      ),
-                      const SizedBox(height: 12),
-                      Text('售后原因', style: TextStyle(color: C.t2, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children:
-                            reasons
-                                .map(
-                                  (r) => ChoiceChip(
-                                    label: Text(
-                                      r,
-                                      style: const TextStyle(fontSize: 11),
-                                    ),
-                                    selected: selectedReason == r,
-                                    selectedColor: C.brand,
-                                    onSelected:
-                                        (_) => setS(() => selectedReason = r),
-                                  ),
-                                )
-                                .toList(),
-                      ),
-                      const SizedBox(height: 12),
-                      TextField(
-                        controller: ctrl,
-                        keyboardType: TextInputType.number,
-                        autofocus: true,
-                        style: TextStyle(color: C.t1),
-                        decoration: InputDecoration(
-                          labelText: '售后费用(元)',
-                          labelStyle: TextStyle(color: C.t2),
-                          filled: true,
-                          fillColor: C.bg,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: Text('取消', style: TextStyle(color: C.t2)),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        final v = (double.tryParse(ctrl.text) ?? 0) * 100;
-                        Navigator.pop(ctx, {
-                          'cost': v.toInt(),
-                          'reason': selectedReason,
-                        });
-                      },
-                      child: Text('保存', style: TextStyle(color: C.brand2)),
-                    ),
-                  ],
                 ),
-          ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      reasons
+                          .map(
+                            (r) => AppChoicePill(
+                              label: r,
+                              selected: selectedReason == r,
+                              onTap: () => setS(() => selectedReason = r),
+                            ),
+                          )
+                          .toList(),
+                ),
+                const SizedBox(height: 14),
+                AppFormField(
+                  controller: ctrl,
+                  label: '售后费用(元)',
+                  icon: Icons.receipt_long_outlined,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
+                ),
+                const SizedBox(height: 18),
+                AppSheetActions(
+                  primaryLabel: '保存',
+                  onPrimary: () {
+                    final v = (double.tryParse(ctrl.text) ?? 0) * 100;
+                    Navigator.pop(sheetContext, {
+                      'cost': v.toInt(),
+                      'reason': selectedReason,
+                    });
+                  },
+                ),
+              ],
+            ),
+      ),
     );
+    ctrl.dispose();
     if (result == null) return;
     final cost = result['cost'] as int;
     if (cost < 0) {
@@ -337,6 +299,6 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   );
   Color _sc(String s) =>
       s == 'shipped'
-          ? C.brand
+          ? C.cyan
           : (s == 'done' ? C.green : (s == 'aftersale' ? C.red : C.t3));
 }

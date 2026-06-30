@@ -27,7 +27,7 @@ class _ErpShellState extends State<ErpShell> {
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width > 768;
     return Scaffold(
-      backgroundColor: C.bg,
+      backgroundColor: C.bgDeep,
       body: Row(children: [
         if (isWide) _buildSidebar(context),
         Expanded(child: widget.child),
@@ -38,11 +38,11 @@ class _ErpShellState extends State<ErpShell> {
   Widget _buildSidebar(BuildContext context) {
     return Container(
       width: 220,
-      decoration: BoxDecoration(color: C.card, border: Border(right: BorderSide(color: C.line))),
+      decoration: BoxDecoration(color: C.bgCard, border: Border(right: BorderSide(color: C.border))),
       child: Column(children: [
         // Logo区
         Container(padding: const EdgeInsets.fromLTRB(16, 50, 16, 20), child: Row(children: [
-          Container(width: 36, height: 36, decoration: BoxDecoration(gradient: LinearGradient(colors: [C.brand2, C.brand]), borderRadius: BorderRadius.circular(10)), child: const Center(child: Text('📱', style: TextStyle(fontSize: 16)))),
+          Container(width: 36, height: 36, decoration: BoxDecoration(gradient: LinearGradient(colors: [C.t3, C.cyan]), borderRadius: BorderRadius.circular(10)), child: const Center(child: Text('📱', style: TextStyle(fontSize: 16)))),
           const SizedBox(width: 10),
           Text('爱管机', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: C.t1)),
         ])),
@@ -68,11 +68,11 @@ class _ErpShellState extends State<ErpShell> {
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        decoration: BoxDecoration(color: active ? C.brand2.withOpacity(0.12) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
+        decoration: BoxDecoration(color: active ? C.t3.withOpacity(0.12) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
         child: Row(children: [
           Text(icon, style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 10),
-          Text(title, style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: active ? C.brand2 : C.t1)),
+          Text(title, style: TextStyle(fontSize: 13, fontWeight: active ? FontWeight.w700 : FontWeight.w500, color: active ? C.t3 : C.t1)),
         ]),
       ),
     ));

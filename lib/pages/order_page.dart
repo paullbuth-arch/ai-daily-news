@@ -30,78 +30,140 @@ class OrderPageState extends State<OrderPage> {
     }
     final revenue = orders.fold<int>(0, (s, o) => s + o.amount);
     final profit = orders.fold<int>(0, (s, o) => s + o.netProfit);
+    final horizontal = AppLayout.pageHorizontal(context);
+    final bottomPadding = AppLayout.scrollBottomPadding(context);
 
-    return PageScaffold(
-      title: const Text(
-        'Orders',
-        style: TextStyle(
-          fontSize: 25,
-          fontWeight: FontWeight.w900,
-          color: C.t1,
-        ),
-      ),
-      subtitle: Text(
-        '累计 $total 单 · 当前 ${orders.length} 单',
-        style: const TextStyle(
-          fontSize: 12,
-          color: C.t2,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      action: RoundIconButton(
-        icon: Icons.add_shopping_cart_outlined,
-        color: Colors.black,
-        background: C.cyan,
-        onTap:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SellPage()),
-            ).then((_) => refresh()),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _OrderSummary(revenue: revenue, profit: profit, count: orders.length),
-          const SizedBox(height: 14),
-          _SegmentedTabs(
-            tabs: tabs,
-            current: tab,
-            onTap: (i) => setState(() => tab = i),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SellPage()),
-                  ).then((_) => refresh()),
-              icon: const Icon(Icons.point_of_sale_outlined, size: 18),
-              label: const Text('售出设备并生成订单'),
-            ),
-          ),
-          const SizedBox(height: 14),
-          if (orders.isEmpty)
-            const _EmptyOrders()
-          else
-            ...orders.map(
-              (o) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _OrderTimelineCard(
-                  order: o,
-                  onTap:
-                      () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => OrderDetailPage(order: o),
+    return Stack(
+      children: [
+        const AppBackdrop(),
+        SafeArea(
+          child: CustomScrollView(
+            cacheExtent: 700,
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '订单时间线',
+                                    style: TextStyle(
+                                      fontSize: AppLayout.titleSize(context),
+                                      fontWeight: FontWeight.w900,
+                                      color: C.t1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    '累计 $total 单 · 当前 ${orders.length} 单',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: C.t2,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            RoundIconButton(
+                              icon: Icons.add_shopping_cart_outlined,
+                              color: Colors.black,
+                              background: C.cyan,
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const SellPage(),
+                                    ),
+                                  ).then((_) => refresh()),
+                            ),
+                          ],
                         ),
-                      ).then((_) => refresh()),
+                      ),
+                      _OrderSummary(
+                        revenue: revenue,
+                        profit: profit,
+                        count: orders.length,
+                      ),
+                      const SizedBox(height: 14),
+                      _SegmentedTabs(
+                        tabs: tabs,
+                        current: tab,
+                        onTap: (i) => setState(() => tab = i),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed:
+                              () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SellPage(),
+                                ),
+                              ).then((_) => refresh()),
+                          icon: const Icon(
+                            Icons.point_of_sale_outlined,
+                            size: 18,
+                          ),
+                          label: const Text('售出设备并生成订单'),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (orders.isEmpty) ...[
+                        const _EmptyOrders(),
+                        SizedBox(height: bottomPadding),
+                      ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-        ],
-      ),
+              if (orders.isNotEmpty)
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontal,
+                    0,
+                    horizontal,
+                    bottomPadding,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate((context, i) {
+                      final order = orders[i];
+                      return Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == orders.length - 1 ? 0 : 12,
+                        ),
+                        child: RepaintBoundary(
+                          child: _OrderTimelineCard(
+                            order: order,
+                            onTap:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => OrderDetailPage(order: order),
+                                  ),
+                                ).then((_) => refresh()),
+                          ),
+                        ),
+                      );
+                    }, childCount: orders.length),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

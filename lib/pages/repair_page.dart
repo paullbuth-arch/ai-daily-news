@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
 
@@ -32,123 +31,87 @@ class _RepairPageState extends State<RepairPage> {
     String type = '换电池';
     final costCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
-    final ok = await showDialog<bool>(
+    final ok = await showAppFormDialog<bool>(
       context: context,
-      builder:
-          (ctx) => StatefulBuilder(
-            builder:
-                (ctx2, setS) => AlertDialog(
-                  backgroundColor: C.card,
-                  title: Text(
-                    '新增维修工单',
-                    style: TextStyle(color: C.t1, fontSize: 16),
+      title: '新增维修工单',
+      subtitle: '记录翻新成本，自动回写到设备利润',
+      maxHeightFactor: 0.84,
+      child: StatefulBuilder(
+        builder:
+            (sheetContext, setS) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '选择设备',
+                  style: TextStyle(
+                    color: C.t2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
                   ),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '选择设备',
-                          style: TextStyle(fontSize: 11, color: C.t2),
-                        ),
-                        const SizedBox(height: 6),
-                        ...devices.map(
-                          (d) => GestureDetector(
-                            onTap: () => setS(() => sel = d),
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color:
-                                    sel?.id == d.id
-                                        ? C.brand.withOpacity(0.15)
-                                        : C.bg,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: sel?.id == d.id ? C.brand : C.line,
-                                ),
-                              ),
-                              child: Text(
-                                '${d.model} ${d.capacity}',
-                                style: TextStyle(fontSize: 12, color: C.t1),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          children:
-                              ['换电池', '换屏', '换壳', '其他']
-                                  .map(
-                                    (t) => Padding(
-                                      padding: const EdgeInsets.only(
-                                        right: 6,
-                                        bottom: 4,
-                                      ),
-                                      child: ChoiceChip(
-                                        label: Text(
-                                          t,
-                                          style: const TextStyle(fontSize: 11),
-                                        ),
-                                        selected: type == t,
-                                        selectedColor: C.brand,
-                                        onSelected: (_) => setS(() => type = t),
-                                      ),
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: costCtrl,
-                          keyboardType: TextInputType.number,
-                          style: TextStyle(color: C.t1),
-                          decoration: InputDecoration(
-                            labelText: '维修成本(元)',
-                            labelStyle: TextStyle(color: C.t2),
-                            filled: true,
-                            fillColor: C.bg,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: C.line),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          controller: noteCtrl,
-                          style: TextStyle(color: C.t1),
-                          decoration: InputDecoration(
-                            labelText: '备注',
-                            labelStyle: TextStyle(color: C.t2),
-                            filled: true,
-                            fillColor: C.bg,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(color: C.line),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx2, false),
-                      child: Text('取消', style: TextStyle(color: C.t2)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx2, true),
-                      child: const Text(
-                        '提交',
-                        style: TextStyle(color: C.brand2),
-                      ),
-                    ),
-                  ],
                 ),
-          ),
+                const SizedBox(height: 8),
+                ...devices.map(
+                  (d) => AppSelectionTile(
+                    title: '${d.model} ${d.capacity}',
+                    subtitle:
+                        '${d.condition} · ${d.color} · 采购${yuan(d.purchaseCost)}',
+                    icon: Icons.tablet_mac_rounded,
+                    selected: sel?.id == d.id,
+                    onTap: () => setS(() => sel = d),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '维修类型',
+                  style: TextStyle(
+                    color: C.t2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      ['换电池', '换屏', '换壳', '其他']
+                          .map(
+                            (t) => AppChoicePill(
+                              label: t,
+                              selected: type == t,
+                              onTap: () => setS(() => type = t),
+                            ),
+                          )
+                          .toList(),
+                ),
+                const SizedBox(height: 12),
+                AppFormField(
+                  controller: costCtrl,
+                  label: '维修成本(元)',
+                  icon: Icons.payments_outlined,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                AppFormField(
+                  controller: noteCtrl,
+                  label: '备注',
+                  icon: Icons.notes_rounded,
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 18),
+                AppSheetActions(
+                  primaryLabel: '提交',
+                  onPrimary: () {
+                    if (sel == null) {
+                      toast(context, '请选择设备');
+                      return;
+                    }
+                    Navigator.pop(sheetContext, true);
+                  },
+                ),
+              ],
+            ),
+      ),
     );
     if (ok == true && sel != null) {
       final now = DateTime.now();
@@ -170,6 +133,8 @@ class _RepairPageState extends State<RepairPage> {
       _refresh();
       toast(context, '维修工单已创建');
     }
+    costCtrl.dispose();
+    noteCtrl.dispose();
   }
 
   @override
@@ -194,9 +159,9 @@ class _RepairPageState extends State<RepairPage> {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: C.cardMuted,
+                      color: C.bgCardMuted,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: C.line),
+                      border: Border.all(color: C.border),
                     ),
                     child: Icon(
                       Icons.build_circle_outlined,
@@ -218,10 +183,10 @@ class _RepairPageState extends State<RepairPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: C.brand2.withOpacity(0.14),
+                        color: C.t3.withOpacity(0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: Icon(_typeIcon(r.type), color: C.brand2, size: 20),
+                      child: Icon(_typeIcon(r.type), color: C.t3, size: 20),
                     ),
                     const SizedBox(width: 11),
                     Expanded(

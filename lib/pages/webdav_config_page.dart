@@ -65,10 +65,10 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                     hintText: 'https://dav.jianguoyun.com/dav/',
                     hintStyle: TextStyle(color: C.t3, fontSize: 12),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                   ),
                 ),
@@ -82,10 +82,10 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                     hintText: '坚果云账号或邮箱',
                     hintStyle: TextStyle(color: C.t3, fontSize: 12),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                   ),
                 ),
@@ -100,10 +100,10 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                     hintText: '坚果云需用应用密码',
                     hintStyle: TextStyle(color: C.t3, fontSize: 12),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -124,7 +124,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             )
           else
@@ -133,8 +133,8 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
               child: OutlinedButton(
                 onPressed: _testConnection,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: C.brand2,
-                  side: const BorderSide(color: C.brand2),
+                  foregroundColor: C.t3,
+                  side: const BorderSide(color: C.t3),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
@@ -151,7 +151,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             )
           else
@@ -185,7 +185,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                       child: ElevatedButton(
                         onPressed: _syncing ? null : _upload,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: C.brand,
+                          backgroundColor: C.cyan,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
@@ -204,14 +204,14 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                       child: ElevatedButton(
                         onPressed: _syncing ? null : _download,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: C.card,
+                          backgroundColor: C.bgCard,
                           foregroundColor: C.t1,
                           padding: EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
                           ),
                           elevation: 0,
-                          side: BorderSide(color: C.line),
+                          side: BorderSide(color: C.border),
                         ),
                         child: Text('⬇️ 下载', style: TextStyle(fontSize: 13)),
                       ),
@@ -308,7 +308,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
       context: context,
       builder:
           (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             title: Text('下载确认', style: TextStyle(color: C.t1, fontSize: 16)),
             content: Text(
               '从云端下载数据会覆盖当前本地数据。系统会自动备份当前数据。',
@@ -321,7 +321,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text('下载', style: TextStyle(color: C.brand2)),
+                child: Text('下载', style: TextStyle(color: C.t3)),
               ),
             ],
           ),

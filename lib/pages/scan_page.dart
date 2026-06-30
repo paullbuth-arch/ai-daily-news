@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../ai_service.dart';
 import '../serial_decoder.dart';
@@ -234,51 +233,44 @@ class _ScanPageState extends State<ScanPage> {
     final historyDesc = historyList.isNotEmpty ? historyList.last : null;
     // 有历史描述时弹窗让用户选
     if (historyDesc != null && mounted) {
-      final choice = await showDialog<String>(
+      final choice = await showAppFormDialog<String>(
         context: context,
-        builder:
-            (ctx) => AlertDialog(
-              backgroundColor: C.card,
-              title: Text('商品描述', style: TextStyle(color: C.t1, fontSize: 16)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
+        title: '商品描述',
+        subtitle: '同型号有历史描述可用',
+        maxHeightFactor: 0.62,
+        child: Builder(
+          builder:
+              (sheetContext) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '同型号有历史描述可用',
-                    style: TextStyle(color: C.t2, fontSize: 12),
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: C.bg,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: C.line),
-                    ),
+                  GlassPanel(
+                    padding: const EdgeInsets.all(14),
+                    radius: 20,
+                    color: C.bgSurface.withOpacity(0.64),
+                    borderColor: Colors.white.withOpacity(0.10),
                     child: Text(
                       historyDesc,
-                      style: TextStyle(fontSize: 11, color: C.t2, height: 1.6),
-                      maxLines: 4,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: C.t2,
+                        height: 1.6,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 6,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
+                  const SizedBox(height: 18),
+                  AppSheetActions(
+                    primaryLabel: '复用历史',
+                    secondaryLabel: '重新AI生成',
+                    primaryColor: C.mint,
+                    onSecondary: () => Navigator.pop(sheetContext, 'ai'),
+                    onPrimary: () => Navigator.pop(sheetContext, 'reuse'),
+                  ),
                 ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, 'ai'),
-                  child: const Text(
-                    '重新AI生成',
-                    style: TextStyle(color: C.purple),
-                  ),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, 'reuse'),
-                  child: const Text('复用历史', style: TextStyle(color: C.brand2)),
-                ),
-              ],
-            ),
+        ),
       );
       if (choice == 'reuse') {
         description = historyDesc;
@@ -362,7 +354,7 @@ class _ScanPageState extends State<ScanPage> {
                       onPressed: details.onStepCancel,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: C.t2,
-                        side: BorderSide(color: C.line),
+                        side: BorderSide(color: C.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(11),
                         ),
@@ -376,7 +368,7 @@ class _ScanPageState extends State<ScanPage> {
                     child: ElevatedButton(
                       onPressed: details.onStepContinue,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: C.brand2,
+                        backgroundColor: C.t3,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(11),
@@ -441,7 +433,7 @@ class _ScanPageState extends State<ScanPage> {
                               child: Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: const BoxDecoration(
-                                  color: Colors.black54,
+                                  color: C.t2,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
@@ -459,9 +451,7 @@ class _ScanPageState extends State<ScanPage> {
                               right: 0,
                               child: Container(
                                 padding: const EdgeInsets.all(8),
-                                decoration: const BoxDecoration(
-                                  color: Colors.black54,
-                                ),
+                                decoration: const BoxDecoration(color: C.t2),
                                 child: Row(
                                   children: [
                                     SizedBox(
@@ -469,7 +459,7 @@ class _ScanPageState extends State<ScanPage> {
                                       height: 14,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: C.brand2,
+                                        color: C.t3,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
@@ -573,14 +563,14 @@ class _ScanPageState extends State<ScanPage> {
                         hintText: '输入或AI识别后自动填入',
                         hintStyle: TextStyle(color: C.t3),
                         filled: true,
-                        fillColor: C.bg,
+                        fillColor: C.bgDeep,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: C.line),
+                          borderSide: BorderSide(color: C.border),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: C.brand2),
+                          borderSide: const BorderSide(color: C.t3),
                         ),
                       ),
                     ),
@@ -599,9 +589,9 @@ class _ScanPageState extends State<ScanPage> {
                     Container(
                       padding: EdgeInsets.symmetric(horizontal: 12),
                       decoration: BoxDecoration(
-                        color: C.bg,
+                        color: C.bgDeep,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: C.line),
+                        border: Border.all(color: C.border),
                       ),
                       child: DropdownButton<String>(
                         value: selectedModel.isEmpty ? null : selectedModel,
@@ -611,7 +601,7 @@ class _ScanPageState extends State<ScanPage> {
                         ),
                         isExpanded: true,
                         underline: const SizedBox(),
-                        dropdownColor: C.card,
+                        dropdownColor: C.bgCard,
                         style: TextStyle(color: C.t1, fontSize: 13),
                         items:
                             iPadModels
@@ -653,9 +643,9 @@ class _ScanPageState extends State<ScanPage> {
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: C.bg,
+                                  color: C.bgDeep,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.line),
+                                  border: Border.all(color: C.border),
                                 ),
                                 child: DropdownButton<String>(
                                   value:
@@ -668,7 +658,7 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                   isExpanded: true,
                                   underline: const SizedBox(),
-                                  dropdownColor: C.card,
+                                  dropdownColor: C.bgCard,
                                   style: TextStyle(color: C.t1, fontSize: 12),
                                   items:
                                       iPadCapacities
@@ -706,9 +696,9 @@ class _ScanPageState extends State<ScanPage> {
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: C.bg,
+                                  color: C.bgDeep,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.line),
+                                  border: Border.all(color: C.border),
                                 ),
                                 child: DropdownButton<String>(
                                   value:
@@ -721,7 +711,7 @@ class _ScanPageState extends State<ScanPage> {
                                   ),
                                   isExpanded: true,
                                   underline: const SizedBox(),
-                                  dropdownColor: C.card,
+                                  dropdownColor: C.bgCard,
                                   style: TextStyle(color: C.t1, fontSize: 12),
                                   items:
                                       iPadColors
@@ -759,15 +749,15 @@ class _ScanPageState extends State<ScanPage> {
                               Container(
                                 padding: EdgeInsets.symmetric(horizontal: 10),
                                 decoration: BoxDecoration(
-                                  color: C.bg,
+                                  color: C.bgDeep,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.line),
+                                  border: Border.all(color: C.border),
                                 ),
                                 child: DropdownButton<String>(
                                   value: selectedNetwork,
                                   isExpanded: true,
                                   underline: const SizedBox(),
-                                  dropdownColor: C.card,
+                                  dropdownColor: C.bgCard,
                                   style: TextStyle(color: C.t1, fontSize: 12),
                                   items:
                                       iPadNetworks
@@ -821,7 +811,7 @@ class _ScanPageState extends State<ScanPage> {
                                       style: const TextStyle(fontSize: 11),
                                     ),
                                     selected: selectedCondition == c,
-                                    selectedColor: C.brand,
+                                    selectedColor: C.cyan,
                                     onSelected:
                                         (_) => setState(
                                           () => selectedCondition = c,
@@ -852,10 +842,10 @@ class _ScanPageState extends State<ScanPage> {
                               labelText: '采购成本(元)',
                               labelStyle: TextStyle(color: C.t2),
                               filled: true,
-                              fillColor: C.bg,
+                              fillColor: C.bgDeep,
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: C.line),
+                                borderSide: BorderSide(color: C.border),
                               ),
                             ),
                           ),
@@ -881,7 +871,7 @@ class _ScanPageState extends State<ScanPage> {
                                 ),
                                 selected:
                                     !isCustomChannel && selectedChannel == c,
-                                selectedColor: C.brand,
+                                selectedColor: C.cyan,
                                 onSelected:
                                     (_) => setState(() {
                                       selectedChannel = c;
@@ -899,7 +889,7 @@ class _ScanPageState extends State<ScanPage> {
                           style: TextStyle(fontSize: 11),
                         ),
                         selected: isCustomChannel,
-                        selectedColor: C.brand,
+                        selectedColor: C.cyan,
                         onSelected:
                             (_) => setState(() {
                               isCustomChannel = true;
@@ -914,10 +904,10 @@ class _ScanPageState extends State<ScanPage> {
                           labelText: '输入渠道名称',
                           labelStyle: TextStyle(color: C.t2),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -980,7 +970,7 @@ class _ScanPageState extends State<ScanPage> {
                                 '${idCheck!["risk"]}：${(idCheck!["issues"] as List).join("、")}',
                                 style: const TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFFFCA5A5),
+                                  color: C.neonRed,
                                 ),
                               ),
                             ),
@@ -1005,7 +995,7 @@ class _ScanPageState extends State<ScanPage> {
                                 'ID锁检测通过：无iCloud锁、无激活锁、非监管机',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Color(0xFF6EE7B7),
+                                  color: C.neonGreen,
                                 ),
                               ),
                             ),
@@ -1068,9 +1058,9 @@ class _ScanPageState extends State<ScanPage> {
                                   width: 90,
                                   height: 90,
                                   decoration: BoxDecoration(
-                                    color: C.bg,
+                                    color: C.bgDeep,
                                     borderRadius: BorderRadius.circular(11),
-                                    border: Border.all(color: C.line),
+                                    border: Border.all(color: C.border),
                                   ),
                                   child: Center(
                                     child: Icon(
@@ -1101,7 +1091,7 @@ class _ScanPageState extends State<ScanPage> {
                                     child: Container(
                                       padding: const EdgeInsets.all(3),
                                       decoration: const BoxDecoration(
-                                        color: Colors.black54,
+                                        color: C.t2,
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(
@@ -1121,7 +1111,7 @@ class _ScanPageState extends State<ScanPage> {
                                       vertical: 1,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: Colors.black54,
+                                      color: C.t2,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                     child: Text(
@@ -1142,9 +1132,9 @@ class _ScanPageState extends State<ScanPage> {
                       Container(
                         height: 90,
                         decoration: BoxDecoration(
-                          color: C.bg,
+                          color: C.bgDeep,
                           borderRadius: BorderRadius.circular(11),
-                          border: Border.all(color: C.line),
+                          border: Border.all(color: C.border),
                         ),
                         child: Center(
                           child: Text(
@@ -1160,7 +1150,7 @@ class _ScanPageState extends State<ScanPage> {
                           child: ElevatedButton(
                             onPressed: () => _addMultipleImages(),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: C.card,
+                              backgroundColor: C.bgCard,
                               foregroundColor: C.t1,
                               padding: EdgeInsets.symmetric(vertical: 11),
                               shape: RoundedRectangleBorder(
@@ -1182,7 +1172,7 @@ class _ScanPageState extends State<ScanPage> {
                           child: ElevatedButton(
                             onPressed: () => _addImage(false),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: C.card,
+                              backgroundColor: C.bgCard,
                               foregroundColor: C.t1,
                               padding: EdgeInsets.symmetric(vertical: 11),
                               shape: RoundedRectangleBorder(
@@ -1204,7 +1194,7 @@ class _ScanPageState extends State<ScanPage> {
                           child: ElevatedButton(
                             onPressed: () => _addImage(true),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: C.brand2,
+                              backgroundColor: C.t3,
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 11),
                               shape: RoundedRectangleBorder(
@@ -1284,7 +1274,7 @@ class _ScanPageState extends State<ScanPage> {
                     const SizedBox(height: 14),
                     saving
                         ? const Center(
-                          child: CircularProgressIndicator(color: C.brand2),
+                          child: CircularProgressIndicator(color: C.t3),
                         )
                         : primaryBtn('确认入库', _save),
                   ],

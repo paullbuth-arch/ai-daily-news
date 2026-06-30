@@ -11,21 +11,21 @@ ThemeMode gThemeMode = ThemeMode.dark;
 class C {
   static const bgDeep = Color(0xFF202228);
   static const bg = bgDeep;
-  static const bgCard = Color(0xFF11141B);
-  static const bgCardMuted = Color(0xFF181C25);
-  static const bgSurface = Color(0xFF242934);
-  static const bgElevated = Color(0xFF2C323E);
+  static const bgCard = Color(0xFF121720);
+  static const bgCardMuted = Color(0xFF1B202A);
+  static const bgSurface = Color(0xFF262D38);
+  static const bgElevated = Color(0xFF313846);
 
   static const nav = Color(0xE60B0D12);
   static const navBorder = Color(0xFF2A303B);
-  static const border = Color(0xFF303744);
-  static const borderGlow = Color(0xFF46505F);
-  static const divider = Color(0xFF242A34);
+  static const border = Color(0xFF3B4554);
+  static const borderGlow = Color(0xFF536073);
+  static const divider = Color(0xFF303846);
 
   static const t1 = Color(0xFFF4F7FB);
-  static const t2 = Color(0xFFB6BFCC);
-  static const t3 = Color(0xFF7C8795);
-  static const tMuted = Color(0xFF596371);
+  static const t2 = Color(0xFFC8D1DD);
+  static const t3 = Color(0xFF98A5B4);
+  static const tMuted = Color(0xFF6E7A8A);
 
   static const cyan = Color(0xFF8FEAF2);
   static const cyanDim = Color(0x268FEAF2);
@@ -96,9 +96,9 @@ class C {
 
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: const Color(0xFF000000).withOpacity(0.26),
-      blurRadius: 18,
-      offset: const Offset(0, 10),
+      color: const Color(0xFF000000).withOpacity(0.22),
+      blurRadius: 12,
+      offset: const Offset(0, 6),
     ),
   ];
 

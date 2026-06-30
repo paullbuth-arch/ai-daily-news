@@ -6,11 +6,9 @@ import 'package:flutter/services.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
 import '../ai_service.dart';
-import 'scan_page.dart';
 import 'sell_page.dart';
 
 class DetailPage extends StatefulWidget {
@@ -59,43 +57,35 @@ class _DetailPageState extends State<DetailPage> {
               ? (device.sellPrice / 100).toStringAsFixed(0)
               : '',
     );
-    final result = await showDialog<int>(
+    final result = await showAppFormDialog<int>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.card,
-            title: Text('售价微调', style: TextStyle(color: C.t1, fontSize: 16)),
-            content: TextField(
-              controller: ctrl,
-              keyboardType: TextInputType.number,
-              autofocus: true,
-              style: TextStyle(color: C.t1),
-              decoration: InputDecoration(
-                labelText: '新售价(元)',
-                labelStyle: TextStyle(color: C.t2),
-                filled: true,
-                fillColor: C.bg,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: C.line),
+      title: '售价微调',
+      subtitle: '${device.model} ${device.capacity}',
+      maxHeightFactor: 0.52,
+      child: Builder(
+        builder:
+            (sheetContext) => Column(
+              children: [
+                AppFormField(
+                  controller: ctrl,
+                  label: '新售价(元)',
+                  icon: Icons.sell_outlined,
+                  keyboardType: TextInputType.number,
+                  autofocus: true,
                 ),
-              ),
+                const SizedBox(height: 18),
+                AppSheetActions(
+                  primaryLabel: '确定',
+                  onPrimary: () {
+                    final v = (double.tryParse(ctrl.text) ?? 0) * 100;
+                    Navigator.pop(sheetContext, v.toInt());
+                  },
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('取消', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () {
-                  final v = (double.tryParse(ctrl.text) ?? 0) * 100;
-                  Navigator.pop(ctx, v.toInt());
-                },
-                child: Text('确定', style: TextStyle(color: C.brand2)),
-              ),
-            ],
-          ),
+      ),
     );
+    ctrl.dispose();
     if (result == null) return;
     if (result <= 0) {
       toast(context, '售价需大于0');
@@ -106,6 +96,332 @@ class _DetailPageState extends State<DetailPage> {
     await gStorage.updateDevice(device);
     setState(() {});
     toast(context, '售价已调整为${yuan(result)}');
+  }
+
+  int _moneyFen(String raw, int fallback) {
+    final clean = raw.replaceAll('¥', '').replaceAll(',', '').trim();
+    if (clean.isEmpty) return fallback;
+    final value = double.tryParse(clean);
+    if (value == null) return fallback;
+    return (value * 100).round();
+  }
+
+  int _intValue(String raw, int fallback) {
+    final clean = raw.trim();
+    if (clean.isEmpty) return fallback;
+    return int.tryParse(clean) ?? fallback;
+  }
+
+  Future<void> _editDevice() async {
+    final modelCtrl = TextEditingController(text: device.model);
+    final serialCtrl = TextEditingController(text: device.serial);
+    final capacityCtrl = TextEditingController(text: device.capacity);
+    final colorCtrl = TextEditingController(text: device.color);
+    final networkCtrl = TextEditingController(text: device.network);
+    final conditionCtrl = TextEditingController(text: device.condition);
+    final batteryCtrl = TextEditingController(text: '${device.batteryHealth}');
+    final cycleCtrl = TextEditingController(text: '${device.cycleCount}');
+    final accessoriesCtrl = TextEditingController(text: device.accessories);
+    final costCtrl = TextEditingController(
+      text: (device.purchaseCost / 100).round().toString(),
+    );
+    final channelCtrl = TextEditingController(text: device.purchaseChannel);
+    final dateCtrl = TextEditingController(text: device.purchaseDate);
+    final priceCtrl = TextEditingController(
+      text:
+          device.sellPrice > 0
+              ? (device.sellPrice / 100).round().toString()
+              : '',
+    );
+    final descCtrl = TextEditingController(text: device.description ?? '');
+    var idClean = device.idLockClean;
+    var status = device.status;
+
+    final saved = await showAppFormDialog<bool>(
+      context: context,
+      title: '编辑设备信息',
+      subtitle: '${device.model} ${device.capacity}',
+      maxWidth: 460,
+      maxHeightFactor: 0.86,
+      child: StatefulBuilder(
+        builder: (sheetContext, setSheet) {
+          Widget statusOption(
+            String value,
+            String label,
+            Color color,
+          ) => GestureDetector(
+            onTap: () => setSheet(() => status = value),
+            child: AnimatedContainer(
+              duration: C.fast,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+              decoration: BoxDecoration(
+                color: status == value ? color : Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color:
+                      status == value ? color : Colors.white.withOpacity(0.09),
+                ),
+              ),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: status == value ? Colors.black : C.t2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          );
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppFormField(
+                controller: modelCtrl,
+                label: '型号',
+                icon: Icons.tablet_mac_rounded,
+                autofocus: true,
+              ),
+              const SizedBox(height: 12),
+              AppFormField(
+                controller: serialCtrl,
+                label: '序列号',
+                icon: Icons.confirmation_number_outlined,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppFormField(
+                      controller: capacityCtrl,
+                      label: '容量',
+                      icon: Icons.sd_storage_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppFormField(
+                      controller: colorCtrl,
+                      label: '颜色',
+                      icon: Icons.palette_outlined,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppFormField(
+                      controller: networkCtrl,
+                      label: '网络',
+                      icon: Icons.wifi_rounded,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppFormField(
+                      controller: conditionCtrl,
+                      label: '成色',
+                      icon: Icons.verified_outlined,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppFormField(
+                      controller: batteryCtrl,
+                      label: '电池健康(%)',
+                      icon: Icons.battery_5_bar_rounded,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppFormField(
+                      controller: cycleCtrl,
+                      label: '循环次数',
+                      icon: Icons.refresh_rounded,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AppFormField(
+                controller: accessoriesCtrl,
+                label: '配件',
+                icon: Icons.inventory_2_outlined,
+              ),
+              const SizedBox(height: 14),
+              const Text(
+                '安全与状态',
+                style: TextStyle(
+                  color: C.t1,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setSheet(() => idClean = true),
+                      child: _EditToggle(
+                        label: 'ID 无锁',
+                        selected: idClean,
+                        color: C.mint,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setSheet(() => idClean = false),
+                      child: _EditToggle(
+                        label: 'ID 异常',
+                        selected: !idClean,
+                        color: C.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  statusOption('in_stock', '库存', C.mint),
+                  statusOption('listed', '在售', C.cyan),
+                  statusOption('sold', '已售', C.purple),
+                  statusOption('returned', '退回', C.orange),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppFormField(
+                      controller: costCtrl,
+                      label: '采购成本(元)',
+                      icon: Icons.payments_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: AppFormField(
+                      controller: priceCtrl,
+                      label: '售价(元)',
+                      icon: Icons.sell_outlined,
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              AppFormField(
+                controller: channelCtrl,
+                label: '采购渠道',
+                icon: Icons.storefront_outlined,
+              ),
+              const SizedBox(height: 12),
+              AppFormField(
+                controller: dateCtrl,
+                label: '收购日期',
+                hint: 'YYYY-MM-DD',
+                icon: Icons.event_outlined,
+              ),
+              const SizedBox(height: 12),
+              AppFormField(
+                controller: descCtrl,
+                label: '商品描述',
+                icon: Icons.notes_rounded,
+                maxLines: 4,
+              ),
+              const SizedBox(height: 18),
+              AppSheetActions(
+                primaryLabel: '保存',
+                onPrimary: () {
+                  final model = modelCtrl.text.trim();
+                  if (model.isEmpty) {
+                    toast(context, '型号不能为空');
+                    return;
+                  }
+                  device.model = model;
+                  device.serial = serialCtrl.text.trim();
+                  device.capacity = capacityCtrl.text.trim();
+                  device.color = colorCtrl.text.trim();
+                  device.network = networkCtrl.text.trim();
+                  device.condition = conditionCtrl.text.trim();
+                  device.batteryHealth =
+                      _intValue(
+                        batteryCtrl.text,
+                        device.batteryHealth,
+                      ).clamp(0, 100).toInt();
+                  device.cycleCount = _intValue(
+                    cycleCtrl.text,
+                    device.cycleCount,
+                  );
+                  device.idLockClean = idClean;
+                  device.accessories =
+                      accessoriesCtrl.text.trim().isEmpty
+                          ? '裸机'
+                          : accessoriesCtrl.text.trim();
+                  device.purchaseCost = _moneyFen(
+                    costCtrl.text,
+                    device.purchaseCost,
+                  );
+                  device.purchaseChannel = channelCtrl.text.trim();
+                  device.purchaseDate =
+                      dateCtrl.text.trim().isEmpty
+                          ? device.purchaseDate
+                          : dateCtrl.text.trim();
+                  device.sellPrice = _moneyFen(priceCtrl.text, 0);
+                  device.status = status;
+                  device.description =
+                      descCtrl.text.trim().isEmpty
+                          ? null
+                          : descCtrl.text.trim();
+                  () async {
+                    await gStorage.updateDevice(device);
+                    if (!mounted) return;
+                    setState(() {});
+                    Navigator.pop(sheetContext, true);
+                    toast(context, '设备信息已更新');
+                  }();
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    for (final c in [
+      modelCtrl,
+      serialCtrl,
+      capacityCtrl,
+      colorCtrl,
+      networkCtrl,
+      conditionCtrl,
+      batteryCtrl,
+      cycleCtrl,
+      accessoriesCtrl,
+      costCtrl,
+      channelCtrl,
+      dateCtrl,
+      priceCtrl,
+      descCtrl,
+    ]) {
+      c.dispose();
+    }
+    if (saved == true) setState(() {});
   }
 
   void _genReport() {
@@ -222,7 +538,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     final hasDesc =
         device.description != null && device.description!.trim().isNotEmpty;
     return Scaffold(
-      backgroundColor: C.bg,
+      backgroundColor: C.bgDeep,
       body: SafeArea(
         child: Stack(
           children: [
@@ -232,7 +548,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                   children: [
                     Container(
                       height: 230,
-                      color: C.cardMuted,
+                      color: C.bgCardMuted,
                       child:
                           images.isNotEmpty
                               ? Image.file(
@@ -264,6 +580,24 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             size: 28,
                           ),
                           onPressed: () => Navigator.pop(context),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.32),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.edit_rounded,
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                          onPressed: _editDevice,
                         ),
                       ),
                     ),
@@ -331,7 +665,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
-                              color: device.sellPrice > 0 ? C.brand : C.orange,
+                              color: device.sellPrice > 0 ? C.cyan : C.orange,
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -403,9 +737,9 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                           vertical: 8,
                         ),
                         decoration: BoxDecoration(
-                          color: C.bg,
+                          color: C.bgDeep,
                           borderRadius: BorderRadius.circular(9),
-                          border: Border.all(color: C.line),
+                          border: Border.all(color: C.border),
                         ),
                         child:
                             hasDesc
@@ -459,7 +793,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                       const SizedBox(height: 12),
                       if (loading)
                         const Center(
-                          child: CircularProgressIndicator(color: C.brand2),
+                          child: CircularProgressIndicator(color: C.t3),
                         )
                       else
                         SizedBox(
@@ -503,14 +837,14 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                                   ? null
                                   : () => _downloadAll(openXianyu: false),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: C.card,
+                            backgroundColor: C.bgCard,
                             foregroundColor: C.t1,
                             padding: EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(13),
                             ),
                             elevation: 0,
-                            side: BorderSide(color: C.line),
+                            side: BorderSide(color: C.border),
                           ),
                           child: const Text(
                             '仅下载',
@@ -570,6 +904,14 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                       ),
                     ),
                   ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  child: ghostBtn(
+                    '编辑设备信息',
+                    _editDevice,
+                    icon: Icons.edit_rounded,
+                  ),
+                ),
                 if (device.status == 'in_stock' || device.status == 'listed')
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
@@ -645,7 +987,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF1E293B), Color(0xFF0B0F1A)],
+            colors: [C.bgSurface, C.bgDeep],
           ),
         ),
         padding: const EdgeInsets.all(24),
@@ -663,7 +1005,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                   ),
                   child: const Icon(
                     Icons.tablet_mac_rounded,
-                    color: C.brand,
+                    color: C.cyan,
                     size: 19,
                   ),
                 ),
@@ -671,7 +1013,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                 const Text(
                   '机掌柜',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: C.t1,
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                   ),
@@ -701,7 +1043,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             Text(
               device.model,
               style: const TextStyle(
-                color: Colors.white,
+                color: C.t1,
                 fontSize: 26,
                 fontWeight: FontWeight.w800,
               ),
@@ -712,7 +1054,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             Text(
               '${device.capacity} · ${device.color} · ${device.network}',
               style: const TextStyle(
-                color: C.brand2,
+                color: C.t3,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -728,7 +1070,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: C.line),
+                border: Border.all(color: C.border),
               ),
               child: Row(
                 children: [
@@ -737,7 +1079,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                   Text(
                     device.sellPrice > 0 ? yuan(device.sellPrice) : '未定价',
                     style: const TextStyle(
-                      color: C.brand2,
+                      color: C.t3,
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                     ),
@@ -770,7 +1112,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
           child: Text(
             v,
             style: TextStyle(
-              color: Colors.white,
+              color: C.t1,
               fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
@@ -784,9 +1126,9 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
   Widget _a(String l, String v, {Color? vc}) => Container(
     padding: const EdgeInsets.all(11),
     decoration: BoxDecoration(
-      color: C.cardMuted,
+      color: C.bgCardMuted,
       borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: C.line),
+      border: Border.all(color: C.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -823,12 +1165,12 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             width: 13,
             height: 13,
             decoration: BoxDecoration(
-              color: active ? C.brand : C.t3,
+              color: active ? C.cyan : C.t3,
               shape: BoxShape.circle,
-              border: Border.all(color: C.bg, width: 2),
+              border: Border.all(color: C.bgDeep, width: 2),
             ),
           ),
-          if (!last) Container(width: 2, height: 36, color: C.line),
+          if (!last) Container(width: 2, height: 36, color: C.border),
         ],
       ),
       SizedBox(width: 11),
@@ -853,5 +1195,39 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
         ),
       ),
     ],
+  );
+}
+
+class _EditToggle extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final Color color;
+
+  const _EditToggle({
+    required this.label,
+    required this.selected,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => AnimatedContainer(
+    duration: C.fast,
+    height: 48,
+    alignment: Alignment.center,
+    decoration: BoxDecoration(
+      color: selected ? color : Colors.white.withOpacity(0.06),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: selected ? color : Colors.white.withOpacity(0.09),
+      ),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        color: selected ? Colors.black : C.t2,
+        fontSize: 13,
+        fontWeight: FontWeight.w900,
+      ),
+    ),
   );
 }

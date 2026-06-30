@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=375, initial-scale=1.0">
+  <title>系统设置 - 机掌柜</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0A0E14',
+            card: 'rgba(13,17,23,0.75)',
+            border: '#1E2A3A',
+            primary: '#4A90E2',
+            accent: '#7C5CFF',
+            success: '#00E5A0',
+            warning: '#FF9F43',
+            danger: '#FF5E7A',
+            gold: '#FFD166',
+            t1: '#E8EDF5',
+            t2: '#8A9BB5',
+            t3: '#4A5A70',
+          },
+          fontFamily: {
+            sans: ["-apple-system", "'SF Pro Display'", "'PingFang SC'", "sans-serif"],
+          },
+          boxShadow: {
+            'card': '0 8px 32px rgba(0,0,0,0.5)',
+            'glow-blue': '0 0 20px rgba(74,144,226,0.12)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { background: #0A0E14; }
+    .glass-card {
+      background: rgba(13,17,23,0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid #1E2A3A;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .toggle-switch {
+      width: 44px; height: 24px; border-radius: 12px; position: relative; cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .toggle-switch::after {
+      content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%;
+      background: white; top: 2px; left: 2px; transition: all 0.3s ease;
+    }
+    .toggle-on { background: #4A90E2; }
+    .toggle-on::after { left: 22px; }
+    .toggle-off { background: #2A3545; }
+    .modal-overlay {
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    }
+    .bottom-sheet {
+      transform: translateY(100%); transition: transform 0.3s ease;
+    }
+    .bottom-sheet.show { transform: translateY(0); }
+    .btn-danger {
+      background: linear-gradient(135deg, #FF5E7A 0%, #FF8A65 100%);
+    }
+    .btn-ghost {
+      background: transparent; border: 1px solid #1E2A3A;
+    }
+  </style>
+</head>
+<body class="font-sans text-t1 w-[375px] min-h-[812px] relative overflow-hidden">
+
+  <!-- Header -->
+  <header class="sticky top-0 z-20 glass-card px-4 py-3 flex items-center gap-3">
+    <span class="material-icons text-t2 cursor-pointer">arrow_back</span>
+    <h1 class="text-[17px] font-semibold">系统设置</h1>
+  </header>
+
+  <!-- Content -->
+  <main class="px-4 py-5 space-y-5 pb-24">
+
+    <!-- Group: 备份与恢复 -->
+    <div class="glass-card rounded-2xl p-4 space-y-1">
+      <div class="text-xs text-t3 mb-3 px-1">备份与恢复</div>
+
+      <!-- 自动备份 -->
+      <div class="flex items-center justify-between py-3 px-1">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span class="material-icons text-primary text-[20px]">cloud_upload</span>
+          </div>
+          <div>
+            <div class="text-[15px] font-medium">自动备份</div>
+            <div class="text-[12px] text-t3">每日凌晨3点自动备份</div>
+          </div>
+        </div>
+        <div class="toggle-switch toggle-on" onclick="this.classList.toggle('toggle-on'); this.classList.toggle('toggle-off');"></div>
+      </div>
+
+      <!-- 备份位置 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer" onclick="showBottomSheet()">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span class="material-icons text-primary text-[20px]">folder</span>
+          </div>
+          <div>
+            <div class="text-[15px] font-medium">备份位置</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-t2 text-[14px]">本地存储</span>
+          <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- 手动备份 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span class="material-icons text-primary text-[20px]">backup</span>
+          </div>
+          <div>
+            <div class="text-[15px] font-medium">手动备份</div>
+            <div class="text-[12px] text-t3">立即备份当前数据</div>
+          </div>
+        </div>
+        <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- 恢复数据 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+            <span class="material-icons text-primary text-[20px]">restore</span>
+          </div>
+          <div>
+            <div class="text-[15px] font-medium">恢复数据</div>
+            <div class="text-[12px] text-t3">从备份恢复</div>
+          </div>
+        </div>
+        <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+      </div>
+    </div>
+
+    <!-- Group: AI配置 -->
+    <div class="glass-card rounded-2xl p-4 space-y-1">
+      <div class="text-xs text-t3 mb-3 px-1">AI配置</div>
+
+      <!-- AI定价模型 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+            <span class="material-icons text-accent text-[20px]">psychology</span>
+          </div>
+          <div>
+            <div class="text-[15px] font-medium">AI定价模型</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-t2 text-[14px]">精准模式</span>
+          <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- 智能调价 -->
+      <div class="flex items-center justify-between py-3 px-1">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+            <span class="material-icons text-accent text-[20px]">trending_up</span>
+          </div>
+          <div class="text-[15px] font-medium">智能调价</div>
+        </div>
+        <div class="toggle-switch toggle-on" onclick="this.classList.toggle('toggle-on'); this.classList.toggle('toggle-off');"></div>
+      </div>
+
+      <!-- 滞销提醒 -->
+      <div class="flex items-center justify-between py-3 px-1">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-accent/10 flex items-center justify-center">
+            <span class="material-icons text-accent text-[20px]">notifications_active</span>
+          </div>
+          <div class="text-[15px] font-medium">滞销提醒</div>
+        </div>
+        <div class="toggle-switch toggle-on" onclick="this.classList.toggle('toggle-on'); this.classList.toggle('toggle-off');"></div>
+      </div>
+    </div>
+
+    <!-- Group: 外观 -->
+    <div class="glass-card rounded-2xl p-4 space-y-1">
+      <div class="text-xs text-t3 mb-3 px-1">外观</div>
+
+      <!-- 深色主题 -->
+      <div class="flex items-center justify-between py-3 px-1">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-t3/20 flex items-center justify-center">
+            <span class="material-icons text-t2 text-[20px]">dark_mode</span>
+          </div>
+          <div class="text-[15px] font-medium">深色主题</div>
+        </div>
+        <span class="text-success text-[14px]">已启用</span>
+      </div>
+
+      <!-- 字体大小 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-t3/20 flex items-center justify-center">
+            <span class="material-icons text-t2 text-[20px]">text_fields</span>
+          </div>
+          <div class="text-[15px] font-medium">字体大小</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-t2 text-[14px]">标准</span>
+          <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group: 关于 -->
+    <div class="glass-card rounded-2xl p-4 space-y-1">
+      <div class="text-xs text-t3 mb-3 px-1">关于</div>
+
+      <!-- 版本信息 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-t3/20 flex items-center justify-center">
+            <span class="material-icons text-t2 text-[20px]">info</span>
+          </div>
+          <div class="text-[15px] font-medium">版本信息</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-t2 text-[14px]">v2.4.0</span>
+          <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+        </div>
+      </div>
+
+      <!-- 用户协议 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-t3/20 flex items-center justify-center">
+            <span class="material-icons text-t2 text-[20px]">description</span>
+          </div>
+          <div class="text-[15px] font-medium">用户协议</div>
+        </div>
+        <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+      </div>
+
+      <!-- 联系我们 -->
+      <div class="flex items-center justify-between py-3 px-1 cursor-pointer">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-t3/20 flex items-center justify-center">
+            <span class="material-icons text-t2 text-[20px]">support_agent</span>
+          </div>
+          <div class="text-[15px] font-medium">联系我们</div>
+        </div>
+        <span class="material-icons text-t3 text-[20px]">chevron_right</span>
+      </div>
+    </div>
+
+    <!-- 退出登录 -->
+    <div class="glass-card rounded-2xl">
+      <div class="flex items-center justify-center gap-2 py-4 cursor-pointer" onclick="showLogoutDialog()">
+        <span class="material-icons text-danger text-[22px]">logout</span>
+        <span class="text-danger text-[15px] font-medium">退出登录</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal 1: Confirmation Dialog -->
+  <div id="logoutDialog" class="hidden absolute inset-0 z-50 modal-overlay flex items-center justify-center p-6">
+    <div class="glass-card rounded-2xl p-6 w-full max-w-[300px] text-center">
+      <div class="w-14 h-14 rounded-full bg-danger/20 flex items-center justify-center mx-auto mb-4">
+        <span class="material-icons text-danger text-[28px]">logout</span>
+      </div>
+      <h2 class="text-[16px] font-bold mb-2">确认退出登录？</h2>
+      <p class="text-[13px] text-t2 mb-6">退出后需要重新输入账号密码登录</p>
+      <div class="flex gap-3">
+        <button class="flex-1 py-3 rounded-xl btn-ghost text-t2 text-[14px] font-medium" onclick="hideLogoutDialog()">取消</button>
+        <button class="flex-1 py-3 rounded-xl btn-danger text-white text-[14px] font-medium" onclick="hideLogoutDialog()">确认退出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Bottom Sheet -->
+  <div id="bottomSheet" class="hidden absolute inset-0 z-50 modal-overlay flex items-end justify-center">
+    <div class="glass-card bottom-sheet rounded-t-3xl w-full max-w-[375px]" style="border-radius: 20px 20px 0 0;">
+      <div class="flex justify-center pt-3 pb-2">
+        <div class="w-9 h-1 rounded-full bg-t3"></div>
+      </div>
+      <div class="px-5 py-4 border-b border-border">
+        <h3 class="text-[15px] font-semibold">备份位置</h3>
+      </div>
+      <div class="p-4 space-y-2">
+        <div class="flex items-center justify-between p-4 rounded-xl bg-primary/10 cursor-pointer" onclick="hideBottomSheet()">
+          <span class="text-[15px] font-medium text-primary">本地存储</span>
+          <span class="material-icons text-primary">check_circle</span>
+        </div>
+        <div class="flex items-center justify-between p-4 rounded-xl opacity-50 cursor-not-allowed">
+          <span class="text-[15px] text-t3">SD卡</span>
+          <span class="material-icons text-t3">lock</span>
+        </div>
+        <div class="flex items-center justify-between p-4 rounded-xl opacity-50 cursor-not-allowed">
+          <span class="text-[15px] text-t3">云端同步</span>
+          <span class="material-icons text-t3">lock</span>
+        </div>
+      </div>
+      <div class="h-8"></div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Toggle Alert Dialog -->
+  <div id="toggleAlert" class="hidden absolute inset-0 z-50 modal-overlay flex items-center justify-center p-6">
+    <div class="glass-card rounded-2xl p-6 w-full max-w-[300px] text-center">
+      <div class="w-14 h-14 rounded-full bg-warning/20 flex items-center justify-center mx-auto mb-4">
+        <span class="material-icons text-warning text-[28px]">warning</span>
+      </div>
+      <h2 class="text-[16px] font-bold mb-3">关闭自动备份将无法保障数据安全</h2>
+      <p class="text-[13px] text-t2 mb-6">建议保持开启状态以防止数据丢失</p>
+      <div class="flex gap-3">
+        <button class="flex-1 py-3 rounded-xl btn-ghost text-t2 text-[14px] font-medium" onclick="hideToggleAlert()">取消</button>
+        <button class="flex-1 py-3 rounded-xl bg-warning text-white text-[14px] font-medium" onclick="hideToggleAlert()">确定关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bar to switch modal states -->
+  <div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-[60] glass-card rounded-full px-4 py-2 flex gap-2">
+    <button class="px-3 py-1.5 rounded-full text-[11px] font-medium bg-primary/20 text-primary" onclick="showLogoutDialog()">对话框</button>
+    <button class="px-3 py-1.5 rounded-full text-[11px] font-medium bg-t3/30 text-t2" onclick="showBottomSheet()">底部面板</button>
+    <button class="px-3 py-1.5 rounded-full text-[11px] font-medium bg-t3/30 text-t2" onclick="showToggleAlert()">警告</button>
+  </div>
+
+  <script>
+    function showLogoutDialog() {
+      document.getElementById('logoutDialog').classList.remove('hidden');
+    }
+    function hideLogoutDialog() {
+      document.getElementById('logoutDialog').classList.add('hidden');
+    }
+    function showBottomSheet() {
+      const sheet = document.getElementById('bottomSheet');
+      sheet.classList.remove('hidden');
+      setTimeout(() => sheet.querySelector('.bottom-sheet').classList.add('show'), 10);
+    }
+    function hideBottomSheet() {
+      const sheet = document.getElementById('bottomSheet');
+      sheet.querySelector('.bottom-sheet').classList.remove('show');
+      setTimeout(() => sheet.classList.add('hidden'), 300);
+    }
+    function showToggleAlert() {
+      document.getElementById('toggleAlert').classList.remove('hidden');
+    }
+    function hideToggleAlert() {
+      document.getElementById('toggleAlert').classList.add('hidden');
+    }
+
+    // Click overlay to close bottom sheet
+    document.getElementById('bottomSheet').addEventListener('click', function(e) {
+      if (e.target === this) hideBottomSheet();
+    });
+  </script>
+
+</body>
+</html>

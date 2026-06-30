@@ -6,10 +6,14 @@ void main() {
     test('defaultConfig 含 BigModel GLM 默认配置', () {
       final d = AiConfig.defaultConfig();
       expect(d.providerName, 'GLM (智谱)');
-      expect(d.baseUrl, 'https://open.bigmodel.cn/api/paas/v4/chat/completions');
+      expect(
+        d.baseUrl,
+        'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      );
       expect(d.apiKey, isNotEmpty);
       expect(d.model, 'glm-4.7-flash');
       expect(d.protocol, 'openai');
+      expect(kDefaultAiVisionModel, 'glm-4.1v-thinking-flash');
     });
 
     test('fromMap(null) 回退默认值', () {
@@ -19,7 +23,12 @@ void main() {
     });
 
     test('fromMap 部分字段空时 effective 回退', () {
-      final c = AiConfig.fromMap({'baseUrl': '', 'apiKey': 'sk-x', 'model': '', 'protocol': ''});
+      final c = AiConfig.fromMap({
+        'baseUrl': '',
+        'apiKey': 'sk-x',
+        'model': '',
+        'protocol': '',
+      });
       final e = c.effective;
       expect(e.baseUrl, AiConfig.defaultConfig().baseUrl); // 空回退
       expect(e.apiKey, 'sk-x'); // 非空保留
@@ -28,7 +37,12 @@ void main() {
     });
 
     test('fromMap 全字段非空时 effective 全保留', () {
-      final c = AiConfig(baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-new', model: 'gpt-4', protocol: 'openai');
+      final c = AiConfig(
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: 'sk-new',
+        model: 'gpt-4',
+        protocol: 'openai',
+      );
       final e = c.effective;
       expect(e.baseUrl, 'https://api.openai.com/v1');
       expect(e.apiKey, 'sk-new');
@@ -37,7 +51,12 @@ void main() {
     });
 
     test('toMap/fromMap 往返一致', () {
-      final c = AiConfig(baseUrl: 'b', apiKey: 'k', model: 'm', protocol: 'anthropic');
+      final c = AiConfig(
+        baseUrl: 'b',
+        apiKey: 'k',
+        model: 'm',
+        protocol: 'anthropic',
+      );
       final restored = AiConfig.fromMap(c.toMap());
       expect(restored.baseUrl, 'b');
       expect(restored.apiKey, 'k');
@@ -46,9 +65,18 @@ void main() {
     });
 
     test('isConfigured 正确判断', () {
-      expect(AiConfig(baseUrl: 'b', apiKey: 'k', model: 'm').isConfigured, true);
-      expect(AiConfig(baseUrl: '', apiKey: 'k', model: 'm').isConfigured, false);
-      expect(AiConfig(baseUrl: 'b', apiKey: '', model: 'm').isConfigured, false);
+      expect(
+        AiConfig(baseUrl: 'b', apiKey: 'k', model: 'm').isConfigured,
+        true,
+      );
+      expect(
+        AiConfig(baseUrl: '', apiKey: 'k', model: 'm').isConfigured,
+        false,
+      );
+      expect(
+        AiConfig(baseUrl: 'b', apiKey: '', model: 'm').isConfigured,
+        false,
+      );
     });
   });
 
@@ -61,7 +89,10 @@ void main() {
     test('effectiveConfig 空字段回退默认', () {
       AiService.setConfig(AiConfig(model: 'test-model'));
       expect(AiService.effectiveConfig.apiKey, AiConfig.defaultConfig().apiKey);
-      expect(AiService.effectiveConfig.baseUrl, AiConfig.defaultConfig().baseUrl);
+      expect(
+        AiService.effectiveConfig.baseUrl,
+        AiConfig.defaultConfig().baseUrl,
+      );
       expect(AiService.effectiveConfig.model, 'test-model'); // 非空保留
     });
 
@@ -69,7 +100,10 @@ void main() {
       AiService.setConfig(AiConfig(model: 'temp'));
       AiService.setConfig(AiConfig.defaultConfig());
       expect(AiService.effectiveConfig.model, 'glm-4.7-flash');
-      expect(AiService.effectiveConfig.baseUrl, 'https://open.bigmodel.cn/api/paas/v4/chat/completions');
+      expect(
+        AiService.effectiveConfig.baseUrl,
+        'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+      );
     });
   });
 }

@@ -18,9 +18,16 @@ class StockPage extends StatefulWidget {
 class StockPageState extends State<StockPage> {
   int chipIndex = 0;
   String searchKw = '';
+  final searchCtrl = TextEditingController();
   final chips = ['全部', 'iPad Pro', 'iPad Air', '数字系列', 'iPad mini'];
 
   void refresh() => setState(() {});
+
+  @override
+  void dispose() {
+    searchCtrl.dispose();
+    super.dispose();
+  }
 
   List<Device> get filtered {
     var list =
@@ -61,125 +68,183 @@ class StockPageState extends State<StockPage> {
             .toList();
     final cost = all.fold<int>(0, (s, d) => s + d.purchaseCost);
     final stagnant = all.where((d) => d.isStagnant).length;
+    final horizontal = AppLayout.pageHorizontal(context);
+    final bottomPadding = AppLayout.scrollBottomPadding(context);
 
-    return PageScaffold(
-      title: const Text(
-        'My stock',
-        style: TextStyle(
-          fontSize: 25,
-          fontWeight: FontWeight.w900,
-          color: C.t1,
-        ),
-      ),
-      subtitle: Text(
-        '在售 ${all.length} 台 · 成本占用 ${yuan(cost)}',
-        style: const TextStyle(
-          fontSize: 12,
-          color: C.t2,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-      action: RoundIconButton(
-        icon: Icons.add_rounded,
-        color: Colors.black,
-        background: Colors.white,
-        onTap:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ScanPage()),
-            ).then((_) => refresh()),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _StockStat(
-                  label: '在售',
-                  value: '${all.where((d) => d.status == 'listed').length}',
-                  color: C.cyan,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StockStat(
-                  label: '未定价',
-                  value: '${all.where((d) => d.sellPrice <= 0).length}',
-                  color: C.mint,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _StockStat(
-                  label: '滞销',
-                  value: '$stagnant',
-                  color: C.red,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          _SearchField(
-            value: searchKw,
-            onChanged: (v) => setState(() => searchKw = v),
-            onClear: () => setState(() => searchKw = ''),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 42,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: chips.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder:
-                  (_, i) => _FilterPill(
-                    label: chips[i],
-                    selected: chipIndex == i,
-                    onTap: () => setState(() => chipIndex = i),
-                  ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (devices.isEmpty)
-            _EmptyStock(
-              onScan: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const ScanPage()),
-                ).then((_) => refresh());
-              },
-            )
-          else
-            LayoutBuilder(
-              builder: (context, box) {
-                final columns = box.maxWidth >= 720 ? 2 : 1;
-                return GridView.builder(
-                  itemCount: devices.length,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: columns,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: columns == 1 ? 1.55 : 1.35,
-                  ),
-                  itemBuilder:
-                      (_, i) => _DeviceProjectCard(
-                        device: devices[i],
-                        onTap:
-                            () => Navigator.push(
+    return Stack(
+      children: [
+        const AppBackdrop(),
+        SafeArea(
+          child: CustomScrollView(
+            cacheExtent: 600,
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+            slivers: [
+              SliverPadding(
+                padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 0),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '库存项目',
+                                  style: TextStyle(
+                                    fontSize: AppLayout.titleSize(context),
+                                    fontWeight: FontWeight.w900,
+                                    color: C.t1,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  '在售 ${all.length} 台 · 成本占用 ${yuan(cost)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: C.t2,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          RoundIconButton(
+                            icon: Icons.add_rounded,
+                            color: Colors.black,
+                            background: Colors.white,
+                            onTap:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const ScanPage(),
+                                  ),
+                                ).then((_) => refresh()),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _StockStat(
+                              label: '在售',
+                              value:
+                                  '${all.where((d) => d.status == 'listed').length}',
+                              color: C.cyan,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _StockStat(
+                              label: '未定价',
+                              value:
+                                  '${all.where((d) => d.sellPrice <= 0).length}',
+                              color: C.mint,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _StockStat(
+                              label: '滞销',
+                              value: '$stagnant',
+                              color: C.red,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      _SearchField(
+                        controller: searchCtrl,
+                        value: searchKw,
+                        onChanged: (v) => setState(() => searchKw = v),
+                        onClear:
+                            () => setState(() {
+                              searchCtrl.clear();
+                              searchKw = '';
+                            }),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 42,
+                        child: ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: chips.length,
+                          separatorBuilder: (_, __) => const SizedBox(width: 8),
+                          itemBuilder:
+                              (_, i) => _FilterPill(
+                                label: chips[i],
+                                selected: chipIndex == i,
+                                onTap: () => setState(() => chipIndex = i),
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      if (devices.isEmpty) ...[
+                        _EmptyStock(
+                          onScan: () {
+                            Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => DetailPage(device: devices[i]),
+                                builder: (_) => const ScanPage(),
                               ),
-                            ).then((_) => refresh()),
-                      ),
-                );
-              },
-            ),
-        ],
-      ),
+                            ).then((_) => refresh());
+                          },
+                        ),
+                        SizedBox(height: bottomPadding),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              if (devices.isNotEmpty)
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    horizontal,
+                    0,
+                    horizontal,
+                    bottomPadding,
+                  ),
+                  sliver: SliverLayoutBuilder(
+                    builder: (context, constraints) {
+                      final columns =
+                          constraints.crossAxisExtent >= 720 ? 2 : 1;
+                      final phoneTile =
+                          columns == 1 && constraints.crossAxisExtent <= 430;
+                      return SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: columns,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio:
+                              columns == 1 ? (phoneTile ? 1.68 : 1.55) : 1.35,
+                        ),
+                        delegate: SliverChildBuilderDelegate((context, i) {
+                          return RepaintBoundary(
+                            child: _DeviceProjectCard(
+                              device: devices[i],
+                              onTap:
+                                  () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (_) => DetailPage(device: devices[i]),
+                                    ),
+                                  ).then((_) => refresh()),
+                            ),
+                          );
+                        }, childCount: devices.length),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -225,11 +290,13 @@ class _StockStat extends StatelessWidget {
 }
 
 class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
   final String value;
   final ValueChanged<String> onChanged;
   final VoidCallback onClear;
 
   const _SearchField({
+    required this.controller,
     required this.value,
     required this.onChanged,
     required this.onClear,
@@ -237,27 +304,41 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GlassPanel(
-    padding: const EdgeInsets.symmetric(horizontal: 13),
-    radius: 22,
-    child: TextField(
-      onChanged: onChanged,
-      style: const TextStyle(
-        color: C.t1,
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-      ),
-      decoration: InputDecoration(
-        border: InputBorder.none,
-        icon: const Icon(Icons.search_rounded, color: C.t2),
-        hintText: '搜索型号、序列号、容量',
-        suffixIcon:
-            value.isEmpty
-                ? null
-                : IconButton(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
-                ),
-      ),
+    padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+    radius: 28,
+    color: const Color(0xE60F151F),
+    borderColor: Colors.white.withOpacity(0.11),
+    child: Row(
+      children: [
+        const Icon(Icons.search_rounded, color: C.t2, size: 24),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+            decoration: const InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.symmetric(vertical: 14),
+              hintText: '搜索型号、序列号、容量',
+            ),
+          ),
+        ),
+        if (value.isNotEmpty)
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
+          ),
+      ],
     ),
   );
 }
@@ -324,112 +405,135 @@ class _DeviceProjectCard extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(24),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                if (image != null)
-                  Image.file(image, fit: BoxFit.cover)
-                else
-                  CustomPaint(painter: _DeviceBackdropPainter(device.model)),
-                Positioned.fill(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.transparent,
-                          Colors.black.withOpacity(0.18),
-                          Colors.black.withOpacity(0.78),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
+            child: LayoutBuilder(
+              builder: (context, box) {
+                final dpr = MediaQuery.of(context).devicePixelRatio;
+                final cacheWidth =
+                    (box.maxWidth * dpr).round().clamp(480, 1400).toInt();
+                final cacheHeight =
+                    (box.maxHeight * dpr).round().clamp(360, 1200).toInt();
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (image != null)
+                      Image.file(
+                        image,
+                        fit: BoxFit.cover,
+                        cacheWidth: cacheWidth,
+                        cacheHeight: cacheHeight,
+                        filterQuality: FilterQuality.low,
+                        errorBuilder:
+                            (_, __, ___) => CustomPaint(
+                              painter: _DeviceBackdropPainter(device.model),
+                            ),
+                      )
+                    else
+                      CustomPaint(
+                        painter: _DeviceBackdropPainter(device.model),
+                      ),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.18),
+                              Colors.black.withOpacity(0.78),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                Positioned(
-                  top: 13,
-                  right: 13,
-                  child: Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.42),
-                      shape: BoxShape.circle,
+                    Positioned(
+                      top: 13,
+                      right: 13,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.42),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.more_horiz_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.more_horiz_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                  ),
-                ),
-                Positioned(
-                  left: 14,
-                  right: 14,
-                  bottom: 14,
-                  child: Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.36),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Row(
+                    Positioned(
+                      left: 14,
+                      right: 14,
+                      bottom: 14,
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.36),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.08),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: Text(
-                                '${device.model} ${device.capacity}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: C.t1,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w900,
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${device.model} ${device.capacity}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: C.t1,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                StatusChip(
+                                  _statusText(device),
+                                  _statusColor(device),
+                                ),
+                              ],
                             ),
-                            StatusChip(
-                              _statusText(device),
-                              _statusColor(device),
+                            const SizedBox(height: 7),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${device.condition} · ${device.color} · ${device.stockDays}天',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      color: C.t2,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  device.sellPrice > 0
+                                      ? yuan(device.sellPrice)
+                                      : '待定价',
+                                  style: const TextStyle(
+                                    color: C.cyan,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 7),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                '${device.condition} · ${device.color} · ${device.stockDays}天',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: C.t2,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              device.sellPrice > 0
-                                  ? yuan(device.sellPrice)
-                                  : '待定价',
-                              style: const TextStyle(
-                                color: C.cyan,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -443,8 +547,7 @@ class _DeviceProjectCard extends StatelessWidget {
     final paths = raw.split(';').where((p) => p.trim().isNotEmpty).toList();
     if (paths.isEmpty) return null;
     final path = paths.first;
-    final file = File(path);
-    return file.existsSync() ? file : null;
+    return File(path);
   }
 
   String _statusText(Device d) {

@@ -1,13 +1,9 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
-import 'detail_page.dart';
 
 // ====== 售出页 ======
 class SellPage extends StatefulWidget {
@@ -73,32 +69,14 @@ class _SellPageState extends State<SellPage> {
     final logi = (logisticsValue * 100).round();
     final profit = price - selected!.purchaseCost - repair - fee - logi;
     if (profit < 0) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder:
-            (ctx) => AlertDialog(
-              backgroundColor: C.card,
-              title: Text(
-                '确认亏损出售',
-                style: TextStyle(color: C.t1, fontSize: 16),
-              ),
-              content: Text(
-                '这单预计亏损 ${yuan(profit.abs())}。确认继续记录出售吗？',
-                style: TextStyle(color: C.t2, fontSize: 13),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  child: Text('取消', style: TextStyle(color: C.t2)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: Text('继续出售', style: TextStyle(color: C.red)),
-                ),
-              ],
-            ),
+      final ok = await confirmAction(
+        context,
+        title: '确认亏损出售',
+        message: '这单预计亏损 ${yuan(profit.abs())}。确认继续记录出售吗？',
+        confirmText: '继续出售',
+        confirmColor: C.red,
       );
-      if (ok != true) return;
+      if (!ok) return;
     }
     final d = selected!;
     d.status = 'sold';
@@ -155,11 +133,11 @@ class _SellPageState extends State<SellPage> {
                     decoration: BoxDecoration(
                       color:
                           selected?.id == d.id
-                              ? C.brand.withOpacity(0.15)
-                              : C.bg,
+                              ? C.cyan.withOpacity(0.15)
+                              : C.bgDeep,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: selected?.id == d.id ? C.brand : C.line,
+                        color: selected?.id == d.id ? C.cyan : C.border,
                       ),
                     ),
                     child: Row(
@@ -188,7 +166,7 @@ class _SellPageState extends State<SellPage> {
                         if (selected?.id == d.id)
                           Text(
                             '✓',
-                            style: TextStyle(color: C.brand2, fontSize: 16),
+                            style: TextStyle(color: C.t3, fontSize: 16),
                           ),
                       ],
                     ),
@@ -212,10 +190,10 @@ class _SellPageState extends State<SellPage> {
                     labelText: '售价(元)',
                     labelStyle: TextStyle(color: C.t2),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                   ),
                 ),
@@ -232,10 +210,10 @@ class _SellPageState extends State<SellPage> {
                           labelText: '维修成本',
                           labelStyle: TextStyle(color: C.t2),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -251,10 +229,10 @@ class _SellPageState extends State<SellPage> {
                           labelText: '平台佣金',
                           labelStyle: TextStyle(color: C.t2),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -270,10 +248,10 @@ class _SellPageState extends State<SellPage> {
                           labelText: '物流',
                           labelStyle: TextStyle(color: C.t2),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -288,10 +266,10 @@ class _SellPageState extends State<SellPage> {
                     labelText: '买家',
                     labelStyle: TextStyle(color: C.t2),
                     filled: true,
-                    fillColor: C.bg,
+                    fillColor: C.bgDeep,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.line),
+                      borderSide: BorderSide(color: C.border),
                     ),
                   ),
                 ),
@@ -306,7 +284,7 @@ class _SellPageState extends State<SellPage> {
                         child: ChoiceChip(
                           label: Text(c, style: const TextStyle(fontSize: 11)),
                           selected: channel == c,
-                          selectedColor: C.brand,
+                          selectedColor: C.cyan,
                           onSelected: (_) => setState(() => channel = c),
                         ),
                       ),

@@ -181,31 +181,31 @@ class _AiReportPageState extends State<AiReportPage> {
           Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+              gradient: LinearGradient(
+                colors: [C.bgDeep, C.bgSurface],
               ),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Color(0xFF4338CA)),
+              border: Border.all(color: C.purple),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
-                    const Text(
+                    Text(
                       '今日数据',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFFE0E7FF),
+                        color: C.t1,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '更新于 ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, "0")}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: Color(0xFFA5B4FC),
+                        color: C.t2,
                       ),
                     ),
                   ],
@@ -242,7 +242,7 @@ class _AiReportPageState extends State<AiReportPage> {
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: C.brand2),
+                child: CircularProgressIndicator(color: C.t3),
               ),
             ),
           // 结构化卡片
@@ -256,7 +256,7 @@ class _AiReportPageState extends State<AiReportPage> {
             const SizedBox(height: 10),
             // 建议
             if (suggestions.isNotEmpty)
-              _sectionCard('🎯 明日建议', suggestions, C.brand2),
+              _sectionCard('🎯 明日建议', suggestions, C.t3),
             const SizedBox(height: 10),
             // 本地异常检测
             if (localAnomalies.isNotEmpty)
@@ -267,8 +267,8 @@ class _AiReportPageState extends State<AiReportPage> {
               child: OutlinedButton(
                 onPressed: _gen,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: C.brand2,
-                  side: BorderSide(color: C.brand2),
+                  foregroundColor: C.t3,
+                  side: BorderSide(color: C.t3),
                   padding: EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(11),
@@ -350,14 +350,14 @@ class _AiReportPageState extends State<AiReportPage> {
       children: [
         Text(
           v,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.w800,
-            color: Color(0xFFFBBF24),
+            color: C.neonOrange,
           ),
         ),
         const SizedBox(height: 2),
-        Text(l, style: const TextStyle(fontSize: 10, color: Color(0xFFA5B4FC))),
+        Text(l, style: TextStyle(fontSize: 10, color: C.t2)),
       ],
     ),
   );

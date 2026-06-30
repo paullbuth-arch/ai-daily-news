@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
@@ -16,6 +17,16 @@ import java.io.FileOutputStream
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "ipad_boss_app/gallery"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        requestHighRefreshRate()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requestHighRefreshRate()
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -91,6 +102,27 @@ class MainActivity : FlutterActivity() {
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun requestHighRefreshRate() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+
+        val modes = windowManager.defaultDisplay.supportedModes
+        var bestRate = 0f
+        var bestModeId = 0
+        for (mode in modes) {
+            if (mode.refreshRate > bestRate) {
+                bestRate = mode.refreshRate
+                bestModeId = mode.modeId
+            }
+        }
+        if (bestRate <= 60f) return
+
+        val attrs = window.attributes
+        attrs.preferredRefreshRate = bestRate
+        attrs.preferredDisplayModeId = bestModeId
+        window.attributes = attrs
     }
 
     /// 把单张图片保存到系统相册 Pictures/<albumName> 目录

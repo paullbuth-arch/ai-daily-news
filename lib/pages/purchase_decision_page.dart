@@ -158,15 +158,15 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    color: C.bg,
+                    color: C.bgDeep,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.line),
+                    border: Border.all(color: C.border),
                   ),
                   child: DropdownButton<String>(
                     value: _selectedModel,
                     isExpanded: true,
                     underline: const SizedBox(),
-                    dropdownColor: C.card,
+                    dropdownColor: C.bgCard,
                     hint: Text(
                       '选择型号',
                       style: TextStyle(color: C.t3, fontSize: 14),
@@ -208,10 +208,10 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                           labelText: '采购成本(元/台)',
                           labelStyle: TextStyle(color: C.t2, fontSize: 12),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -227,10 +227,10 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                           labelText: '数量',
                           labelStyle: TextStyle(color: C.t2, fontSize: 12),
                           filled: true,
-                          fillColor: C.bg,
+                          fillColor: C.bgDeep,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.line),
+                            borderSide: BorderSide(color: C.border),
                           ),
                         ),
                       ),
@@ -300,12 +300,12 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: C.brand.withOpacity(0.15),
+                  color: C.cyan.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
                   '基于 ${sales30 + inStock} 条历史',
-                  style: TextStyle(fontSize: 9, color: C.brand),
+                  style: TextStyle(fontSize: 9, color: C.cyan),
                 ),
               ),
             ],
@@ -319,7 +319,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
               '¥$wholesalePrice',
               _marketPrice!['date'] as String?,
             ),
-          Divider(color: C.line, height: 8),
+          Divider(color: C.border, height: 8),
           _refRow(
             '🏆 历史最佳采购价',
             '¥$bestPur',
@@ -414,14 +414,14 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
             '毛利率 ${margin.toStringAsFixed(1)}% · 预计周转 ${avgTurnover}天',
             style: TextStyle(fontSize: 10, color: C.t3),
           ),
-          Divider(color: C.line, height: 16),
+          Divider(color: C.border, height: 16),
           _profitRow('预计售价', avgSell, null, bold: true),
           _profitRow('拿货成本', costFen, C.red),
           _profitRow('维修成本预估', repairAvg, C.orange),
           _profitRow('平台佣金预估', feeAvg, C.orange),
           _profitRow('物流+包装', logisticsAvg, C.orange),
           _profitRow('售后预留', afterSaleAvg, C.orange),
-          Divider(color: C.line, height: 8),
+          Divider(color: C.border, height: 8),
           _profitRow(
             '预估净利',
             netProfit,
@@ -573,13 +573,13 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
             ],
           ),
           const SizedBox(height: 10),
-          _scoreBar('利润空间', profitScore, 0.30, Colors.blue),
+          _scoreBar('利润空间', profitScore, 0.30, C.blue),
           const SizedBox(height: 6),
-          _scoreBar('周转速度', turnoverScore, 0.25, Colors.teal),
+          _scoreBar('周转速度', turnoverScore, 0.25, C.teal),
           const SizedBox(height: 6),
-          _scoreBar('库存压力', stockScore, 0.25, Colors.indigo),
+          _scoreBar('库存压力', stockScore, 0.25, C.purple),
           const SizedBox(height: 6),
-          _scoreBar('价格趋势', trendScore, 0.20, Colors.cyan),
+          _scoreBar('价格趋势', trendScore, 0.20, C.cyan),
         ],
       ),
     );
@@ -613,7 +613,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           borderRadius: BorderRadius.circular(3),
           child: LinearProgressIndicator(
             value: score / 100,
-            backgroundColor: C.line,
+            backgroundColor: C.border,
             valueColor: AlwaysStoppedAnimation<Color>(color.withOpacity(0.8)),
             minHeight: 6,
           ),
@@ -641,7 +641,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           // 第一行：4 大核心指标（大数字）
           Row(
             children: [
-              Expanded(child: _bigKpi('${a['salesCount']}', '销量(台)', C.brand2)),
+              Expanded(child: _bigKpi('${a['salesCount']}', '销量(台)', C.t3)),
               Expanded(
                 child: _bigKpi(
                   ((a['avgProfit'] as int) / 100).toStringAsFixed(0),
@@ -775,14 +775,14 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: C.brand.withOpacity(0.15),
+                      color: C.cyan.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       s['channel'] as String,
                       style: const TextStyle(
                         fontSize: 12,
-                        color: C.brand,
+                        color: C.cyan,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -815,7 +815,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [C.purple, C.brand2]),
+        gradient: const LinearGradient(colors: [C.purple, C.t3]),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(

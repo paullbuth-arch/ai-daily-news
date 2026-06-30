@@ -5,6 +5,7 @@ import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
 import 'ai_report_page.dart';
+import 'detail_page.dart';
 import 'market_price_page.dart';
 import 'scan_page.dart';
 import 'sell_page.dart';
@@ -58,17 +59,14 @@ class HomePageState extends State<HomePage> {
           fontWeight: FontWeight.w700,
         ),
       ),
-      action: RoundIconButton(
-        icon: Icons.refresh_rounded,
-        onTap: refresh,
-        color: C.t1,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _HeroPhoneCard(
             stats: stats,
             margin: margin,
+            onSearch: _openHomeSearch,
+            onTune: _openQuickPanel,
             onScan: () => _push(const ScanPage()),
             onPrice: () => _push(const MarketPricePage()),
             onSell: () => _push(const SellPage()),
@@ -96,11 +94,127 @@ class HomePageState extends State<HomePage> {
       MaterialPageRoute(builder: (_) => page),
     ).then((_) => refresh());
   }
+
+  Future<void> _openHomeSearch() async {
+    final ctrl = TextEditingController();
+    var query = '';
+    final devices = gStorage.getDevices();
+    await showAppFormSheet<void>(
+      context: context,
+      title: '搜索库存',
+      subtitle: '按型号、容量、序列号快速定位设备',
+      initialChildSize: 0.72,
+      child: StatefulBuilder(
+        builder: (context, setSheet) {
+          final kw = query.trim().toLowerCase();
+          final results =
+              (kw.isEmpty
+                      ? devices
+                      : devices.where(
+                        (d) =>
+                            d.model.toLowerCase().contains(kw) ||
+                            d.serial.toLowerCase().contains(kw) ||
+                            d.capacity.toLowerCase().contains(kw) ||
+                            d.color.toLowerCase().contains(kw),
+                      ))
+                  .take(12)
+                  .toList();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppFormField(
+                controller: ctrl,
+                label: '搜索型号、序列号、容量',
+                icon: Icons.search_rounded,
+                autofocus: true,
+                onChanged: (v) => setSheet(() => query = v),
+              ),
+              const SizedBox(height: 14),
+              if (results.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 30),
+                  child: Center(
+                    child: Text(
+                      '没有匹配的库存设备',
+                      style: TextStyle(
+                        color: C.t2,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                )
+              else
+                ...results.map(
+                  (d) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _SearchResultTile(
+                      device: d,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _push(DetailPage(device: d));
+                      },
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
+      ),
+    );
+    ctrl.dispose();
+  }
+
+  Future<void> _openQuickPanel() async {
+    await showAppFormSheet<void>(
+      context: context,
+      title: '经营快捷入口',
+      subtitle: '把常用判断集中到这里',
+      initialChildSize: 0.5,
+      maxChildSize: 0.72,
+      child: Column(
+        children: [
+          _QuickPanelAction(
+            icon: Icons.auto_awesome_rounded,
+            title: 'AI 经营日报',
+            subtitle: '汇总库存、订单和利润',
+            color: C.purple,
+            onTap: () {
+              Navigator.pop(context);
+              _push(const AiReportPage());
+            },
+          ),
+          _QuickPanelAction(
+            icon: Icons.warning_amber_rounded,
+            title: '滞销库存',
+            subtitle: '查看超过周转阈值的设备',
+            color: C.red,
+            onTap: () {
+              Navigator.pop(context);
+              _push(const StagnantListPage());
+            },
+          ),
+          _QuickPanelAction(
+            icon: Icons.query_stats_rounded,
+            title: '今日批发价',
+            subtitle: '查行情和采购参考价',
+            color: C.mint,
+            onTap: () {
+              Navigator.pop(context);
+              _push(const MarketPricePage());
+            },
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _HeroPhoneCard extends StatelessWidget {
   final Stats stats;
   final double margin;
+  final VoidCallback onSearch;
+  final VoidCallback onTune;
   final VoidCallback onScan;
   final VoidCallback onPrice;
   final VoidCallback onSell;
@@ -108,6 +222,8 @@ class _HeroPhoneCard extends StatelessWidget {
   const _HeroPhoneCard({
     required this.stats,
     required this.margin,
+    required this.onSearch,
+    required this.onTune,
     required this.onScan,
     required this.onPrice,
     required this.onSell,
@@ -129,7 +245,7 @@ class _HeroPhoneCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  _CircleTool(icon: Icons.search_rounded),
+                  _CircleTool(icon: Icons.search_rounded, onTap: onSearch),
                   const Spacer(),
                   Container(
                     width: 84,
@@ -140,12 +256,12 @@ class _HeroPhoneCard extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  _CircleTool(icon: Icons.tune_rounded),
+                  _CircleTool(icon: Icons.tune_rounded, onTap: onTune),
                 ],
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
               const Text(
-                'Today cockpit',
+                '今日经营舱',
                 style: TextStyle(
                   fontSize: 13,
                   color: C.t2,
@@ -175,67 +291,81 @@ class _HeroPhoneCard extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MiniMetric(
-                      label: '订单',
-                      value: '${stats.orderCount}',
-                      tint: C.purple,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _MiniMetric(
-                      label: '在售',
-                      value: '${stats.inStockCount}',
-                      tint: C.cyan,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _MiniMetric(
-                      label: '占用',
-                      value: yuan(stats.capitalOccupied),
-                      tint: C.mint,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 18),
-              Row(
-                children: [
-                  Expanded(
-                    child: _PastelPill(
-                      label: '收货',
-                      sub: 'Scan',
-                      icon: Icons.qr_code_scanner_rounded,
-                      color: C.cyan,
-                      onTap: onScan,
+              LayoutBuilder(
+                builder:
+                    (context, box) => Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        SizedBox(
+                          width: (box.maxWidth - 10) / 2,
+                          child: _MiniMetric(
+                            label: '今日订单',
+                            value: '${stats.orderCount}',
+                            tint: C.purple,
+                          ),
+                        ),
+                        SizedBox(
+                          width: (box.maxWidth - 10) / 2,
+                          child: _MiniMetric(
+                            label: '在售设备',
+                            value: '${stats.inStockCount}',
+                            tint: C.cyan,
+                          ),
+                        ),
+                        SizedBox(
+                          width: box.maxWidth,
+                          child: _MiniMetric(
+                            label: '资金占用',
+                            value: yuan(stats.capitalOccupied),
+                            tint: C.mint,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _PastelPill(
-                      label: '批发价',
-                      sub: 'Price',
-                      icon: Icons.query_stats_rounded,
-                      color: C.mint,
-                      onTap: onPrice,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _PastelPill(
-                      label: '售出',
-                      sub: 'Sell',
-                      icon: Icons.point_of_sale_outlined,
-                      color: C.purple,
-                      onTap: onSell,
-                    ),
-                  ),
-                ],
+              ),
+              const SizedBox(height: 16),
+              LayoutBuilder(
+                builder: (context, box) {
+                  final half = (box.maxWidth - 10) / 2;
+                  return Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      SizedBox(
+                        width: half,
+                        child: _PastelPill(
+                          label: '扫码收货',
+                          sub: '快速录入',
+                          icon: Icons.qr_code_scanner_rounded,
+                          color: C.cyan,
+                          onTap: onScan,
+                        ),
+                      ),
+                      SizedBox(
+                        width: half,
+                        child: _PastelPill(
+                          label: '批发价',
+                          sub: '行情参考',
+                          icon: Icons.query_stats_rounded,
+                          color: C.mint,
+                          onTap: onPrice,
+                        ),
+                      ),
+                      SizedBox(
+                        width: box.maxWidth,
+                        child: _PastelPill(
+                          label: '售出设备',
+                          sub: '生成订单并计算利润',
+                          icon: Icons.point_of_sale_outlined,
+                          color: C.purple,
+                          onTap: onSell,
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
@@ -295,18 +425,152 @@ class _HeroTexturePainter extends CustomPainter {
 
 class _CircleTool extends StatelessWidget {
   final IconData icon;
-  const _CircleTool({required this.icon});
+  final VoidCallback onTap;
+  const _CircleTool({required this.icon, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 44,
-    height: 44,
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.10),
-      shape: BoxShape.circle,
-      border: Border.all(color: Colors.white.withOpacity(0.10)),
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: Ink(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.10),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withOpacity(0.10)),
+        ),
+        child: Icon(icon, color: C.t1, size: 21),
+      ),
     ),
-    child: Icon(icon, color: C.t1, size: 21),
+  );
+}
+
+class _SearchResultTile extends StatelessWidget {
+  final Device device;
+  final VoidCallback onTap;
+
+  const _SearchResultTile({required this.device, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(13),
+    radius: 20,
+    color: const Color(0xE60C0F16),
+    onTap: onTap,
+    child: Row(
+      children: [
+        Container(
+          width: 42,
+          height: 42,
+          decoration: const BoxDecoration(
+            color: C.cyan,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(
+            Icons.tablet_mac_rounded,
+            color: Colors.black,
+            size: 21,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${device.model} ${device.capacity}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: C.t1,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${device.condition} · ${device.color} · ${device.serial.isEmpty ? "无序列号" : device.serial}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: C.t2,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const Icon(Icons.chevron_right_rounded, color: C.t3),
+      ],
+    ),
+  );
+}
+
+class _QuickPanelAction extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickPanelAction({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: GlassPanel(
+      padding: const EdgeInsets.all(13),
+      radius: 20,
+      color: color.withOpacity(0.12),
+      borderColor: color.withOpacity(0.22),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(icon, color: Colors.black, size: 21),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: C.t1,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: C.t2,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: C.t2),
+        ],
+      ),
+    ),
   );
 }
 
@@ -374,56 +638,59 @@ class _PastelPill extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Ink(
-        padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    sub,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.black.withOpacity(0.48),
-                      fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) => SizedBox(
+    width: double.infinity,
+    child: Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.black.withOpacity(0.50),
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.black,
-                      fontWeight: FontWeight.w900,
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(
-                color: Colors.black,
-                shape: BoxShape.circle,
+              Container(
+                width: 38,
+                height: 38,
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: Colors.white, size: 19),
               ),
-              child: Icon(icon, color: Colors.white, size: 18),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),

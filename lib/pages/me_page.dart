@@ -97,7 +97,7 @@ class _MePageState extends State<MePage> {
 
     return PageScaffold(
       title: const Text(
-        'Workspace',
+        '工作区',
         style: TextStyle(
           fontSize: 25,
           fontWeight: FontWeight.w900,

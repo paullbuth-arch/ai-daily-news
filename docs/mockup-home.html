@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>机掌柜 - 首页</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0A0E14',
+                        primary: '#4A90E2',
+                        accent: '#7C5CFF',
+                        success: '#00E5A0',
+                        warning: '#FF9F43',
+                        danger: '#FF5E7A',
+                        gold: '#FFD166',
+                        t1: '#E8EDF5',
+                        t2: '#8A9BB5',
+                        t3: '#4A5A70',
+                        cardBg: 'rgba(13,17,23,0.75)',
+                        border: '#1E2A3A'
+                    },
+                    fontFamily: {
+                        sans: ["-apple-system", "'SF Pro Display'", "'PingFang SC'", "'Noto Sans SC'", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * { box-sizing: border-box; }
+        body { background: #0A0E14; }
+        
+        .glass-card {
+            background: rgba(13,17,23,0.75);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid #1E2A3A;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(74,144,226,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        
+        .blue-gradient {
+            background: linear-gradient(135deg, #4A90E2, #60A5FA);
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(135deg, #4A90E2, #7C5CFF, #4A90E2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 30px rgba(74,144,226,0.2), 0 0 30px rgba(124,92,255,0.15);
+        }
+        
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(74,144,226,0.4);
+        }
+        
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(124,92,255,0.4);
+        }
+        
+        .input-glass {
+            background: rgba(30,42,58,0.6);
+            border: 1px solid rgba(74,144,226,0.2);
+            transition: all 150ms ease;
+        }
+        
+        /* Grid background pattern */
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(74,144,226,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74,144,226,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+        }
+        
+        /* Trend chip animation */
+        .trend-up {
+            animation: pulse-green 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% { box-shadow: 0 0 8px rgba(0,229,160,0.3); }
+            50% { box-shadow: 0 0 15px rgba(0,229,160,0.5); }
+        }
+        
+        /* Chart line animation */
+        .chart-line {
+            stroke-dasharray: 500;
+            stroke-dashoffset: 500;
+            animation: draw-line 2s ease-out forwards;
+        }
+        
+        @keyframes draw-line {
+            to { stroke-dashoffset: 0; }
+        }
+        
+        .chart-area {
+            opacity: 0;
+            animation: fade-in 0.5s ease-out 1.5s forwards;
+        }
+        
+        @keyframes fade-in {
+            to { opacity: 0.3; }
+        }
+        
+        /* Hover effects */
+        .metric-card {
+            transition: all 150ms ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5), 0 0 25px rgba(74,144,226,0.15);
+        }
+        
+        .alert-item {
+            transition: all 150ms ease;
+        }
+        
+        .alert-item:hover {
+            background: rgba(255,159,67,0.05);
+        }
+        
+        /* Tab button */
+        .tab-btn {
+            transition: all 150ms ease;
+        }
+        
+        .tab-btn:hover:not(.active) {
+            background: rgba(74,144,226,0.1);
+        }
+        
+        .tab-btn.active {
+            background: linear-gradient(135deg, #4A90E2, #60A5FA);
+            color: white;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #1E2A3A;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="font-sans text-t1 min-h-screen grid-bg">
+    <div class="max-w-[375px] mx-auto px-4 py-4 pb-8">
+        
+        <!-- Header -->
+        <header class="glass-card rounded-2xl p-4 mb-4 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-white">库存总览</h1>
+                <p class="text-t2 text-xs mt-0.5">欢迎回来老板</p>
+            </div>
+            <div class="relative">
+                <div class="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                    <span class="text-white text-sm font-bold">Boss</span>
+                </div>
+                <div class="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-success rounded-full border-2 border-bg"></div>
+            </div>
+        </header>
+        
+        <!-- Hero Card -->
+        <div class="hero-gradient rounded-2xl p-5 mb-4 relative overflow-hidden">
+            <!-- Decorative circles -->
+            <div class="absolute -top-10 -right-10 w-32 h-32 rounded-full bg-white/5"></div>
+            <div class="absolute -bottom-5 -left-5 w-20 h-20 rounded-full bg-white/5"></div>
+            
+            <!-- Trend chip -->
+            <div class="absolute top-4 right-4 trend-up bg-success/20 text-success text-xs px-2 py-1 rounded-full font-medium flex items-center gap-0.5">
+                <span class="material-icons text-xs">trending_up</span>
+                +12.3%
+            </div>
+            
+            <div class="relative z-10">
+                <p class="text-t2 text-xs mb-1">今日毛利</p>
+                <h2 class="text-4xl font-black text-white mb-4">¥12,845</h2>
+                
+                <!-- Mini stats -->
+                <div class="flex gap-2">
+                    <div class="flex-1 bg-white/10 rounded-xl py-2.5 px-3 text-center">
+                        <p class="text-white font-bold text-sm">24</p>
+                        <p class="text-white/60 text-xs">订单</p>
+                    </div>
+                    <div class="flex-1 bg-white/10 rounded-xl py-2.5 px-3 text-center">
+                        <p class="text-white font-bold text-sm">156</p>
+                        <p class="text-white/60 text-xs">设备</p>
+                    </div>
+                    <div class="flex-1 bg-white/10 rounded-xl py-2.5 px-3 text-center">
+                        <p class="text-white font-bold text-sm">3.2天</p>
+                        <p class="text-white/60 text-xs">周转</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Core Metrics Section -->
+        <section class="mb-4">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <span class="material-icons text-primary text-lg">dashboard</span>
+                核心指标
+            </h3>
+            
+            <!-- 2x2 Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Stock Value -->
+                <div class="glass-card metric-card rounded-2xl p-4">
+                    <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center mb-3">
+                        <span class="material-icons text-primary text-xl">account_balance_wallet</span>
+                    </div>
+                    <p class="text-lg font-black text-white mb-0.5">¥856,400</p>
+                    <p class="text-t3 text-xs">库存总价值</p>
+                    <div class="mt-2 bg-success/10 text-success text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                        <span class="material-icons text-xs">trending_up</span>
+                        +5.2%
+                    </div>
+                </div>
+                
+                <!-- In-stock Count -->
+                <div class="glass-card metric-card rounded-2xl p-4">
+                    <div class="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center mb-3">
+                        <span class="material-icons text-success text-xl">inventory</span>
+                    </div>
+                    <p class="text-lg font-black text-white mb-0.5">156 台</p>
+                    <p class="text-t3 text-xs">在库设备</p>
+                    <div class="mt-2 bg-success/10 text-success text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                        <span class="material-icons text-xs">trending_up</span>
+                        +12
+                    </div>
+                </div>
+                
+                <!-- Pending Orders -->
+                <div class="glass-card metric-card rounded-2xl p-4">
+                    <div class="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center mb-3">
+                        <span class="material-icons text-warning text-xl">pending_actions</span>
+                    </div>
+                    <p class="text-lg font-black text-white mb-0.5">8 单</p>
+                    <p class="text-t3 text-xs">待发货</p>
+                    <div class="mt-2 bg-warning/10 text-warning text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                        <span class="material-icons text-xs">schedule</span>
+                        待处理
+                    </div>
+                </div>
+                
+                <!-- Monthly Revenue -->
+                <div class="glass-card metric-card rounded-2xl p-4">
+                    <div class="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center mb-3">
+                        <span class="material-icons text-accent text-xl">payments</span>
+                    </div>
+                    <p class="text-lg font-black text-white mb-0.5">¥128,450</p>
+                    <p class="text-t3 text-xs">本月营收</p>
+                    <div class="mt-2 bg-accent/10 text-accent text-xs px-2 py-0.5 rounded-full inline-flex items-center gap-0.5">
+                        <span class="material-icons text-xs">trending_up</span>
+                        +18.6%
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Chart Section -->
+        <section class="mb-4">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <span class="material-icons text-primary text-lg">show_chart</span>
+                近期动态
+            </h3>
+            
+            <div class="glass-card rounded-2xl p-4">
+                <!-- Chart Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="text-sm font-bold text-t1">近7天毛利趋势</h4>
+                    <div class="flex bg-bg rounded-lg p-0.5">
+                        <button class="tab-btn active text-xs px-3 py-1 rounded-md font-medium">近7天</button>
+                        <button class="tab-btn text-t2 text-xs px-3 py-1 rounded-md font-medium">当月</button>
+                        <button class="tab-btn text-t2 text-xs px-3 py-1 rounded-md font-medium">近12月</button>
+                    </div>
+                </div>
+                
+                <!-- Chart SVG -->
+                <div class="relative h-40">
+                    <svg viewBox="0 0 320 140" class="w-full h-full" preserveAspectRatio="none">
+                        <!-- Grid lines -->
+                        <line x1="0" y1="35" x2="320" y2="35" stroke="#1E2A3A" stroke-width="0.5" stroke-dasharray="4,4"/>
+                        <line x1="0" y1="70" x2="320" y2="70" stroke="#1E2A3A" stroke-width="0.5" stroke-dasharray="4,4"/>
+                        <line x1="0" y1="105" x2="320" y2="105" stroke="#1E2A3A" stroke-width="0.5" stroke-dasharray="4,4"/>
+                        
+                        <!-- Y-axis labels -->
+                        <text x="5" y="12" fill="#4A5A70" font-size="8">6K</text>
+                        <text x="5" y="40" fill="#4A5A70" font-size="8">4K</text>
+                        <text x="5" y="68" fill="#4A5A70" font-size="8">2K</text>
+                        <text x="5" y="136" fill="#4A5A70" font-size="8">0</text>
+                        
+                        <!-- Gradient fill area -->
+                        <defs>
+                            <linearGradient id="chartGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                <stop offset="0%" style="stop-color:#4A90E2;stop-opacity:0.4"/>
+                                <stop offset="100%" style="stop-color:#4A90E2;stop-opacity:0"/>
+                            </linearGradient>
+                        </defs>
+                        
+                        <!-- Area path -->
+                        <path class="chart-area" d="M0,105 C45,98 90,70 135,84 C180,98 225,56 270,77 C292,86 310,92 320,95 L320,140 L0,140 Z" fill="url(#chartGradient)"/>
+                        
+                        <!-- Line -->
+                        <path class="chart-line" d="M0,105 C45,98 90,70 135,84 C180,98 225,56 270,77 C292,86 310,92 320,95" fill="none" stroke="#4A90E2" stroke-width="2.5" stroke-linecap="round"/>
+                        
+                        <!-- Data points -->
+                        <circle cx="0" cy="105" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="45" cy="98" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="90" cy="70" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="135" cy="84" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="180" cy="98" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="225" cy="56" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        <circle cx="270" cy="77" r="4" fill="#4A90E2" stroke="#0A0E14" stroke-width="2"/>
+                        
+                        <!-- X-axis labels -->
+                        <text x="0" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-25</text>
+                        <text x="45" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-26</text>
+                        <text x="90" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-27</text>
+                        <text x="135" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-28</text>
+                        <text x="180" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-29</text>
+                        <text x="225" y="148" fill="#4A5A70" font-size="7" text-anchor="middle">06-30</text>
+                        <text x="270" y="148" fill="#E8EDF5" font-size="7" text-anchor="middle" font-weight="bold">07-01</text>
+                    </svg>
+                    
+                    <!-- Tooltip -->
+                    <div class="absolute top-2 right-2 glass-card rounded-lg px-2 py-1 text-xs">
+                        <span class="text-t2">最高</span>
+                        <span class="text-success font-bold ml-1">¥6,100</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Alert Section -->
+        <section class="mb-4">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <span class="material-icons text-warning text-lg">warning_amber</span>
+                滞销预警
+            </h3>
+            
+            <div class="glass-card rounded-2xl overflow-hidden">
+                <!-- Alert header -->
+                <div class="p-4 border-l-4 border-warning bg-warning/5">
+                    <div class="flex items-center justify-between">
+                        <p class="text-warning font-bold text-sm">3 台设备入库超过30天</p>
+                        <a href="#" class="text-primary text-xs font-medium hover:text-blue-400 transition-colors flex items-center gap-0.5">
+                            查看详情
+                            <span class="material-icons text-xs">chevron_right</span>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Device list -->
+                <div class="p-2">
+                    <!-- Device 1 -->
+                    <div class="alert-item flex items-center justify-between p-3 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-bg flex items-center justify-center">
+                                <span class="material-icons text-t2 text-lg">tablet_mac</span>
+                            </div>
+                            <div>
+                                <p class="text-t1 text-sm font-medium">iPad Pro 11 256GB</p>
+                                <p class="text-t3 text-xs">深空灰 · WiFi版</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-danger text-xs">入库 35天</p>
+                            <p class="text-t3 text-xs">¥4,299 购入</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="h-px bg-border mx-3"></div>
+                    
+                    <!-- Device 2 -->
+                    <div class="alert-item flex items-center justify-between p-3 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-bg flex items-center justify-center">
+                                <span class="material-icons text-t2 text-lg">tablet_mac</span>
+                            </div>
+                            <div>
+                                <p class="text-t1 text-sm font-medium">iPad Air 5 64GB</p>
+                                <p class="text-t3 text-xs">星光色 · WiFi版</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-warning text-xs">入库 32天</p>
+                            <p class="text-t3 text-xs">¥3,599 购入</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Divider -->
+                    <div class="h-px bg-border mx-3"></div>
+                    
+                    <!-- Device 3 -->
+                    <div class="alert-item flex items-center justify-between p-3 rounded-xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-lg bg-bg flex items-center justify-center">
+                                <span class="material-icons text-t2 text-lg">tablet_mac</span>
+                            </div>
+                            <div>
+                                <p class="text-t1 text-sm font-medium">iPad mini 6 256GB</p>
+                                <p class="text-t3 text-xs">紫色 · 蜂窝版</p>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-warning text-xs">入库 31天</p>
+                            <p class="text-t3 text-xs">¥5,099 购入</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Quick Actions -->
+        <section class="mb-4">
+            <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
+                <span class="material-icons text-accent text-lg">flash_on</span>
+                快捷操作
+            </h3>
+            
+            <div class="grid grid-cols-4 gap-2">
+                <button class="glass-card metric-card rounded-xl p-3 flex flex-col items-center gap-1.5 hover:bg-primary/10">
+                    <div class="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                        <span class="material-icons text-primary text-xl">add_circle</span>
+                    </div>
+                    <span class="text-t2 text-xs">入库</span>
+                </button>
+                
+                <button class="glass-card metric-card rounded-xl p-3 flex flex-col items-center gap-1.5 hover:bg-success/10">
+                    <div class="w-10 h-10 rounded-xl bg-success/20 flex items-center justify-center">
+                        <span class="material-icons text-success text-xl">shopping_cart</span>
+                    </div>
+                    <span class="text-t2 text-xs">销售</span>
+                </button>
+                
+                <button class="glass-card metric-card rounded-xl p-3 flex flex-col items-center gap-1.5 hover:bg-accent/10">
+                    <div class="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+                        <span class="material-icons text-accent text-xl">qr_code_scanner</span>
+                    </div>
+                    <span class="text-t2 text-xs">扫码</span>
+                </button>
+                
+                <button class="glass-card metric-card rounded-xl p-3 flex flex-col items-center gap-1.5 hover:bg-warning/10">
+                    <div class="w-10 h-10 rounded-xl bg-warning/20 flex items-center justify-center">
+                        <span class="material-icons text-warning text-xl">assessment</span>
+                    </div>
+                    <span class="text-t2 text-xs">报表</span>
+                </button>
+            </div>
+        </section>
+        
+        <!-- Bottom Navigation -->
+        <nav class="fixed bottom-0 left-0 right-0 glass-card border-t border-border rounded-t-2xl px-2 py-2 max-w-[375px] mx-auto">
+            <div class="flex justify-around">
+                <button class="flex flex-col items-center py-1 px-4 text-primary">
+                    <span class="material-icons text-xl">home</span>
+                    <span class="text-xs mt-0.5 font-medium">首页</span>
+                </button>
+                <button class="flex flex-col items-center py-1 px-4 text-t2 hover:text-t1 transition-colors">
+                    <span class="material-icons text-xl">inventory_2</span>
+                    <span class="text-xs mt-0.5">库存</span>
+                </button>
+                <button class="flex flex-col items-center py-1 px-4 text-t2 hover:text-t1 transition-colors">
+                    <span class="material-icons text-xl">receipt_long</span>
+                    <span class="text-xs mt-0.5">订单</span>
+                </button>
+                <button class="flex flex-col items-center py-1 px-4 text-t2 hover:text-t1 transition-colors">
+                    <span class="material-icons text-xl">person</span>
+                    <span class="text-xs mt-0.5">我的</span>
+                </button>
+            </div>
+        </nav>
+        
+        <!-- Spacer for bottom nav -->
+        <div class="h-20"></div>
+    </div>
+    
+    <script>
+        // Tab switching functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+    </script>
+</body>
+</html>

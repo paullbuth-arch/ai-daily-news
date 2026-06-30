@@ -22,81 +22,52 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
     final nameCtrl = TextEditingController();
     final phoneCtrl = TextEditingController();
     final rateCtrl = TextEditingController(text: '10');
-    final ok = await showDialog<bool>(
+    final ok = await showAppFormDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.card,
-            title: Text('新增代理', style: TextStyle(color: C.t1, fontSize: 16)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
+      title: '新增代理',
+      subtitle: '用于私域分销、佣金统计和客户归属',
+      maxHeightFactor: 0.62,
+      child: Builder(
+        builder:
+            (sheetContext) => Column(
               children: [
-                TextField(
+                AppFormField(
                   controller: nameCtrl,
-                  style: TextStyle(color: C.t1),
-                  decoration: InputDecoration(
-                    labelText: '代理名称',
-                    labelStyle: TextStyle(color: C.t2),
-                    filled: true,
-                    fillColor: C.bg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: C.line),
-                    ),
-                  ),
+                  label: '代理名称',
+                  icon: Icons.person_outline_rounded,
+                  autofocus: true,
                 ),
-                const SizedBox(height: 10),
-                TextField(
+                const SizedBox(height: 12),
+                AppFormField(
                   controller: phoneCtrl,
-                  style: TextStyle(color: C.t1),
-                  decoration: InputDecoration(
-                    labelText: '联系方式',
-                    labelStyle: TextStyle(color: C.t2),
-                    filled: true,
-                    fillColor: C.bg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: C.line),
-                    ),
-                  ),
+                  label: '联系方式',
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
                 ),
-                const SizedBox(height: 10),
-                TextField(
+                const SizedBox(height: 12),
+                AppFormField(
                   controller: rateCtrl,
+                  label: '佣金比例(%)',
+                  icon: Icons.percent_rounded,
                   keyboardType: TextInputType.number,
-                  style: TextStyle(color: C.t1),
-                  decoration: InputDecoration(
-                    labelText: '佣金比例(%)',
-                    labelStyle: TextStyle(color: C.t2),
-                    filled: true,
-                    fillColor: C.bg,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: C.line),
-                    ),
-                  ),
+                ),
+                const SizedBox(height: 18),
+                AppSheetActions(
+                  primaryLabel: '添加',
+                  onPrimary: () => Navigator.pop(sheetContext, true),
                 ),
               ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text('取消', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text('添加', style: TextStyle(color: C.brand2)),
-              ),
-            ],
-          ),
+      ),
     );
-    if (ok == true && nameCtrl.text.isNotEmpty) {
+    final name = nameCtrl.text.trim();
+    if (ok == true && name.isNotEmpty) {
       final now = DateTime.now();
       await gStorage.addAgent(
         Agent(
           id: 'a${now.millisecondsSinceEpoch}',
-          name: nameCtrl.text,
-          phone: phoneCtrl.text,
+          name: name,
+          phone: phoneCtrl.text.trim(),
           commissionRate: (double.tryParse(rateCtrl.text) ?? 10) / 100,
           totalGmv: 0,
           createdAt: _fmt(now),
@@ -105,6 +76,9 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
       _refresh();
       toast(context, '已添加代理');
     }
+    nameCtrl.dispose();
+    phoneCtrl.dispose();
+    rateCtrl.dispose();
   }
 
   @override
@@ -129,9 +103,9 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: C.cardMuted,
+                      color: C.bgCardMuted,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: C.line),
+                      border: Border.all(color: C.border),
                     ),
                     child: Icon(Icons.groups_2_outlined, color: C.t3, size: 26),
                   ),

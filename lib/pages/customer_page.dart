@@ -30,9 +30,9 @@ class _CustomerPageState extends State<CustomerPage> {
                     width: 54,
                     height: 54,
                     decoration: BoxDecoration(
-                      color: C.cardMuted,
+                      color: C.bgCardMuted,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: C.line),
+                      border: Border.all(color: C.border),
                     ),
                     child: Icon(Icons.contacts_outlined, color: C.t3, size: 26),
                   ),
