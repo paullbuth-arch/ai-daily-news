@@ -12,7 +12,76 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+/// 扫描线动画效果
+class _ScanLineEffect extends StatefulWidget {
+  const _ScanLineEffect();
+
+  @override
+  State<_ScanLineEffect> createState() => _ScanLineEffectState();
+}
+
+class _ScanLineEffectState extends State<_ScanLineEffect> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _animation = Tween<double>(begin: -0.1, end: 1.1).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            return CustomPaint(
+              size: Size(constraints.maxWidth, constraints.maxHeight),
+              painter: _ScanLinePainter(_animation.value),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ScanLinePainter extends CustomPainter {
+  final double progress;
+
+  _ScanLinePainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF00F0FF).withOpacity(0.06)
+      ..style = PaintingStyle.fill;
+    const lineHeight = 2.0;
+    final y = progress * size.height;
+    if (y > -lineHeight && y < size.height + lineHeight) {
+      canvas.drawRect(Rect.fromLTWH(0, y, size.width, lineHeight), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScanLinePainter oldDelegate) => oldDelegate.progress != progress;
+}
+
+class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
   final _emailCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
@@ -21,11 +90,27 @@ class _LoginPageState extends State<LoginPage> {
   int _countdown = 0;
   String? _error;
 
+  late final AnimationController _scanController;
+  late final Animation<double> _scanAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+    _scanAnimation = Tween<double>(begin: -0.1, end: 1.1).animate(
+      CurvedAnimation(parent: _scanController, curve: Curves.linear),
+    );
+  }
+
   @override
   void dispose() {
     _emailCtrl.dispose();
     _codeCtrl.dispose();
     _passCtrl.dispose();
+    _scanController.dispose();
     super.dispose();
   }
 
@@ -102,38 +187,87 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: C.bg,
-      body: SafeArea(
-        child: LayoutBuilder(builder: (context, box) {
-          final wide = box.maxWidth >= 760;
-          final form = _loginPanel();
-          if (!wide) {
-            return Center(child: SingleChildScrollView(padding: const EdgeInsets.all(22), child: form));
-          }
-          return Center(child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 940),
-            child: Padding(padding: const EdgeInsets.all(32), child: Row(children: [
-              Expanded(child: _brandIntro()),
-              const SizedBox(width: 42),
-              SizedBox(width: 410, child: form),
-            ])),
-          ));
-        }),
+      backgroundColor: C.bgDeep,
+      body: Stack(
+        children: [
+          const _ScanLineEffect(),
+          SafeArea(
+            child: LayoutBuilder(builder: (context, box) {
+              final wide = box.maxWidth >= 760;
+              final form = _loginPanel();
+              if (!wide) {
+                return Center(child: SingleChildScrollView(padding: const EdgeInsets.all(22), child: form));
+              }
+              return Center(child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 940),
+                child: Padding(padding: const EdgeInsets.all(32), child: Row(children: [
+                  Expanded(child: _brandIntro()),
+                  const SizedBox(width: 42),
+                  SizedBox(width: 410, child: form),
+                ])),
+              ));
+            }),
+          ),
+        ],
       ),
     );
   }
 
   Widget _brandIntro() => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 54, height: 54, decoration: BoxDecoration(color: C.selected, borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.tablet_mac_rounded, color: C.brand, size: 28)),
-    const SizedBox(height: 18),
-    Text('机掌柜', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: C.t1)),
-    const SizedBox(height: 8),
+    Container(
+      width: 60,
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: C.heroGradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: C.cyan.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 4)),
+          BoxShadow(color: C.purple.withOpacity(0.3), blurRadius: 24, offset: const Offset(0, 0)),
+        ],
+      ),
+      child: const Icon(Icons.tablet_mac_rounded, color: Colors.white, size: 32),
+    ),
+    const SizedBox(height: 20),
+    Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        ShaderMask(
+          shaderCallback: (bounds) => C.heroGradient.createShader(bounds),
+          child: const Text(
+            '机掌柜',
+            style: TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.white),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: C.cyan, width: 1),
+            boxShadow: [BoxShadow(color: C.cyan.withOpacity(0.3), blurRadius: 8)],
+          ),
+          child: const Text(
+            'PRO',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: C.cyan),
+          ),
+        ),
+      ],
+    ),
+    const SizedBox(height: 10),
     Text('二手 iPad 经营工作台', style: TextStyle(fontSize: 15, color: C.t2, fontWeight: FontWeight.w600)),
   ]);
 
   Widget _loginPanel() => Container(
     padding: const EdgeInsets.all(22),
-    decoration: BoxDecoration(color: C.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: C.line), boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 18, offset: Offset(0, 8))]),
+    decoration: BoxDecoration(
+      color: C.bgCard,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: C.border),
+      boxShadow: [
+        const BoxShadow(color: Color(0x40000000), blurRadius: 24, offset: Offset(0, 8)),
+        BoxShadow(color: C.cyan.withOpacity(0.05), blurRadius: 30, spreadRadius: 2),
+      ],
+    ),
     child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(_isRegister ? '创建账号' : '欢迎回来', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: C.t1)),
       const SizedBox(height: 6),
@@ -151,7 +285,14 @@ class _LoginPageState extends State<LoginPage> {
             height: 48,
             child: ElevatedButton(
               onPressed: _loading || _countdown > 0 ? null : _sendCode,
-              style: ElevatedButton.styleFrom(backgroundColor: _countdown > 0 ? C.t3 : C.brand, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _countdown > 0 ? C.t3 : C.cyan,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: 0,
+                shadowColor: C.cyan.withOpacity(0.5),
+              ),
               child: Text(_countdown > 0 ? '${_countdown}s' : '获取验证码', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
             ),
           ),
@@ -161,18 +302,35 @@ class _LoginPageState extends State<LoginPage> {
       if (_error != null) Padding(padding: const EdgeInsets.only(bottom: 14), child: Text(_error!, style: TextStyle(color: C.red, fontSize: 12, fontWeight: FontWeight.w600))),
       SizedBox(
         width: double.infinity,
-        child: ElevatedButton(
-          onPressed: _loading ? null : _submit,
-          style: ElevatedButton.styleFrom(backgroundColor: C.brand, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
-          child: _loading
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : Text(_isRegister ? '注册并登录' : '登录', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+        height: 48,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            gradient: C.heroGradient,
+            boxShadow: [
+              BoxShadow(color: C.cyan.withOpacity(0.4), blurRadius: 12, offset: const Offset(0, 4)),
+              BoxShadow(color: C.purple.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 0)),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: _loading ? null : _submit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 0,
+            ),
+            child: _loading
+                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : Text(_isRegister ? '注册并登录' : '登录', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+          ),
         ),
       ),
       const SizedBox(height: 12),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text(_isRegister ? '已有账号？' : '没有账号？', style: TextStyle(fontSize: 12, color: C.t2)),
-        GestureDetector(onTap: () => setState(() { _isRegister = !_isRegister; _error = null; }), child: Text(_isRegister ? '去登录' : '去注册', style: TextStyle(fontSize: 12, color: C.brand, fontWeight: FontWeight.w800))),
+        GestureDetector(onTap: () => setState(() { _isRegister = !_isRegister; _error = null; }), child: Text(_isRegister ? '去登录' : '去注册', style: TextStyle(fontSize: 12, color: C.cyan, fontWeight: FontWeight.w800))),
       ]),
       const SizedBox(height: 16),
       Center(child: TextButton(
@@ -185,17 +343,18 @@ class _LoginPageState extends State<LoginPage> {
   Widget _input(String label, TextEditingController ctrl, {String? hint, bool obscure = false, IconData? icon}) => TextField(
     controller: ctrl,
     obscureText: obscure,
-    style: TextStyle(color: C.t1, fontSize: 14),
+    style: const TextStyle(color: C.t1, fontSize: 14),
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: icon == null ? null : Icon(icon, color: C.t3, size: 18),
-      labelStyle: TextStyle(color: C.t2, fontSize: 13),
-      hintStyle: TextStyle(color: C.t3, fontSize: 12),
+      labelStyle: const TextStyle(color: C.t2, fontSize: 13),
+      hintStyle: const TextStyle(color: C.t3, fontSize: 12),
       filled: true,
-      fillColor: C.card,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: C.line)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: C.brand2)),
+      fillColor: C.bgSurface,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: C.cyan, width: 1.5)),
     ),
   );
 }

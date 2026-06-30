@@ -42,7 +42,7 @@ class OrderPageState extends State<OrderPage> {
       ),
       action: IconButton(
         tooltip: '售出设备',
-        icon: Icon(Icons.point_of_sale_outlined, color: C.brand),
+        icon: Icon(Icons.point_of_sale_outlined, color: C.cyan),
         onPressed:
             () => Navigator.push(
               context,
@@ -55,9 +55,9 @@ class OrderPageState extends State<OrderPage> {
             margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: C.card,
+              color: C.bgCard,
               borderRadius: BorderRadius.circular(9),
-              border: Border.all(color: C.line),
+              border: Border.all(color: C.border),
             ),
             child: Row(
               children: List.generate(tabs.length, (i) {
@@ -69,15 +69,19 @@ class OrderPageState extends State<OrderPage> {
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: on ? C.selected : Colors.transparent,
+                        color: on ? C.cyan.withOpacity(0.1) : Colors.transparent,
                         borderRadius: BorderRadius.circular(7),
+                        border: Border.all(
+                          color: on ? C.cyan.withOpacity(0.3) : Colors.transparent,
+                          width: on ? 1.2 : 0,
+                        ),
                       ),
                       child: Text(
                         tabs[i],
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: on ? FontWeight.w800 : FontWeight.w600,
-                          color: on ? C.brand : C.t2,
+                          color: on ? C.cyan : C.t2,
                         ),
                       ),
                     ),
@@ -99,8 +103,8 @@ class OrderPageState extends State<OrderPage> {
                 icon: const Icon(Icons.add_shopping_cart_outlined, size: 18),
                 label: const Text('售出设备并生成订单'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: C.brand,
-                  foregroundColor: Colors.white,
+                  backgroundColor: C.cyan,
+                  foregroundColor: Colors.black,
                   elevation: 0,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -126,9 +130,9 @@ class OrderPageState extends State<OrderPage> {
             width: 54,
             height: 54,
             decoration: BoxDecoration(
-              color: C.cardMuted,
+              color: C.cyan.withOpacity(0.06),
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: C.line),
+              border: Border.all(color: C.cyan.withOpacity(0.15)),
             ),
             child: Icon(Icons.receipt_long_outlined, color: C.t3, size: 26),
           ),
@@ -158,7 +162,7 @@ class OrderPageState extends State<OrderPage> {
           'cancelled': '已作废',
         }[o.status] ??
         o.status;
-    final profitColor = o.netProfit >= 0 ? C.green : C.red;
+    final profitColor = o.netProfit >= 0 ? C.neonGreen : C.neonRed;
     return GestureDetector(
       onTap:
           () => Navigator.push(
@@ -169,9 +173,9 @@ class OrderPageState extends State<OrderPage> {
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: C.card,
+          color: C.bgCard,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: C.line),
+          border: Border.all(color: C.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,9 +201,9 @@ class OrderPageState extends State<OrderPage> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: C.cardMuted,
+                    color: C.bgCardMuted,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.line),
+                    border: Border.all(color: C.border),
                   ),
                   child: Icon(Icons.tablet_mac_rounded, color: C.t2, size: 21),
                 ),
@@ -237,7 +241,7 @@ class OrderPageState extends State<OrderPage> {
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
-                        color: C.t1,
+                        color: C.cyan,
                       ),
                     ),
                     const SizedBox(height: 3),
@@ -261,6 +265,6 @@ class OrderPageState extends State<OrderPage> {
 
   Color _sc(String s) =>
       s == 'shipped'
-          ? C.brand
-          : (s == 'done' ? C.green : (s == 'aftersale' ? C.red : C.t3));
+          ? C.cyan
+          : (s == 'done' ? C.neonGreen : (s == 'aftersale' ? C.neonRed : C.t3));
 }

@@ -73,15 +73,15 @@ class StockPageState extends State<StockPage> {
           child: Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              gradient: C.metricGradient,
+              gradient: C.cyanGradient,
               borderRadius: BorderRadius.circular(C.radiusMd),
               boxShadow: [
                 BoxShadow(
-                  color: C.primary.withOpacity(0.25), blurRadius: 6, offset: const Offset(0, 2),
+                  color: C.cyan.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+            child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.black, size: 20),
           ),
         ),
       ),
@@ -95,17 +95,17 @@ class StockPageState extends State<StockPage> {
               children: [
                 Expanded(child: _metricCard(
                   '在售', '${allInStock.where((d) => d.status == 'listed').length}',
-                  C.primary, Icons.sell_outlined,
+                  C.cyan, Icons.sell_outlined,
                 )),
                 const SizedBox(width: 8),
                 Expanded(child: _metricCard(
                   '未定价', '${allInStock.where((d) => d.sellPrice <= 0).length}',
-                  C.orange, Icons.price_change_outlined,
+                  C.neonOrange, Icons.price_change_outlined,
                 )),
                 const SizedBox(width: 8),
                 Expanded(child: _metricCard(
                   '滞销', '${allInStock.where((d) => d.isStagnant).length}',
-                  C.red, Icons.warning_amber_rounded,
+                  C.neonRed, Icons.warning_amber_rounded,
                 )),
               ],
             ),
@@ -117,9 +117,9 @@ class StockPageState extends State<StockPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
-                color: C.card,
+                color: C.bgCard,
                 borderRadius: BorderRadius.circular(C.radiusMd),
-                border: Border.all(color: C.line, width: 0.8),
+                border: Border.all(color: C.border, width: 0.8),
                 boxShadow: C.elevationSm,
               ),
               child: TextField(
@@ -161,19 +161,24 @@ class StockPageState extends State<StockPage> {
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: on ? C.selected : C.card,
+                      color: on ? C.cyan.withOpacity(0.1) : C.bgCard,
                       borderRadius: BorderRadius.circular(C.radiusMd),
                       border: Border.all(
-                        color: on ? C.primary.withOpacity(0.3) : C.line,
+                        color: on ? C.cyan.withOpacity(0.3) : C.border,
                         width: on ? 1.2 : 0.8,
                       ),
-                      boxShadow: on ? null : C.elevationSm,
+                      boxShadow: on ? [
+                        BoxShadow(
+                          color: C.cyan.withOpacity(0.1),
+                          blurRadius: 8, offset: const Offset(0, 2),
+                        ),
+                      ] : C.elevationSm,
                     ),
                     child: Text(
                       chips[i],
                       style: TextStyle(
                         fontSize: 12,
-                        color: on ? C.selectedText : C.t2,
+                        color: on ? C.cyan : C.t2,
                         fontWeight: on ? FontWeight.w800 : FontWeight.w500,
                       ),
                     ),
@@ -188,20 +193,11 @@ class StockPageState extends State<StockPage> {
           if (devices.isEmpty)
             _emptyStock()
           else
-            LayoutBuilder(
-              builder: (context, box) {
-                final columns = box.maxWidth >= 900 ? 4 : (box.maxWidth >= 620 ? 3 : 2);
-                return GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: C.sp16),
-                  crossAxisCount: columns,
-                  mainAxisSpacing: 12,
-                  crossAxisSpacing: 12,
-                  childAspectRatio: columns >= 3 ? 0.84 : 0.78,
-                  children: devices.map(_deviceCard).toList(),
-                );
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: C.sp16),
+              child: Column(
+                children: devices.map((d) => _deviceListItem(d)).toList(),
+              ),
             ),
         ],
       ),
@@ -211,9 +207,9 @@ class StockPageState extends State<StockPage> {
   Widget _metricCard(String label, String value, Color color, IconData icon) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.line, width: 0.8),
+      border: Border.all(color: C.border, width: 0.8),
       boxShadow: C.elevationSm,
     ),
     child: Row(
@@ -223,6 +219,7 @@ class StockPageState extends State<StockPage> {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: color.withOpacity(0.2)),
           ),
           child: Icon(icon, size: 16, color: color),
         ),
@@ -259,9 +256,9 @@ class StockPageState extends State<StockPage> {
           Container(
             width: 64, height: 64,
             decoration: BoxDecoration(
-              color: C.primary.withOpacity(0.06),
+              color: C.cyan.withOpacity(0.06),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: C.primary.withOpacity(0.15)),
+              border: Border.all(color: C.cyan.withOpacity(0.15)),
             ),
             child: Icon(Icons.inventory_2_outlined, color: C.t3, size: 28),
           ),
@@ -286,12 +283,15 @@ class StockPageState extends State<StockPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  gradient: C.metricGradient,
+                  gradient: C.cyanGradient,
                   borderRadius: BorderRadius.circular(C.radiusMd),
+                  boxShadow: [
+                    BoxShadow(color: C.cyan.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 3)),
+                  ],
                 ),
                 child: const Text(
-                  '立即收货',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white),
+                  '立即扫码收货',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black),
                 ),
               ),
             ),
@@ -301,115 +301,90 @@ class StockPageState extends State<StockPage> {
     ),
   );
 
-  Widget _deviceCard(Device d) {
+  Widget _deviceListItem(Device d) {
     final hasImg = d.imagePath != null && d.imagePath!.isNotEmpty;
     final firstImg = hasImg ? d.imagePath!.split(';').first : null;
     final goodCond = d.condition.contains('99') || d.condition.contains('95') || d.condition.contains('全新');
+    final statusColor = d.isStagnant ? C.neonRed : C.cyan;
     return GestureDetector(
       onTap: () => Navigator.push(
         context, MaterialPageRoute(builder: (_) => DetailPage(device: d)),
       ).then((_) => refresh()),
       child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: C.card,
+          color: C.bgCard,
           borderRadius: BorderRadius.circular(C.radiusMd),
-          border: Border.all(color: C.line, width: 0.8),
+          border: Border.all(color: C.border, width: 0.8),
           boxShadow: C.cardShadow,
         ),
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 图片区域
-            Expanded(
-              flex: 3,
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(C.radiusMd - 1),
-                    ),
-                    child: Container(
-                      width: double.infinity,
-                      color: C.cardMuted,
-                      child: firstImg != null
-                          ? Image.file(
-                              File(firstImg), fit: BoxFit.cover,
-                              width: double.infinity, height: double.infinity,
-                            )
-                          : Center(
-                              child: Icon(Icons.tablet_mac_rounded, color: C.t3, size: 36),
-                            ),
-                    ),
-                  ),
-                  // 状态标签
-                  Positioned(
-                    top: 8, left: 8,
-                    child: StatusChip(
-                      d.isStagnant ? '滞销' : '在售',
-                      d.isStagnant ? C.red : C.green,
-                    ),
-                  ),
-                  if (!d.idLockClean)
-                    Positioned(
-                      top: 8, right: 8,
-                      child: StatusChip('ID锁', C.red),
-                    ),
-                  // 电池健康度
-                  Positioned(
-                    bottom: 8, right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        '${d.batteryHealth}%',
-                        style: const TextStyle(
-                          fontSize: 10, color: Colors.white, fontWeight: FontWeight.w700,
+            // 左侧图片
+            ClipRRect(
+              borderRadius: BorderRadius.circular(C.radiusSm),
+              child: SizedBox(
+                width: 120,
+                height: 120,
+                child: firstImg != null
+                    ? Image.file(
+                        File(firstImg), fit: BoxFit.cover,
+                        width: 120, height: 120,
+                      )
+                    : Container(
+                        color: C.bgCardMuted,
+                        child: Center(
+                          child: Icon(Icons.tablet_mac_rounded, color: C.t3, size: 40),
                         ),
                       ),
-                    ),
-                  ),
-                ],
               ),
             ),
-            // 信息区域
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 10, 10, 12),
+            const SizedBox(width: 12),
+            // 右侧信息
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // 型号
                   Text(
                     d.model,
-                    style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: C.t1),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.t1),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 4),
+                  // 配置信息
                   Text(
                     '${d.capacity} · ${d.color} · ${d.network}',
-                    style: TextStyle(fontSize: 10.5, color: C.t2),
+                    style: TextStyle(fontSize: 12, color: C.t2),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
+                  // 电池健康度
+                  Text(
+                    '电池健康 ${d.batteryHealth}% · 库龄${d.stockDays}天',
+                    style: TextStyle(fontSize: 11, color: C.t3),
+                  ),
+                  const Spacer(),
+                  // 价格和标签行
                   Row(
                     children: [
                       Text(
                         d.sellPrice > 0 ? yuan(d.sellPrice) : '未定价',
                         style: TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w900,
-                          color: d.sellPrice > 0 ? C.primary : C.orange,
+                          fontSize: 18, fontWeight: FontWeight.w900,
+                          color: d.sellPrice > 0 ? C.cyan : C.neonOrange,
                         ),
                       ),
                       const Spacer(),
-                      StatusChip(d.condition, goodCond ? C.green : C.orange),
+                      StatusChip(d.condition, goodCond ? C.neonGreen : C.neonOrange),
+                      const SizedBox(width: 6),
+                      StatusChip(
+                        d.isStagnant ? '滞销' : '在售',
+                        d.isStagnant ? C.neonRed : C.neonGreen,
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '库龄${d.stockDays}天 · 成本${yuan(d.purchaseCost)}',
-                    style: TextStyle(fontSize: 9.5, color: C.t3),
-                    maxLines: 1, overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

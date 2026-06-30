@@ -35,7 +35,7 @@ class _MePageState extends State<MePage> {
   bool _backupReminded = false;
   File? _avatarImage;
   String _avatarEmoji = '📱';
-  List<Color> _avatarGradientColors = [C.primary, C.purple];
+  List<Color> _avatarGradientColors = [C.cyan, C.purple];
   String _displayName = '老板 · 老张';
   String _shopName = '张记二手iPad';
   final ImagePicker _picker = ImagePicker();
@@ -87,20 +87,20 @@ class _MePageState extends State<MePage> {
   void _editProfile() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: C.card,
+      backgroundColor: C.bgCard,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(C.radiusXl)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.all(20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
                 width: 36, height: 4,
                 decoration: BoxDecoration(
-                  color: C.line, borderRadius: BorderRadius.circular(2),
+                  color: C.border, borderRadius: BorderRadius.circular(2),
                 ),
               ),
               const SizedBox(height: 16),
@@ -108,16 +108,16 @@ class _MePageState extends State<MePage> {
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: C.t1),
               ),
               const SizedBox(height: 16),
-              _avatarOption(Icons.camera_alt, C.brand2, '拍照', () async {
+              _avatarOption(Icons.camera_alt, C.cyan, '拍照', () async {
                 Navigator.pop(ctx);
                 await _pickImage(ImageSource.camera);
               }),
-              _avatarOption(Icons.photo_library, C.brand2, '从相册选择', () async {
+              _avatarOption(Icons.photo_library, C.cyan, '从相册选择', () async {
                 Navigator.pop(ctx);
                 await _pickImage(ImageSource.gallery);
               }),
-              Divider(color: C.line, height: 24),
-              _avatarOption(Icons.emoji_emotions, C.orange, '随机头像表情', () {
+              Divider(color: C.border, height: 24),
+              _avatarOption(Icons.emoji_emotions, C.neonOrange, '随机头像表情', () {
                 Navigator.pop(ctx);
                 _randomEmojiAvatar();
               }),
@@ -126,8 +126,8 @@ class _MePageState extends State<MePage> {
                 _randomGradientAvatar();
               }),
               if (_avatarImage != null) ...[
-                Divider(color: C.line, height: 24),
-                _avatarOption(Icons.delete, C.red, '清除自定义头像', () {
+                Divider(color: C.border, height: 24),
+                _avatarOption(Icons.delete, C.neonRed, '清除自定义头像', () {
                   Navigator.pop(ctx);
                   _clearAvatar();
                 }, destructive: true),
@@ -146,10 +146,11 @@ class _MePageState extends State<MePage> {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withOpacity(0.2)),
           ),
           child: Icon(icon, color: color, size: 18),
         ),
-        title: Text(label, style: TextStyle(color: destructive ? C.red : C.t1, fontWeight: FontWeight.w600)),
+        title: Text(label, style: TextStyle(color: destructive ? C.neonRed : C.t1, fontWeight: FontWeight.w600)),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(C.radiusMd)),
       );
@@ -182,12 +183,11 @@ class _MePageState extends State<MePage> {
 
   void _randomGradientAvatar() {
     final gradients = [
-      [C.primary, C.purple],
-      [C.blue, C.teal],
-      [C.pink, C.purple],
-      [C.orange, const Color(0xFFF97316)],
-      [C.green, const Color(0xFF059669)],
-      [const Color(0xFFEC4899), const Color(0xFFF97316)],
+      [C.cyan, C.purple],
+      [C.blue, C.cyan],
+      [C.purple, C.neonRed],
+      [C.neonOrange, C.neonRed],
+      [C.neonGreen, C.cyan],
     ];
     setState(() {
       _avatarGradientColors = gradients[DateTime.now().millisecondsSinceEpoch % gradients.length];
@@ -210,7 +210,7 @@ class _MePageState extends State<MePage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: C.card,
+        backgroundColor: C.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(C.radiusLg)),
         title: Text('编辑资料', style: TextStyle(color: C.t1, fontSize: 16, fontWeight: FontWeight.w800)),
         content: Column(
@@ -221,10 +221,14 @@ class _MePageState extends State<MePage> {
               style: TextStyle(color: C.t1),
               decoration: InputDecoration(
                 labelText: '昵称', labelStyle: TextStyle(color: C.t2),
-                filled: true, fillColor: C.bg,
+                filled: true, fillColor: C.bgDeep,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(C.radiusSm),
-                  borderSide: BorderSide(color: C.line),
+                  borderSide: BorderSide(color: C.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(C.radiusSm),
+                  borderSide: BorderSide(color: C.cyan),
                 ),
               ),
             ),
@@ -234,10 +238,14 @@ class _MePageState extends State<MePage> {
               style: TextStyle(color: C.t1),
               decoration: InputDecoration(
                 labelText: '店铺名', labelStyle: TextStyle(color: C.t2),
-                filled: true, fillColor: C.bg,
+                filled: true, fillColor: C.bgDeep,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(C.radiusSm),
-                  borderSide: BorderSide(color: C.line),
+                  borderSide: BorderSide(color: C.border),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(C.radiusSm),
+                  borderSide: BorderSide(color: C.cyan),
                 ),
               ),
             ),
@@ -258,7 +266,7 @@ class _MePageState extends State<MePage> {
               _saveProfile();
               toast(context, '已保存');
             },
-            style: TextButton.styleFrom(foregroundColor: C.primary),
+            style: TextButton.styleFrom(foregroundColor: C.cyan),
             child: const Text('保存', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
         ],
@@ -274,7 +282,7 @@ class _MePageState extends State<MePage> {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            backgroundColor: C.card,
+            backgroundColor: C.bgCard,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(C.radiusLg)),
             title: Text('备份提醒', style: TextStyle(color: C.t1, fontSize: 16, fontWeight: FontWeight.w800)),
             content: Text(
@@ -295,7 +303,7 @@ class _MePageState extends State<MePage> {
                     context, MaterialPageRoute(builder: (_) => const BackupPage()),
                   ).then((_) => _refresh());
                 },
-                style: TextButton.styleFrom(foregroundColor: C.primary),
+                style: TextButton.styleFrom(foregroundColor: C.cyan),
                 child: const Text('去备份', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
@@ -318,9 +326,9 @@ class _MePageState extends State<MePage> {
             child: Container(
               padding: const EdgeInsets.all(C.sp16),
               decoration: BoxDecoration(
-                color: C.card,
+                color: C.bgCard,
                 borderRadius: BorderRadius.circular(C.radiusLg),
-                border: Border.all(color: C.line, width: 0.8),
+                border: Border.all(color: C.border, width: 0.8),
                 boxShadow: C.cardShadow,
               ),
               child: Row(
@@ -369,13 +377,14 @@ class _MePageState extends State<MePage> {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: C.primary.withOpacity(0.1),
+                                  color: C.cyan.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: C.cyan.withOpacity(0.2)),
                                 ),
                                 child: Text(
                                   'v${UpdateService.currentVersion}',
                                   style: TextStyle(
-                                    fontSize: 9, color: C.primary, fontWeight: FontWeight.w800,
+                                    fontSize: 9, color: C.cyan, fontWeight: FontWeight.w800,
                                   ),
                                 ),
                               ),
@@ -393,10 +402,11 @@ class _MePageState extends State<MePage> {
                       child: Container(
                         width: 36, height: 36,
                         decoration: BoxDecoration(
-                          color: C.primary.withOpacity(0.06),
+                          color: C.cyan.withOpacity(0.06),
                           borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: C.cyan.withOpacity(0.1)),
                         ),
-                        child: Icon(Icons.edit_outlined, color: C.primary, size: 17),
+                        child: Icon(Icons.edit_outlined, color: C.cyan, size: 17),
                       ),
                     ),
                   ),
@@ -410,9 +420,9 @@ class _MePageState extends State<MePage> {
             padding: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp16),
             child: Row(
               children: [
-                Expanded(child: _statCard(yuan(s.grossProfit), '今日毛利', C.green)),
+                Expanded(child: _statCard(yuan(s.grossProfit), '今日毛利', C.neonGreen)),
                 const SizedBox(width: 8),
-                Expanded(child: _statCard('${s.inStockCount}', '在售台数', C.primary)),
+                Expanded(child: _statCard('${s.inStockCount}', '在售台数', C.cyan)),
                 const SizedBox(width: 8),
                 Expanded(child: _statCard('${orders.length}', '累计订单', C.purple)),
               ],
@@ -424,13 +434,13 @@ class _MePageState extends State<MePage> {
             title: '经营分析',
             icon: Icons.insights,
             items: [
-              _MenuItem(Icons.analytics_outlined, 'KPI 看板', C.primary,
+              _MenuItem(Icons.analytics_outlined, 'KPI 看板', C.cyan,
                 () => _nav(const AnalyticsPage())),
               _MenuItem(Icons.bar_chart_rounded, '统计报表', C.purple,
                 () => _nav(const ReportPage())),
               _MenuItem(Icons.auto_awesome_rounded, 'AI 经营日报', C.blue,
                 () => _nav(const AiReportPage())),
-              _MenuItem(Icons.query_stats_rounded, '今日批发价', C.teal,
+              _MenuItem(Icons.query_stats_rounded, '今日批发价', C.neonGreen,
                 () => _nav(const MarketPricePage())),
             ],
           ),
@@ -439,11 +449,11 @@ class _MePageState extends State<MePage> {
             title: '业务操作',
             icon: Icons.bolt,
             items: [
-              _MenuItem(Icons.rule_rounded, '采购决策', C.orange,
+              _MenuItem(Icons.rule_rounded, '采购决策', C.neonOrange,
                 () => _nav(const PurchaseDecisionPage())),
-              _MenuItem(Icons.qr_code_scanner_rounded, '扫码收货', C.primary,
+              _MenuItem(Icons.qr_code_scanner_rounded, '扫码收货', C.cyan,
                 () => _nav(const ScanPage())),
-              _MenuItem(Icons.point_of_sale_outlined, '售出设备', C.green,
+              _MenuItem(Icons.point_of_sale_outlined, '售出设备', C.neonGreen,
                 () => _nav(const SellPage())),
             ],
           ),
@@ -452,13 +462,13 @@ class _MePageState extends State<MePage> {
             title: '管理中心',
             icon: Icons.hub,
             items: [
-              _MenuItem(Icons.groups_2_outlined, '代理管理', C.pink,
+              _MenuItem(Icons.groups_2_outlined, '代理管理', C.purple,
                 () => _nav(const AgentManagerPage())),
-              _MenuItem(Icons.account_balance_wallet_outlined, '财务中心', C.green,
+              _MenuItem(Icons.account_balance_wallet_outlined, '财务中心', C.neonGreen,
                 () => _nav(const FinancePage())),
-              _MenuItem(Icons.contacts_outlined, '客户管理', C.orange,
+              _MenuItem(Icons.contacts_outlined, '客户管理', C.neonOrange,
                 () => _nav(const CustomerPage())),
-              _MenuItem(Icons.build_circle_outlined, '翻新维修', C.brand2,
+              _MenuItem(Icons.build_circle_outlined, '翻新维修', C.t2,
                 () => _nav(const RepairPage())),
             ],
           ),
@@ -467,7 +477,7 @@ class _MePageState extends State<MePage> {
             title: '系统与数据',
             icon: Icons.settings,
             items: [
-              _MenuItem(Icons.archive_outlined, '备份与恢复', C.green,
+              _MenuItem(Icons.archive_outlined, '备份与恢复', C.neonGreen,
                 () => _nav(const BackupPage())),
               _MenuItem(Icons.cloud_sync_outlined, 'WebDAV 云同步', C.blue,
                 () => _nav(const WebDavConfigPage())),
@@ -499,9 +509,9 @@ class _MePageState extends State<MePage> {
   Widget _statCard(String value, String label, Color color) => Container(
     padding: const EdgeInsets.symmetric(vertical: 14),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.line, width: 0.8),
+      border: Border.all(color: C.border, width: 0.8),
       boxShadow: C.elevationSm,
     ),
     child: Column(
@@ -536,9 +546,9 @@ class _MenuGroup extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusLg),
-      border: Border.all(color: C.line, width: 0.8),
+      border: Border.all(color: C.border, width: 0.8),
       boxShadow: C.cardShadow,
     ),
     child: Column(
@@ -552,10 +562,10 @@ class _MenuGroup extends StatelessWidget {
               Container(
                 width: 24, height: 24,
                 decoration: BoxDecoration(
-                  color: C.primary.withOpacity(0.1),
+                  color: C.cyan.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(7),
                 ),
-                child: Icon(icon, color: C.primary, size: 14),
+                child: Icon(icon, color: C.cyan, size: 14),
               ),
               const SizedBox(width: 8),
               Text(
@@ -605,6 +615,7 @@ class _MenuRow extends StatelessWidget {
               decoration: BoxDecoration(
                 color: item.color.withOpacity(0.08),
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: item.color.withOpacity(0.15)),
               ),
               child: Icon(item.icon, color: item.color, size: 18),
             ),

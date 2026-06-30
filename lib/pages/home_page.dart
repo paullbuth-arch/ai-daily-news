@@ -110,50 +110,48 @@ class HomePageState extends State<HomePage> {
         style: TextStyle(fontSize: 12, color: C.t2, fontWeight: FontWeight.w500),
       ),
       action: _refreshButton(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ─── 英雄指标卡（GMV） ───
-          _HeroMetricCard(
-            gmv: s.gmv,
-            gmvPct: gmvDiffPct,
-            profit: s.grossProfit,
-            profitDiff: profitDiff,
-            orders: s.orderCount,
-            orderDiff: orderDiff,
-            margin: margin,
-          ),
-
-          // ─── 状态指标网格 ───
-          _StatusMetricsRow(stats: s),
-
-          // ─── 趋势图表 ───
-          _ChartSection(
-            chart: chart,
-            chartMode: chartMode,
-            onModeChange: (m) => setState(() => chartMode = m),
-          ),
-
-          // ─── 资金 & 滞销 ───
-          _AlertsRow(stats: s, onRefresh: refresh),
-
-          // ─── 渠道占比 ───
-          if (channelGmv.isNotEmpty) _ChannelSection(channelGmv: channelGmv),
-
-          // ─── AI 经营日报 ───
-          _AiReportEntry(
-            onTap: () => Navigator.push(
-              context, MaterialPageRoute(builder: (_) => const AiReportPage()),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Hero card
+            _HeroMetricCard(
+              gmv: s.gmv,
+              gmvPct: gmvDiffPct,
+              profit: s.grossProfit,
+              profitDiff: profitDiff,
+              orders: s.orderCount,
+              orderDiff: orderDiff,
+              margin: margin,
             ),
-          ),
 
-          // ─── 滞销预警列表 ───
-          if (stagnant.isNotEmpty)
-            _StagnantSection(stagnant: stagnant, onRefresh: refresh),
+            // Status metrics
+            _StatusMetricsRow(stats: s),
 
-          // ─── 快捷操作 ───
-          _QuickActions(onRefresh: refresh),
-        ],
+            // Chart section
+            _ChartSection(
+              chart: chart,
+              chartMode: chartMode,
+              onModeChange: (m) => setState(() => chartMode = m),
+            ),
+
+            // Alerts
+            _AlertsRow(stats: s, onRefresh: refresh),
+
+            // Channel section
+            if (channelGmv.isNotEmpty) _ChannelSection(channelGmv: channelGmv),
+
+            // AI report
+            _AiReportEntry(
+              onTap: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const AiReportPage()),
+              ),
+            ),
+
+            // Quick actions
+            _QuickActions(onRefresh: refresh),
+          ],
+        ),
       ),
     );
   }
@@ -166,10 +164,18 @@ class HomePageState extends State<HomePage> {
       child: Container(
         width: 40, height: 40,
         decoration: BoxDecoration(
-          color: C.primary.withOpacity(0.06),
+          color: C.cyan.withOpacity(0.1),
           borderRadius: BorderRadius.circular(C.radiusMd),
+          border: Border.all(color: C.cyan.withOpacity(0.3), width: 0.8),
+          boxShadow: [
+            BoxShadow(
+              color: C.cyan.withOpacity(0.2),
+              blurRadius: 8,
+              offset: const Offset(0, 0),
+            ),
+          ],
         ),
-        child: Icon(Icons.refresh_rounded, color: C.primary, size: 20),
+        child: Icon(Icons.refresh_rounded, color: C.cyan, size: 20),
       ),
     ),
   );
@@ -202,114 +208,170 @@ class _HeroMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
-    padding: const EdgeInsets.all(C.sp20),
-    decoration: BoxDecoration(
-      gradient: C.heroGradient,
-      borderRadius: BorderRadius.circular(C.radiusXl),
-      boxShadow: [
-        BoxShadow(
-          color: C.primary.withOpacity(0.3),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Stack(
       children: [
-        // 顶部标签
-        Row(
-          children: [
-            Container(
-              width: 32, height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
+        // Main card
+        Container(
+          padding: const EdgeInsets.all(C.sp20),
+          decoration: BoxDecoration(
+            gradient: C.heroGradient,
+            borderRadius: BorderRadius.circular(C.radiusXl),
+            boxShadow: [
+              BoxShadow(
+                color: C.cyan.withOpacity(0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
-              child: const Icon(Icons.payments_outlined, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '今日 GMV',
-                  style: TextStyle(
-                    fontSize: 12, color: Colors.white.withOpacity(0.8),
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                Text(
-                  fmtDate(DateTime.now()),
-                  style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5)),
-                ),
-              ],
-            ),
-            const Spacer(),
-            if (gmvPct != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.18),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      gmvPct! >= 0 ? Icons.trending_up : Icons.trending_down,
-                      color: Colors.white, size: 14,
+              BoxShadow(
+                color: C.purple.withOpacity(0.2),
+                blurRadius: 30,
+                offset: const Offset(0, 0),
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top label
+              Row(
+                children: [
+                  Container(
+                    width: 32, height: 32,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white.withOpacity(0.3), width: 0.8),
                     ),
-                    const SizedBox(width: 3),
-                    Text(
-                      '${gmvPct!.abs().toStringAsFixed(1)}%',
-                      style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white,
+                    child: const Icon(Icons.payments_outlined, color: Colors.white, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '今日 GMV',
+                        style: TextStyle(
+                          fontSize: 12, color: Colors.white.withOpacity(0.9),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        fmtDate(DateTime.now()),
+                        style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.6)),
+                      ),
+                    ],
+                  ),
+                  const Spacer(),
+                  if (gmvPct != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white.withOpacity(0.2), width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            gmvPct! >= 0 ? Icons.trending_up : Icons.trending_down,
+                            color: Colors.white, size: 14,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${gmvPct!.abs().toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w800, color: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                ],
+              ),
+
+              // Core GMV number
+              const SizedBox(height: 12),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  yuan(gmv),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 38,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                    height: 1.1,
+                    shadows: [
+                      Shadow(
+                        color: Color(0x8000F0FF),
+                        blurRadius: 10,
+                        offset: Offset(0, 0),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom sub-metrics
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(C.radiusMd),
+                  border: Border.all(color: Colors.white.withOpacity(0.15), width: 0.8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _heroSubMetric('今日毛利', yuan(profit),
+                        profitDiff >= 0 ? '+${yuan(profitDiff.abs())}' : '-${yuan(profitDiff.abs())}'),
+                    _heroDivider(),
+                    _heroSubMetric('毛利率', '${margin.toStringAsFixed(1)}%', '经营效率'),
+                    _heroDivider(),
+                    _heroSubMetric('今日订单', '$orders',
+                        orderDiff >= 0 ? '+$orderDiff' : '$orderDiff'),
                   ],
                 ),
               ),
-          ],
-        ),
-
-        // 核心 GMV 数字
-        const SizedBox(height: 12),
-        FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Text(
-            yuan(gmv),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 38,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
-              height: 1.1,
-            ),
-          ),
-        ),
-
-        // 底部次级指标
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(C.radiusMd),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _heroSubMetric('今日毛利', yuan(profit),
-                  profitDiff >= 0 ? '+${yuan(profitDiff.abs())}' : '-${yuan(profitDiff.abs())}'),
-              _heroDivider(),
-              _heroSubMetric('毛利率', '${margin.toStringAsFixed(1)}%', '经营效率'),
-              _heroDivider(),
-              _heroSubMetric('今日订单', '$orders',
-                  orderDiff >= 0 ? '+$orderDiff' : '$orderDiff'),
             ],
           ),
+        ),
+        // Corner decorations
+        Positioned(
+          top: 12, left: 12,
+          child: Container(width: 16, height: 2, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          top: 12, left: 12,
+          child: Container(width: 2, height: 16, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          top: 12, right: 12,
+          child: Container(width: 16, height: 2, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          top: 12, right: 12,
+          child: Container(width: 2, height: 16, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          bottom: 12, left: 12,
+          child: Container(width: 16, height: 2, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          bottom: 12, left: 12,
+          child: Container(width: 2, height: 16, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          bottom: 12, right: 12,
+          child: Container(width: 16, height: 2, color: Colors.white.withOpacity(0.6)),
+        ),
+        Positioned(
+          bottom: 12, right: 12,
+          child: Container(width: 2, height: 16, color: Colors.white.withOpacity(0.6)),
         ),
       ],
     ),
@@ -348,7 +410,7 @@ class _HeroMetricCard extends StatelessWidget {
   );
 }
 
-/// 状态指标行（在售/待质检/在途/待发货）
+/// 状态指标行（在售设备 / 待收货）
 class _StatusMetricsRow extends StatelessWidget {
   final Stats stats;
   const _StatusMetricsRow({required this.stats});
@@ -356,76 +418,88 @@ class _StatusMetricsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
-    child: LayoutBuilder(
-      builder: (context, box) {
-        final items = [
-          _StatusItem('${stats.inStockCount}', '在售设备', C.primary, Icons.inventory_2_outlined),
-          _StatusItem('${stats.pendingQcCount}', '待质检', C.orange, Icons.fact_check_outlined),
-          _StatusItem('${stats.shippedCount}', '在途', C.blue, Icons.local_shipping_outlined),
-          _StatusItem('${stats.pendingCount}', '待发货', C.green, Icons.outbox_outlined),
-        ];
-        if (box.maxWidth < 520) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (int i = 0; i < items.length; i++) ...[
-                  SizedBox(width: 136, child: _buildCard(items[i])),
-                  if (i != items.length - 1) const SizedBox(width: 8),
-                ],
-              ],
-            ),
-          );
-        }
-        return Row(
-          children: [
-            for (int i = 0; i < items.length; i++) ...[
-              Expanded(child: _buildCard(items[i])),
-              if (i != items.length - 1) const SizedBox(width: 8),
-            ],
-          ],
-        );
-      },
+    child: Row(
+      children: [
+        Expanded(child: _buildCard(
+          _StatusItem('${stats.inStockCount}', '在售设备', C.cyan, Icons.inventory_2_outlined),
+        )),
+        const SizedBox(width: 10),
+        Expanded(child: _buildCard(
+          _StatusItem('${stats.pendingCount}', '待收货', C.neonGreen, Icons.local_shipping_outlined),
+        )),
+      ],
     ),
   );
 
   Widget _buildCard(_StatusItem item) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: C.elevationSm,
-    ),
-    child: Row(
-      children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: item.color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Icon(item.icon, size: 18, color: item.color),
+      border: Border.all(color: C.border, width: 0.8),
+      boxShadow: [
+        BoxShadow(
+          color: item.color.withOpacity(0.15),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
         ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  item.value,
-                  style: TextStyle(
-                    fontSize: 20, fontWeight: FontWeight.w900, color: C.t1,
-                  ),
-                ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Top neon bar
+        Container(
+          height: 3,
+          decoration: BoxDecoration(
+            color: item.color,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(C.radiusMd),
+              topRight: Radius.circular(C.radiusMd),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: item.color.withOpacity(0.5),
+                blurRadius: 6,
+                offset: const Offset(0, 0),
               ),
-              Text(
-                item.label,
-                style: TextStyle(
-                  fontSize: 10.5, color: C.t2, fontWeight: FontWeight.w600,
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 36, height: 36,
+                decoration: BoxDecoration(
+                  color: item.color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: item.color.withOpacity(0.3), width: 0.8),
+                ),
+                child: Icon(item.icon, size: 18, color: item.color),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        item.value,
+                        style: TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w900, color: C.t1,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      item.label,
+                      style: TextStyle(
+                        fontSize: 10.5, color: C.t2, fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -461,24 +535,31 @@ class _ChartSection extends StatelessWidget {
     margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
     padding: const EdgeInsets.all(C.sp16),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusLg),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: C.cardShadow,
+      border: Border.all(color: C.borderGlow, width: 0.8),
+      boxShadow: [
+        BoxShadow(
+          color: C.cyan.withOpacity(0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 标题行
+        // Title row
         Row(
           children: [
             Container(
               width: 28, height: 28,
               decoration: BoxDecoration(
-                color: C.primary.withOpacity(0.1),
+                color: C.cyan.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: C.cyan.withOpacity(0.3), width: 0.8),
               ),
-              child: const Icon(Icons.show_chart, color: C.primary, size: 16),
+              child: const Icon(Icons.show_chart, color: C.cyan, size: 16),
             ),
             const SizedBox(width: 10),
             Text(
@@ -488,13 +569,13 @@ class _ChartSection extends StatelessWidget {
             const Spacer(),
             Text(
               '累计 ${yuan(chart.total)}',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.primary),
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: C.cyan),
             ),
           ],
         ),
         const SizedBox(height: 12),
 
-        // 周期切换
+        // Period switch
         Row(
           children: [
             _chartTab('近7天', 0),
@@ -506,12 +587,12 @@ class _ChartSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
 
-        // 图表
+        // Chart
         SizedBox(
           height: 160,
           child: CustomPaint(
             painter: LineChartPainter(
-              chart.profit, chart.labels, lineColor: C.primary,
+              chart.profit, chart.labels, lineColor: C.cyan,
             ),
             size: Size.infinite,
           ),
@@ -528,18 +609,27 @@ class _ChartSection extends StatelessWidget {
         duration: C.fast,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
-          color: on ? C.selected : C.cardMuted,
+          color: on ? C.cyan.withOpacity(0.15) : C.bgCardMuted,
           borderRadius: BorderRadius.circular(C.radiusSm),
           border: Border.all(
-            color: on ? C.primary.withOpacity(0.3) : C.line,
+            color: on ? C.cyan.withOpacity(0.5) : C.border,
             width: on ? 1.2 : 0.8,
           ),
+          boxShadow: on
+              ? [
+                  BoxShadow(
+                    color: C.cyan.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 0),
+                  ),
+                ]
+              : [],
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 11,
-            color: on ? C.selectedText : C.t2,
+            color: on ? C.cyan : C.t2,
             fontWeight: on ? FontWeight.w800 : FontWeight.w500,
           ),
         ),
@@ -566,7 +656,7 @@ class _AlertsRow extends StatelessWidget {
             label: '资金占用',
             value: yuan(stats.capitalOccupied),
             sub: '在售${stats.inStockCount}台',
-            color: C.orange,
+            color: C.neonOrange,
           ),
         ),
         const SizedBox(width: 10),
@@ -580,7 +670,7 @@ class _AlertsRow extends StatelessWidget {
               label: '滞销预警',
               value: '${stats.stagnantCount}台',
               sub: stats.stagnantCount > 0 ? '点击处理 · 建议清仓' : '库存健康',
-              color: stats.stagnantCount > 0 ? C.red : C.green,
+              color: stats.stagnantCount > 0 ? C.neonRed : C.neonGreen,
               tappable: true,
             ),
           ),
@@ -599,10 +689,16 @@ class _AlertsRow extends StatelessWidget {
   }) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: C.elevationSm,
+      border: Border.all(color: C.borderGlow, width: 0.8),
+      boxShadow: [
+        BoxShadow(
+          color: color.withOpacity(0.1),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Row(
       children: [
@@ -611,6 +707,7 @@ class _AlertsRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: color.withOpacity(0.3), width: 0.8),
           ),
           child: Icon(icon, color: color, size: 19),
         ),
@@ -656,7 +753,7 @@ class _ChannelSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final segColors = [C.primary, C.blue, C.purple, C.orange, C.pink, C.green];
+    final segColors = [C.cyan, C.cyan, C.purple, C.neonOrange, C.purple, C.neonGreen];
     final entries = channelGmv.entries.toList();
     final total = channelGmv.values.fold<int>(0, (a, b) => a + b);
     final segments = entries
@@ -670,10 +767,16 @@ class _ChannelSection extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
       padding: const EdgeInsets.all(C.sp16),
       decoration: BoxDecoration(
-        color: C.card,
+        color: C.bgCard,
         borderRadius: BorderRadius.circular(C.radiusLg),
-        border: Border.all(color: C.line, width: 0.8),
-        boxShadow: C.cardShadow,
+        border: Border.all(color: C.borderGlow, width: 0.8),
+        boxShadow: [
+          BoxShadow(
+            color: C.purple.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -685,6 +788,7 @@ class _ChannelSection extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: C.purple.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: C.purple.withOpacity(0.3), width: 0.8),
                 ),
                 child: const Icon(Icons.pie_chart_outline, color: C.purple, size: 16),
               ),
@@ -720,6 +824,13 @@ class _ChannelSection extends StatelessWidget {
                             width: 10, height: 10,
                             decoration: BoxDecoration(
                               color: color, borderRadius: BorderRadius.circular(3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: color.withOpacity(0.5),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 0),
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -729,7 +840,7 @@ class _ChannelSection extends StatelessWidget {
                               style: TextStyle(fontSize: 12, color: C.t1, fontWeight: FontWeight.w500),
                             ),
                           ),
-                          // 进度条
+                          // Progress bar
                           Expanded(
                             flex: 2,
                             child: LayoutBuilder(
@@ -745,6 +856,13 @@ class _ChannelSection extends StatelessWidget {
                                     decoration: BoxDecoration(
                                       color: color,
                                       borderRadius: BorderRadius.circular(3),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: color.withOpacity(0.4),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 0),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ),
@@ -792,10 +910,17 @@ class _AiReportEntryState extends State<_AiReportEntry> {
       margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
       padding: const EdgeInsets.all(C.sp16),
       decoration: BoxDecoration(
-        color: C.card,
+        color: C.bgCard,
         borderRadius: BorderRadius.circular(C.radiusLg),
-        border: Border.all(color: C.line, width: 0.8),
-        boxShadow: C.cardShadow,
+        border: Border.all(color: C.purple.withOpacity(0.5), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: C.purple.withOpacity(0.25),
+            blurRadius: 12,
+            offset: const Offset(0, 0),
+            spreadRadius: 1,
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -808,8 +933,8 @@ class _AiReportEntryState extends State<_AiReportEntry> {
               borderRadius: BorderRadius.circular(C.radiusMd),
               boxShadow: [
                 BoxShadow(
-                  color: C.purple.withOpacity(0.25),
-                  blurRadius: 8, offset: const Offset(0, 3),
+                  color: C.purple.withOpacity(0.4),
+                  blurRadius: 10, offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -834,7 +959,7 @@ class _AiReportEntryState extends State<_AiReportEntry> {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: C.t3, size: 22),
+          Icon(Icons.chevron_right_rounded, color: C.purple, size: 22),
         ],
       ),
     ),
@@ -853,10 +978,16 @@ class _StagnantSection extends StatelessWidget {
     margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
     padding: const EdgeInsets.all(C.sp16),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusLg),
-      border: Border.all(color: C.red.withOpacity(0.2), width: 1),
-      boxShadow: C.cardShadow,
+      border: Border.all(color: C.neonRed.withOpacity(0.3), width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: C.neonRed.withOpacity(0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -866,10 +997,11 @@ class _StagnantSection extends StatelessWidget {
             Container(
               width: 28, height: 28,
               decoration: BoxDecoration(
-                color: C.red.withOpacity(0.1),
+                color: C.neonRed.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: C.neonRed.withOpacity(0.3), width: 0.8),
               ),
-              child: const Icon(Icons.warning_amber_rounded, color: C.red, size: 16),
+              child: const Icon(Icons.warning_amber_rounded, color: C.neonRed, size: 16),
             ),
             const SizedBox(width: 10),
             Text(
@@ -890,11 +1022,11 @@ class _StagnantSection extends StatelessWidget {
                     Text(
                       '全部',
                       style: TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w600, color: C.red,
+                        fontSize: 12, fontWeight: FontWeight.w600, color: C.neonRed,
                       ),
                     ),
                     const SizedBox(width: 2),
-                    const Icon(Icons.chevron_right, color: C.red, size: 16),
+                    const Icon(Icons.chevron_right, color: C.neonRed, size: 16),
                   ],
                 ),
               ),
@@ -909,9 +1041,9 @@ class _StagnantSection extends StatelessWidget {
               Container(
                 width: 38, height: 38,
                 decoration: BoxDecoration(
-                  color: C.cardMuted,
+                  color: C.bgCardMuted,
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: C.line, width: 0.5),
+                  border: Border.all(color: C.border, width: 0.5),
                 ),
                 child: Icon(Icons.tablet_mac_rounded, color: C.t2, size: 18),
               ),
@@ -933,7 +1065,7 @@ class _StagnantSection extends StatelessWidget {
                   ],
                 ),
               ),
-              const StatusChip('滞销', C.red),
+              _neonStatusChip('滞销', C.neonRed),
             ],
           ),
         )),
@@ -952,10 +1084,16 @@ class _QuickActions extends StatelessWidget {
     margin: const EdgeInsets.fromLTRB(C.sp16, 0, C.sp16, C.sp12),
     padding: const EdgeInsets.all(C.sp16),
     decoration: BoxDecoration(
-      color: C.card,
+      color: C.bgCard,
       borderRadius: BorderRadius.circular(C.radiusLg),
-      border: Border.all(color: C.line, width: 0.8),
-      boxShadow: C.cardShadow,
+      border: Border.all(color: C.borderGlow, width: 0.8),
+      boxShadow: [
+        BoxShadow(
+          color: C.cyan.withOpacity(0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -965,10 +1103,11 @@ class _QuickActions extends StatelessWidget {
             Container(
               width: 28, height: 28,
               decoration: BoxDecoration(
-                color: C.primary.withOpacity(0.1),
+                color: C.cyan.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: C.cyan.withOpacity(0.3), width: 0.8),
               ),
-              child: const Icon(Icons.bolt_rounded, color: C.primary, size: 16),
+              child: const Icon(Icons.bolt_rounded, color: C.cyan, size: 16),
             ),
             const SizedBox(width: 10),
             Text(
@@ -982,7 +1121,7 @@ class _QuickActions extends StatelessWidget {
           children: [
             Expanded(
               child: _quickAction(
-                Icons.qr_code_scanner_rounded, '扫码收货', C.primary,
+                Icons.qr_code_scanner_rounded, '扫码收货', C.cyan,
                 () => Navigator.push(
                   context, MaterialPageRoute(builder: (_) => const ScanPage()),
                 ).then((_) => onRefresh()),
@@ -1000,7 +1139,7 @@ class _QuickActions extends StatelessWidget {
             const SizedBox(width: 10),
             Expanded(
               child: _quickAction(
-                Icons.point_of_sale_outlined, '售出', C.green,
+                Icons.point_of_sale_outlined, '售出', C.neonGreen,
                 () => Navigator.push(
                   context, MaterialPageRoute(builder: (_) => const SellPage()),
                 ).then((_) => onRefresh()),
@@ -1021,17 +1160,25 @@ class _QuickActions extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.06),
+              color: color.withOpacity(0.08),
               borderRadius: BorderRadius.circular(C.radiusMd),
-              border: Border.all(color: color.withOpacity(0.15), width: 0.8),
+              border: Border.all(color: color.withOpacity(0.4), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.2),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Row(
               children: [
                 Container(
                   width: 32, height: 32,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(9),
+                    border: Border.all(color: color.withOpacity(0.3), width: 0.8),
                   ),
                   child: Icon(icon, color: color, size: 17),
                 ),
@@ -1049,6 +1196,37 @@ class _QuickActions extends StatelessWidget {
           ),
         ),
       );
+}
+
+// ═══════════════════════════════════════════════
+// 辅助组件
+// ═══════════════════════════════════════════════
+
+/// 霓虹状态标签
+Widget _neonStatusChip(String text, Color color) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: color.withOpacity(0.4), width: 0.8),
+      boxShadow: [
+        BoxShadow(
+          color: color.withOpacity(0.2),
+          blurRadius: 4,
+          offset: const Offset(0, 0),
+        ),
+      ],
+    ),
+    child: Text(
+      text,
+      style: TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
+    ),
+  );
 }
 
 // ═══════════════════════════════════════════════

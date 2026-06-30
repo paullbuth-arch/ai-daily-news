@@ -170,21 +170,21 @@ class _IpadBossAppState extends State<IpadBossApp> {
   );
 
   ThemeData _buildDarkTheme() => ThemeData(
-    scaffoldBackgroundColor: const Color(0xFF0B0F19),
+    scaffoldBackgroundColor: const Color(0xFF050507),
     brightness: Brightness.dark,
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF818CF8),
-      secondary: Color(0xFF60A5FA),
-      surface: Color(0xFF151A28),
+      primary: Color(0xFF00F0FF),
+      secondary: Color(0xFFB829FF),
+      surface: Color(0xFF0c0e14),
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF0F1320),
+      backgroundColor: Color(0xFF0a0c14),
       elevation: 0,
       centerTitle: true,
       titleTextStyle: TextStyle(
         fontSize: 18,
         fontWeight: FontWeight.w800,
-        color: Color(0xFFF1F5F9),
+        color: Color(0xFFE0E2E8),
         letterSpacing: 0.3,
       ),
     ),
