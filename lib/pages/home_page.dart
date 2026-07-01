@@ -22,7 +22,12 @@ class HomePageState extends State<HomePage> {
   Stats stats = Stats();
   List<Device> stagnant = [];
   List<DailyStat> daily = [];
+  List<DailyStat> weekly = [];
   Map<String, int> channelGmv = {};
+  final _homeSearchCtrl = TextEditingController();
+  final _homeSearchFocus = FocusNode();
+  bool _searchOpen = false;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -35,8 +40,16 @@ class HomePageState extends State<HomePage> {
       stats = gStorage.computeStats();
       stagnant = gStorage.getDevices().where((d) => d.isStagnant).toList();
       daily = gStorage.getDailyStats(days: 7);
+      weekly = gStorage.getCurrentMonthWeeklyStats();
       channelGmv = gStorage.getChannelGmv();
     });
+  }
+
+  @override
+  void dispose() {
+    _homeSearchCtrl.dispose();
+    _homeSearchFocus.dispose();
+    super.dispose();
   }
 
   @override
@@ -44,7 +57,7 @@ class HomePageState extends State<HomePage> {
     final margin = stats.gmv > 0 ? stats.grossProfit / stats.gmv * 100 : 0.0;
     return PageScaffold(
       title: const Text(
-        '机掌柜',
+        '货脉',
         style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w900,
@@ -65,11 +78,42 @@ class HomePageState extends State<HomePage> {
           _HeroPhoneCard(
             stats: stats,
             margin: margin,
-            onSearch: _openHomeSearch,
+            onSearch: _toggleHomeSearch,
             onTune: _openQuickPanel,
             onScan: () => _push(const ScanPage()),
             onPrice: () => _push(const MarketPricePage()),
             onSell: () => _push(const SellPage()),
+          ),
+          AnimatedSwitcher(
+            duration: C.fast,
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            child:
+                _searchOpen
+                    ? Padding(
+                      key: const ValueKey('home-search'),
+                      padding: const EdgeInsets.only(top: 14),
+                      child: _InlineSearchPanel(
+                        controller: _homeSearchCtrl,
+                        focusNode: _homeSearchFocus,
+                        query: _searchQuery,
+                        devices: _searchResults,
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                        onClear: () {
+                          _homeSearchCtrl.clear();
+                          setState(() => _searchQuery = '');
+                          _homeSearchFocus.requestFocus();
+                        },
+                        onClose: _closeHomeSearch,
+                        onSelect: (device) {
+                          _closeHomeSearch();
+                          _push(DetailPage(device: device));
+                        },
+                      ),
+                    )
+                    : const SizedBox.shrink(key: ValueKey('home-search-empty')),
           ),
           const SizedBox(height: 14),
           _AttentionStrip(
@@ -78,7 +122,7 @@ class HomePageState extends State<HomePage> {
             onStagnantTap: () => _push(const StagnantListPage()),
           ),
           const SizedBox(height: 14),
-          _TrendPanel(daily: daily),
+          _TrendPanel(daily: daily, weekly: weekly),
           const SizedBox(height: 14),
           if (channelGmv.isNotEmpty) _ChannelPanel(channelGmv: channelGmv),
           const SizedBox(height: 14),
@@ -95,74 +139,38 @@ class HomePageState extends State<HomePage> {
     ).then((_) => refresh());
   }
 
-  Future<void> _openHomeSearch() async {
-    final ctrl = TextEditingController();
-    var query = '';
+  List<Device> get _searchResults {
     final devices = gStorage.getDevices();
-    await showAppFormSheet<void>(
-      context: context,
-      title: '搜索库存',
-      subtitle: '按型号、容量、序列号快速定位设备',
-      initialChildSize: 0.72,
-      child: StatefulBuilder(
-        builder: (context, setSheet) {
-          final kw = query.trim().toLowerCase();
-          final results =
-              (kw.isEmpty
-                      ? devices
-                      : devices.where(
-                        (d) =>
-                            d.model.toLowerCase().contains(kw) ||
-                            d.serial.toLowerCase().contains(kw) ||
-                            d.capacity.toLowerCase().contains(kw) ||
-                            d.color.toLowerCase().contains(kw),
-                      ))
-                  .take(12)
-                  .toList();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppFormField(
-                controller: ctrl,
-                label: '搜索型号、序列号、容量',
-                icon: Icons.search_rounded,
-                autofocus: true,
-                onChanged: (v) => setSheet(() => query = v),
-              ),
-              const SizedBox(height: 14),
-              if (results.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 30),
-                  child: Center(
-                    child: Text(
-                      '没有匹配的库存设备',
-                      style: TextStyle(
-                        color: C.t2,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                ...results.map(
-                  (d) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _SearchResultTile(
-                      device: d,
-                      onTap: () {
-                        Navigator.pop(context);
-                        _push(DetailPage(device: d));
-                      },
-                    ),
-                  ),
-                ),
-            ],
-          );
-        },
-      ),
-    );
-    ctrl.dispose();
+    final kw = _searchQuery.trim().toLowerCase();
+    return (kw.isEmpty
+            ? devices
+            : devices.where(
+              (d) =>
+                  d.model.toLowerCase().contains(kw) ||
+                  d.serial.toLowerCase().contains(kw) ||
+                  d.capacity.toLowerCase().contains(kw) ||
+                  d.color.toLowerCase().contains(kw),
+            ))
+        .take(8)
+        .toList();
+  }
+
+  void _toggleHomeSearch() {
+    setState(() => _searchOpen = !_searchOpen);
+    if (_searchOpen) {
+      Future.delayed(const Duration(milliseconds: 80), () {
+        if (mounted) _homeSearchFocus.requestFocus();
+      });
+    }
+  }
+
+  void _closeHomeSearch() {
+    _homeSearchFocus.unfocus();
+    _homeSearchCtrl.clear();
+    setState(() {
+      _searchOpen = false;
+      _searchQuery = '';
+    });
   }
 
   Future<void> _openQuickPanel() async {
@@ -444,6 +452,118 @@ class _CircleTool extends StatelessWidget {
         ),
         child: Icon(icon, color: C.t1, size: 21),
       ),
+    ),
+  );
+}
+
+class _InlineSearchPanel extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final String query;
+  final List<Device> devices;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+  final VoidCallback onClose;
+  final ValueChanged<Device> onSelect;
+
+  const _InlineSearchPanel({
+    required this.controller,
+    required this.focusNode,
+    required this.query,
+    required this.devices,
+    required this.onChanged,
+    required this.onClear,
+    required this.onClose,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(14),
+    radius: 22,
+    color: const Color(0xF00B1018),
+    borderColor: C.cyan.withOpacity(0.18),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 46,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: C.bgDeep,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: C.border),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.search_rounded, color: C.cyan, size: 20),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      child: TextField(
+                        controller: controller,
+                        focusNode: focusNode,
+                        onChanged: onChanged,
+                        style: const TextStyle(
+                          color: C.t1,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        decoration: const InputDecoration(
+                          isCollapsed: true,
+                          border: InputBorder.none,
+                          hintText: '搜索型号、序列号、容量、颜色',
+                          hintStyle: TextStyle(color: C.t3, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                    if (query.isNotEmpty)
+                      IconButton(
+                        onPressed: onClear,
+                        icon: const Icon(
+                          Icons.close_rounded,
+                          color: C.t3,
+                          size: 18,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            RoundIconButton(
+              icon: Icons.keyboard_arrow_up_rounded,
+              onTap: onClose,
+              size: 42,
+              color: C.t2,
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (devices.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 18),
+            child: Center(
+              child: Text(
+                '没有匹配的库存设备',
+                style: TextStyle(
+                  color: C.t2,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          )
+        else
+          ...devices.map(
+            (d) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: _SearchResultTile(device: d, onTap: () => onSelect(d)),
+            ),
+          ),
+      ],
     ),
   );
 }
@@ -788,19 +908,28 @@ class _AlertTile extends StatelessWidget {
   );
 }
 
-class _TrendPanel extends StatelessWidget {
+class _TrendPanel extends StatefulWidget {
   final List<DailyStat> daily;
+  final List<DailyStat> weekly;
 
-  const _TrendPanel({required this.daily});
+  const _TrendPanel({required this.daily, required this.weekly});
+
+  @override
+  State<_TrendPanel> createState() => _TrendPanelState();
+}
+
+class _TrendPanelState extends State<_TrendPanel> {
+  bool weeklyMode = false;
 
   @override
   Widget build(BuildContext context) {
-    final data = daily.map((d) => d.profit.toDouble()).toList();
+    final source = weeklyMode ? widget.weekly : widget.daily;
+    final data = source.map((d) => d.profit.toDouble()).toList();
     final labels =
-        daily
+        source
             .map((d) => d.date.length > 5 ? d.date.substring(5) : d.date)
             .toList();
-    final total = daily.fold<int>(0, (sum, d) => sum + d.profit);
+    final total = source.fold<int>(0, (sum, d) => sum + d.profit);
     return GlassPanel(
       padding: const EdgeInsets.all(16),
       radius: 22,
@@ -833,14 +962,40 @@ class _TrendPanel extends StatelessWidget {
                   ),
                 ),
               ),
-              StatusChip('7日 ${yuan(total)}', C.cyan),
+              _TrendToggle(
+                weeklyMode: weeklyMode,
+                onChanged: (value) => setState(() => weeklyMode = value),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              StatusChip(
+                weeklyMode ? '本月 ${yuan(total)}' : '7日 ${yuan(total)}',
+                C.cyan,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                weeklyMode ? '按月内自然周聚合' : '最近 7 天净利',
+                style: const TextStyle(
+                  color: C.t3,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           SizedBox(
             height: 150,
             child: CustomPaint(
-              painter: LineChartPainter(data, labels, lineColor: C.cyan),
+              painter: LineChartPainter(
+                data,
+                labels,
+                lineColor: C.cyan,
+                showPointLabels: true,
+              ),
               size: Size.infinite,
             ),
           ),
@@ -848,6 +1003,51 @@ class _TrendPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TrendToggle extends StatelessWidget {
+  final bool weeklyMode;
+  final ValueChanged<bool> onChanged;
+
+  const _TrendToggle({required this.weeklyMode, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: Colors.white.withOpacity(0.07),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: Colors.white.withOpacity(0.08)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _item('日', !weeklyMode, () => onChanged(false)),
+        _item('周', weeklyMode, () => onChanged(true)),
+      ],
+    ),
+  );
+
+  Widget _item(String label, bool selected, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: C.fast,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+          decoration: BoxDecoration(
+            color: selected ? C.cyan : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.black : C.t2,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      );
 }
 
 class _ChannelPanel extends StatelessWidget {

@@ -1,4 +1,4 @@
-// 机掌柜 · 二手iPad经营工作台
+// 货脉 · 二手iPad经营工作台
 // 商务科技设计系统 · 模块化架构
 //
 // 目录结构:
@@ -19,7 +19,6 @@ import 'storage.dart';
 import 'models.dart';
 import 'ai_service.dart';
 import 'auth_service.dart';
-import 'login_page.dart';
 import 'pages/shell.dart';
 
 // ═══════════════════════════════════════════════
@@ -46,7 +45,8 @@ void main() async {
   await AuthService.init(gStorage);
   final aiMap = gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?;
   AiService.setConfig(AiConfig.fromMap(aiMap));
-  if (gStorage.getDevices().isEmpty) {
+  final initialized = gStorage.getSettings()['initialized'] == true;
+  if (gStorage.getDevices().isEmpty && !initialized) {
     await seedDemoData();
   }
   gStorageReady = true;
@@ -102,12 +102,12 @@ class _IpadBossAppState extends State<IpadBossApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '机掌柜',
+      title: '货脉',
       debugShowCheckedModeBanner: false,
       themeMode: gThemeMode,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
-      home: AuthService.isLoggedIn ? const MainShell() : const LoginPage(),
+      home: const MainShell(),
     );
   }
 

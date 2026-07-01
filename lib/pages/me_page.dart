@@ -105,7 +105,7 @@ class _MePageState extends State<MePage> {
         ),
       ),
       subtitle: Text(
-        '机掌柜 v${UpdateService.currentVersion}',
+        '货脉 v${UpdateService.currentVersion}',
         style: const TextStyle(
           fontSize: 12,
           color: C.t2,

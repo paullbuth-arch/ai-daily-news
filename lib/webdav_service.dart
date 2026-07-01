@@ -13,13 +13,14 @@ class WebDavDownloadResult {
 }
 
 class WebDavConfig {
-  final String url;       // 如 https://dav.jianguoyun.com/dav/
+  final String url; // 如 https://dav.jianguoyun.com/dav/
   final String username;
-  final String password;  // 坚果云用应用密码
+  final String password; // 坚果云用应用密码
 
   const WebDavConfig({this.url = '', this.username = '', this.password = ''});
 
-  bool get isValid => url.isNotEmpty && username.isNotEmpty && password.isNotEmpty;
+  bool get isValid =>
+      url.isNotEmpty && username.isNotEmpty && password.isNotEmpty;
 
   factory WebDavConfig.fromMap(Map<String, dynamic>? m) {
     if (m == null) return const WebDavConfig();
@@ -30,12 +31,24 @@ class WebDavConfig {
     );
   }
 
-  Map<String, dynamic> toMap() => {'url': url, 'username': username, 'password': password};
+  Map<String, dynamic> toMap() => {
+    'url': url,
+    'username': username,
+    'password': password,
+  };
 }
 
 class WebDavService {
   static const kRemoteFile = 'ipad_boss_data.json';
   static const kTimestampFile = 'ipad_boss_sync_ts.txt';
+  static const kRemoteDir = '货脉';
+  static const kLegacyRemoteDir = '机掌柜';
+
+  static String _normalizedBaseUrl(String url) =>
+      url.endsWith('/') ? url : '$url/';
+
+  static Uri _remoteUri(String baseUrl, String dir, String file) =>
+      Uri.parse('$baseUrl$dir/$file');
 
   /// 上传数据到 WebDAV
   /// [dataPath] = 本地 data.json 路径
@@ -48,11 +61,11 @@ class WebDavService {
       final file = File(dataPath);
       if (!await file.exists()) return '本地数据文件不存在';
       final bytes = await file.readAsBytes();
-      final baseUrl = config.url.endsWith('/') ? config.url : '${config.url}/';
-      final uri = Uri.parse('${baseUrl}机掌柜/$kRemoteFile');
+      final baseUrl = _normalizedBaseUrl(config.url);
+      final uri = _remoteUri(baseUrl, kRemoteDir, kRemoteFile);
 
       // 先创建目录（忽略错误，可能已存在）
-      await _mkcol(config, '${baseUrl}机掌柜/');
+      await _mkcol(config, '$baseUrl$kRemoteDir/');
 
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 15);
@@ -72,11 +85,31 @@ class WebDavService {
 
   /// 从 WebDAV 下载数据
   /// 返回下载结果：成功时 data 非 null，失败时 errMsg 非 null
-  static Future<WebDavDownloadResult> download({required WebDavConfig config}) async {
+  static Future<WebDavDownloadResult> download({
+    required WebDavConfig config,
+  }) async {
     if (!config.isValid) return WebDavDownloadResult(null, '配置无效');
     try {
-      final baseUrl = config.url.endsWith('/') ? config.url : '$config.url/';
-      final uri = Uri.parse('$baseUrl机掌柜/$kRemoteFile');
+      final baseUrl = _normalizedBaseUrl(config.url);
+      WebDavDownloadResult? lastError;
+      for (final dir in const [kRemoteDir, kLegacyRemoteDir]) {
+        final result = await _downloadFromDir(config, baseUrl, dir);
+        if (result.data != null) return result;
+        lastError = result;
+      }
+      return lastError ?? WebDavDownloadResult(null, '云端无数据（首次同步请先上传）');
+    } catch (e) {
+      return WebDavDownloadResult(null, '下载异常：$e');
+    }
+  }
+
+  static Future<WebDavDownloadResult> _downloadFromDir(
+    WebDavConfig config,
+    String baseUrl,
+    String dir,
+  ) async {
+    try {
+      final uri = _remoteUri(baseUrl, dir, kRemoteFile);
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 15);
       final req = await client.openUrl('GET', uri);
@@ -90,7 +123,9 @@ class WebDavService {
         client.close();
         return WebDavDownloadResult(null, '下载失败(${resp.statusCode})');
       }
-      final bytes = await resp.fold<BytesBuilder>(BytesBuilder(), (b, d) => b..add(d)).then((b) => b.takeBytes());
+      final bytes = await resp
+          .fold<BytesBuilder>(BytesBuilder(), (b, d) => b..add(d))
+          .then((b) => b.takeBytes());
       client.close();
       return WebDavDownloadResult(Uint8List.fromList(bytes), null);
     } catch (e) {
@@ -102,8 +137,8 @@ class WebDavService {
   static Future<String?> uploadTimestamp({required WebDavConfig config}) async {
     if (!config.isValid) return '配置无效';
     try {
-      final baseUrl = config.url.endsWith('/') ? config.url : '${config.url}/';
-      final uri = Uri.parse('${baseUrl}机掌柜/$kTimestampFile');
+      final baseUrl = _normalizedBaseUrl(config.url);
+      final uri = _remoteUri(baseUrl, kRemoteDir, kTimestampFile);
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 10);
       final req = await client.openUrl('PUT', uri);
@@ -131,9 +166,15 @@ class WebDavService {
       final req = await client.openUrl('PROPFIND', uri);
       _setAuth(req, config);
       req.headers.set('Depth', '0');
-      req.headers.contentType = ContentType('application', 'xml', charset: 'utf-8');
+      req.headers.contentType = ContentType(
+        'application',
+        'xml',
+        charset: 'utf-8',
+      );
       // PROPFIND 需要请求体（标准 WebDAV）
-      req.write('<?xml version="1.0"?><a:propfind xmlns:a="DAV:"><a:prop><a:resourcetype/></a:prop></a:propfind>');
+      req.write(
+        '<?xml version="1.0"?><a:propfind xmlns:a="DAV:"><a:prop><a:resourcetype/></a:prop></a:propfind>',
+      );
       final resp = await req.close();
       await resp.drain<void>();
       client.close();
@@ -172,7 +213,9 @@ class WebDavService {
   }
 
   static void _setAuth(HttpClientRequest req, WebDavConfig config) {
-    final auth = base64Encode(utf8.encode('${config.username}:${config.password}'));
+    final auth = base64Encode(
+      utf8.encode('${config.username}:${config.password}'),
+    );
     req.headers.set('Authorization', 'Basic $auth');
   }
 
@@ -192,7 +235,9 @@ class WebDavService {
 
   /// 从 Storage 读取 WebDAV 配置
   static WebDavConfig getConfig(Storage s) {
-    return WebDavConfig.fromMap(s.getSettings()['webdavConfig'] as Map<String, dynamic>?);
+    return WebDavConfig.fromMap(
+      s.getSettings()['webdavConfig'] as Map<String, dynamic>?,
+    );
   }
 
   /// 保存 WebDAV 配置到 Storage

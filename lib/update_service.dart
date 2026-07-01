@@ -7,9 +7,9 @@ import 'package:path_provider/path_provider.dart';
 
 /// 远端版本信息
 class UpdateInfo {
-  final String version;   // 版本名，如 "1.6.1"
-  final int buildNumber;  // 构建号，如 7
-  final String apkUrl;    // APK 下载地址
+  final String version; // 版本名，如 "1.6.1"
+  final int buildNumber; // 构建号，如 7
+  final String apkUrl; // APK 下载地址
   final String changelog; // 更新说明
 
   const UpdateInfo({
@@ -20,21 +20,20 @@ class UpdateInfo {
   });
 
   factory UpdateInfo.fromJson(Map<String, dynamic> json) => UpdateInfo(
-        version: json['version'] as String? ?? '',
-        buildNumber: json['buildNumber'] as int? ?? 0,
-        apkUrl: json['apkUrl'] as String? ?? '',
-        changelog: json['changelog'] as String? ?? '',
-      );
+    version: json['version'] as String? ?? '',
+    buildNumber: json['buildNumber'] as int? ?? 0,
+    apkUrl: json['apkUrl'] as String? ?? '',
+    changelog: json['changelog'] as String? ?? '',
+  );
 }
 
 class UpdateService {
   /// 默认更新检查 URL
-  static const String defaultCheckUrl =
-      'https://deepsell.wiki/api/version';
+  static const String defaultCheckUrl = 'https://deepsell.wiki/api/version';
 
   /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.1.0';
-  static int get currentBuild => 12;
+  static String get currentVersion => '2.7.0';
+  static int get currentBuild => 17;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
@@ -78,7 +77,11 @@ class UpdateService {
   /// 下载 APK 到本地
   /// 返回本地文件路径，失败返回 null
   /// [onProgress] 可选进度回调 (0.0 - 1.0)
-  static Future<String?> downloadApk(String url, {String? fileName, void Function(double)? onProgress}) async {
+  static Future<String?> downloadApk(
+    String url, {
+    String? fileName,
+    void Function(double)? onProgress,
+  }) async {
     try {
       final uri = Uri.parse(url);
       final client = HttpClient();
@@ -113,7 +116,8 @@ class UpdateService {
       await sink.close();
       client.close();
 
-      if (await file.exists() && (contentLength <= 0 || await file.length() == contentLength)) {
+      if (await file.exists() &&
+          (contentLength <= 0 || await file.length() == contentLength)) {
         return file.path;
       }
       return null;
@@ -127,7 +131,9 @@ class UpdateService {
   static Future<bool> installApk(String path) async {
     try {
       const channel = MethodChannel('ipad_boss_app/gallery');
-      final result = await channel.invokeMethod<Map>('installApk', {'path': path});
+      final result = await channel.invokeMethod<Map>('installApk', {
+        'path': path,
+      });
       return result?['success'] == true;
     } catch (e) {
       return false;

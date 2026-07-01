@@ -105,6 +105,15 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fallbackGradient = LinearGradient(
+      colors: [
+        Colors.white.withOpacity(0.075),
+        Colors.white.withOpacity(0.030),
+        Colors.black.withOpacity(0.10),
+      ],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
     final content = Container(
       margin: margin,
       decoration: BoxDecoration(
@@ -130,16 +139,7 @@ class GlassPanel extends StatelessWidget {
                           ? (color ?? C.bgCard.withOpacity(0.82))
                           : null,
                   gradient:
-                      gradient ??
-                      LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.075),
-                          Colors.white.withOpacity(0.030),
-                          Colors.black.withOpacity(0.10),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
+                      gradient ?? (color == null ? fallbackGradient : null),
                   borderRadius: BorderRadius.circular(radius),
                 ),
               ),

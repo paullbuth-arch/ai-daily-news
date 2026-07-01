@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
+import '../models.dart';
 import '../ai_service.dart';
 import '../main.dart';
+import 'detail_page.dart';
+import 'market_price_page.dart';
+import 'order_detail_page.dart';
+import 'stagnant_list_page.dart';
 
 class AiReportPage extends StatefulWidget {
   const AiReportPage({Key? key}) : super(key: key);
@@ -15,10 +19,6 @@ class AiReportPage extends StatefulWidget {
 class _AiReportPageState extends State<AiReportPage> {
   String? report;
   bool loading = false;
-  List<String> highlights = [];
-  List<String> concerns = [];
-  List<String> suggestions = [];
-  List<String> localAnomalies = [];
 
   Future<void> _gen() async {
     setState(() => loading = true);
@@ -27,11 +27,8 @@ class _AiReportPageState extends State<AiReportPage> {
         gStorage
             .getDevices()
             .where((d) => d.isStagnant)
-            .map((d) => '${d.model} ${d.capacity}')
+            .map((d) => '${d.model} ${d.capacity} · ${d.stockDays}天')
             .toList();
-
-    // 本地异常检测
-    localAnomalies = _detectAnomalies(s);
 
     final r = await AiService.dailyReport(
       gmv: s.gmv,
@@ -42,301 +39,556 @@ class _AiReportPageState extends State<AiReportPage> {
       capital: s.capitalOccupied,
       stagnantModels: stg,
     );
-    _parseReport(r);
+    if (!mounted) return;
     setState(() {
       report = r;
       loading = false;
     });
   }
 
-  /// 本地异常检测
-  List<String> _detectAnomalies(dynamic s) {
-    final anomalies = <String>[];
-    final devices = gStorage.getDevices();
-
-    // 1. 滞销率 > 30%
-    if (s.stagnantCount > 0 && s.inStockCount > 0) {
-      final rate = s.stagnantCount / s.inStockCount;
-      if (rate > 0.3) {
-        anomalies.add('滞销率 ${(rate * 100).toStringAsFixed(0)}%，超过 30% 警戒线');
-      }
-    }
-
-    // 2. 今日GMV比周均值低50%以上
-    final sold =
-        devices.where((d) => d.status == 'sold' && d.sellDate != null).toList();
-    final today = DateTime.now();
-    final weekAgo = today.subtract(const Duration(days: 7));
-    final weekSales =
-        sold.where((d) {
-          try {
-            return DateTime.parse(d.sellDate!).isAfter(weekAgo);
-          } catch (_) {
-            return false;
-          }
-        }).toList();
-    if (weekSales.length >= 3 && s.gmv > 0) {
-      final weekAvgGmv =
-          weekSales.fold(0, (int sum, d) => sum + d.sellPrice) ~/
-          weekSales.length;
-      if (s.gmv < weekAvgGmv * 0.5) {
-        anomalies.add('今日 GMV 低于近 7 日均值 50% 以上');
-      }
-    }
-
-    // 3. 单台利润低于历史均值50%
-    final soldHasProfit = sold.where((d) => d.netProfit > 0).toList();
-    if (soldHasProfit.length >= 3) {
-      final avgProfit =
-          soldHasProfit.fold(0, (int sum, d) => sum + d.netProfit) ~/
-          soldHasProfit.length;
-      final todaySold =
-          sold.where((d) {
-            try {
-              return DateTime.parse(d.sellDate!).day == today.day;
-            } catch (_) {
-              return false;
-            }
-          }).toList();
-      for (final d in todaySold) {
-        if (d.netProfit < avgProfit * 0.5) {
-          anomalies.add(
-            '${d.model} ${d.capacity} 利润 ${(d.netProfit / 100).toStringAsFixed(0)}元，低于历史均值 50%',
-          );
-          break;
-        }
-      }
-    }
-
-    // 4. 某机型连续7天无动销（有库存但没卖出）
-    for (final model in devices.map((d) => d.model).toSet()) {
-      final inStock =
-          devices
-              .where(
-                (d) =>
-                    d.model == model &&
-                    (d.status == 'in_stock' || d.status == 'listed'),
-              )
-              .toList();
-      if (inStock.isNotEmpty) {
-        final lastSold =
-            sold.where((d) => d.model == model).toList()
-              ..sort((a, b) => (b.sellDate ?? '').compareTo(a.sellDate ?? ''));
-        if (lastSold.isNotEmpty) {
-          try {
-            final lastDate = DateTime.parse(lastSold.first.sellDate!);
-            if (today.difference(lastDate).inDays >= 7) {
-              anomalies.add('$model 已有 7 天以上无动销，库存 ${inStock.length} 台');
-            }
-          } catch (_) {}
-        } else {
-          anomalies.add('$model 从未售出，库存 ${inStock.length} 台');
-        }
-      }
-    }
-
-    return anomalies;
-  }
-
-  /// 解析结构化输出
-  void _parseReport(String text) {
-    highlights = [];
-    concerns = [];
-    suggestions = [];
-    String currentSection = '';
-    for (final line in text.split('\n')) {
-      final trimmed = line.trim();
-      if (trimmed.contains('【亮点】') || trimmed.contains('[亮点]')) {
-        currentSection = 'highlights';
-      } else if (trimmed.contains('【待关注】') || trimmed.contains('[待关注]')) {
-        currentSection = 'concerns';
-      } else if (trimmed.contains('【明日建议】') || trimmed.contains('[明日建议]')) {
-        currentSection = 'suggestions';
-      } else if (trimmed.startsWith('•') ||
-          trimmed.startsWith('-') ||
-          trimmed.startsWith('*')) {
-        final item = trimmed.substring(1).trim();
-        if (item.isNotEmpty) {
-          if (currentSection == 'highlights')
-            highlights.add(item);
-          else if (currentSection == 'concerns')
-            concerns.add(item);
-          else if (currentSection == 'suggestions')
-            suggestions.add(item);
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final s = gStorage.computeStats();
+    final stats = gStorage.computeStats();
+    final devices = gStorage.getDevices();
+    final orders =
+        gStorage.getOrders().where((o) => o.status != 'cancelled').toList();
+    final actions = _buildActions(stats, devices, orders);
+    final week = _weekSummary();
+    final staleCapital = devices
+        .where((d) => d.isStagnant)
+        .fold<int>(0, (sum, d) => sum + d.purchaseCost);
+
     return appScaffold(
       context,
-      'AI经营日报',
+      '今日经营动作台',
       ListView(
         padding: const EdgeInsets.all(14),
         children: [
-          // 今日数据头
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [C.bgDeep, C.bgSurface],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: C.purple),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      '今日数据',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: C.t1,
-                      ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '更新于 ${DateTime.now().hour}:${DateTime.now().minute.toString().padLeft(2, "0")}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: C.t2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _d('GMV', yuan(s.gmv)),
-                    _d('毛利', yuan(s.grossProfit)),
-                    _d('在售', '${s.inStockCount}台'),
-                    _d('滞销', '${s.stagnantCount}台'),
-                  ],
-                ),
-              ],
-            ),
+          _buildSnapshot(stats, week, staleCapital),
+          const SizedBox(height: 2),
+          _SectionHeader(
+            title: '今天先做什么',
+            subtitle: '${actions.where((a) => a.priority <= 2).length} 项需要处理',
           ),
+          const SizedBox(height: 10),
+          ...actions.map(_buildActionCard),
+          const SizedBox(height: 2),
+          _buildFocusModels(devices),
+          const SizedBox(height: 2),
+          _buildAiBriefCard(stats),
           const SizedBox(height: 12),
-          // AI生成按钮
-          if (report == null && !loading)
-            CardBox(
-              child: Column(
-                children: [
-                  Text(
-                    '点击下方按钮，AI将基于你的真实经营数据生成今日日报与建议',
-                    style: TextStyle(fontSize: 12.5, color: C.t3, height: 1.8),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 14),
-                  primaryBtn('生成AI日报', _gen),
-                ],
-              ),
-            ),
-          if (loading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: CircularProgressIndicator(color: C.t3),
-              ),
-            ),
-          // 结构化卡片
-          if (report != null && !loading) ...[
-            // 亮点
-            if (highlights.isNotEmpty)
-              _sectionCard('✅ 今日亮点', highlights, C.green),
-            const SizedBox(height: 10),
-            // 待关注
-            if (concerns.isNotEmpty) _sectionCard('⚠️ 待关注', concerns, C.orange),
-            const SizedBox(height: 10),
-            // 建议
-            if (suggestions.isNotEmpty)
-              _sectionCard('🎯 明日建议', suggestions, C.t3),
-            const SizedBox(height: 10),
-            // 本地异常检测
-            if (localAnomalies.isNotEmpty)
-              _sectionCard('🚨 异常预警', localAnomalies, C.red),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                onPressed: _gen,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: C.t3,
-                  side: BorderSide(color: C.t3),
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(11),
-                  ),
-                ),
-                child: const Text('重新生成', style: TextStyle(fontSize: 13)),
-              ),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  Widget _sectionCard(String title, List<String> items, Color accent) {
-    return CardBox(
+  Widget _buildSnapshot(Stats s, _WeekSummary week, int staleCapital) {
+    final margin = s.gmv > 0 ? s.grossProfit / s.gmv * 100 : 0.0;
+    return GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: 20,
+      color: const Color(0xEA0B0F16),
+      borderColor: Colors.white.withValues(alpha: 0.11),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  '经营快照',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                    color: C.t1,
+                  ),
+                ),
+              ),
+              Text(
+                _clockText(),
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: C.t3,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _MetricBlock('今日GMV', yuan(s.gmv), C.cyan)),
+              _MetricDivider(),
+              Expanded(
+                child: _MetricBlock(
+                  '今日毛利',
+                  yuan(s.grossProfit),
+                  s.grossProfit >= 0 ? C.mint : C.red,
+                ),
+              ),
+              _MetricDivider(),
+              Expanded(child: _MetricBlock('订单', '${s.orderCount}单', C.purple)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _InfoPill('毛利率 ${margin.toStringAsFixed(1)}%', C.t2),
+              _InfoPill('在售 ${s.inStockCount} 台', C.cyan),
+              _InfoPill(
+                '滞销 ${s.stagnantCount} 台',
+                s.stagnantCount > 0 ? C.red : C.t2,
+              ),
+              _InfoPill('占用 ${yuan(s.capitalOccupied)}', C.orange),
+              _InfoPill(
+                '滞销占用 ${yuan(staleCapital)}',
+                staleCapital > 0 ? C.red : C.t2,
+              ),
+              _InfoPill(
+                '7日毛利 ${yuan(week.profit)}',
+                week.profit >= 0 ? C.mint : C.red,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_OpsAction> _buildActions(
+    Stats stats,
+    List<Device> devices,
+    List<Order> orders,
+  ) {
+    final inStock =
+        devices
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
+    final unpriced =
+        inStock.where((d) => d.sellPrice <= 0).toList()
+          ..sort((a, b) => b.purchaseCost.compareTo(a.purchaseCost));
+    final stagnant =
+        inStock.where((d) => d.isStagnant).toList()
+          ..sort((a, b) => b.stockDays.compareTo(a.stockDays));
+    final todayKey = _dateKey(DateTime.now());
+    final todayOrders =
+        orders.where((o) => o.createdAt.startsWith(todayKey)).toList();
+    final lowProfitOrders =
+        todayOrders.where((o) => o.netProfit < 15000).toList()
+          ..sort((a, b) => a.netProfit.compareTo(b.netProfit));
+    final pendingOrders = orders.where((o) => o.status == 'pending').toList();
+    final actions = <_OpsAction>[];
+
+    if (unpriced.isNotEmpty) {
+      final capital = unpriced.fold<int>(0, (sum, d) => sum + d.purchaseCost);
+      actions.add(
+        _OpsAction(
+          priority: 1,
+          icon: Icons.edit_note_rounded,
+          color: C.orange,
+          title: '先补齐定价与描述',
+          value: '${unpriced.length}台',
+          detail: '占用 ${yuan(capital)}',
+          reason: '未定价设备无法判断毛利，也不适合直接导出闲鱼资料。',
+          action: '处理首台',
+          lines:
+              unpriced
+                  .take(3)
+                  .map(
+                    (d) =>
+                        '${d.model} ${d.capacity} · 成本${yuan(d.purchaseCost)}',
+                  )
+                  .toList(),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DetailPage(device: unpriced.first),
+                ),
+              ).then((_) => setState(() {})),
+        ),
+      );
+    }
+
+    if (stagnant.isNotEmpty) {
+      final capital = stagnant.fold<int>(0, (sum, d) => sum + d.purchaseCost);
+      actions.add(
+        _OpsAction(
+          priority: 1,
+          icon: Icons.trending_down_rounded,
+          color: C.red,
+          title: '处理滞销资金',
+          value: '${stagnant.length}台',
+          detail: '压住 ${yuan(capital)}',
+          reason: '超过15天还没动销，今天要降价、换标题图，或转快速出货价。',
+          action: '打开滞销列表',
+          lines:
+              stagnant
+                  .take(3)
+                  .map((d) => '${d.model} ${d.capacity} · 已在库${d.stockDays}天')
+                  .toList(),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StagnantListPage()),
+              ).then((_) => setState(() {})),
+        ),
+      );
+    }
+
+    if (pendingOrders.isNotEmpty) {
+      actions.add(
+        _OpsAction(
+          priority: 2,
+          icon: Icons.local_shipping_outlined,
+          color: C.cyan,
+          title: '核对待发货订单',
+          value: '${pendingOrders.length}单',
+          detail: '避免漏发',
+          reason: '待发货订单会拖慢回款和售后响应，先确认物流与买家信息。',
+          action: '处理首单',
+          lines:
+              pendingOrders
+                  .take(3)
+                  .map((o) => '${o.deviceName} · ${yuan(o.amount)}')
+                  .toList(),
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => OrderDetailPage(order: pendingOrders.first),
+                ),
+              ).then((_) => setState(() {})),
+        ),
+      );
+    }
+
+    if (lowProfitOrders.isNotEmpty) {
+      final min = lowProfitOrders.first.netProfit;
+      actions.add(
+        _OpsAction(
+          priority: min < 0 ? 1 : 2,
+          icon: Icons.warning_amber_rounded,
+          color: min < 0 ? C.red : C.orange,
+          title: min < 0 ? '复盘亏损订单' : '复盘低毛利订单',
+          value: '${lowProfitOrders.length}单',
+          detail: '最低 ${yuan(min)}',
+          reason: '低毛利通常来自拿货过高、维修漏算或平台手续费漏算。',
+          action: null,
+          lines:
+              lowProfitOrders
+                  .take(3)
+                  .map((o) => '${o.deviceName} · 净利${yuan(o.netProfit)}')
+                  .toList(),
+        ),
+      );
+    }
+
+    if (!gStorage.isMarketPriceUpdatedToday() && inStock.isNotEmpty) {
+      actions.add(
+        _OpsAction(
+          priority: 3,
+          icon: Icons.price_change_outlined,
+          color: C.blue,
+          title: '补今日批发价',
+          value: '未更新',
+          detail: '影响采购判断',
+          reason: '采购决策会用今日行情做校验，批发价缺失时只能靠历史均值。',
+          action: '录入行情',
+          lines: const ['至少录入主力型号，采购页会自动带入。'],
+          onTap:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MarketPricePage()),
+              ).then((_) => setState(() {})),
+        ),
+      );
+    }
+
+    if (actions.isEmpty) {
+      actions.add(
+        _OpsAction(
+          priority: 4,
+          icon: Icons.check_circle_outline_rounded,
+          color: C.mint,
+          title: '今天没有硬风险',
+          value: '正常',
+          detail: '继续巡检',
+          reason: '先看主力型号有没有低库存，再把新到货的标题图和描述补齐。',
+          action: null,
+          lines: const ['建议保留15分钟做价格巡检，避免采购价跑偏。'],
+        ),
+      );
+    }
+
+    actions.sort((a, b) => a.priority.compareTo(b.priority));
+    return actions.take(5).toList();
+  }
+
+  Widget _buildActionCard(_OpsAction a) {
+    final urgent = a.priority <= 1;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: GlassPanel(
+        padding: const EdgeInsets.all(14),
+        radius: 18,
+        color:
+            urgent ? a.color.withValues(alpha: 0.10) : const Color(0xDE0B0F16),
+        borderColor: a.color.withValues(alpha: urgent ? 0.35 : 0.18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    color: a.color.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(a.icon, color: a.color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        a.title,
+                        style: const TextStyle(
+                          color: C.t1,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        a.reason,
+                        style: const TextStyle(
+                          color: C.t2,
+                          fontSize: 12,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      a.value,
+                      style: TextStyle(
+                        color: a.color,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      a.detail,
+                      style: const TextStyle(
+                        color: C.t3,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            if (a.lines.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              ...a.lines.map(
+                (line) => Padding(
+                  padding: const EdgeInsets.only(bottom: 5),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(top: 6),
+                        width: 5,
+                        height: 5,
+                        decoration: BoxDecoration(
+                          color: a.color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          line,
+                          style: const TextStyle(
+                            color: C.t2,
+                            fontSize: 11.5,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+            if (a.onTap != null && a.action != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: smallBtn(a.action!, a.onTap!, color: a.color),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFocusModels(List<Device> devices) {
+    final stale =
+        devices.where((d) => d.isStagnant).toList()
+          ..sort((a, b) => b.purchaseCost.compareTo(a.purchaseCost));
+    final profitModels = gStorage.getProfitByModel().take(3).toList();
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xD80B0F16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '型号观察',
+            style: TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (stale.isNotEmpty) ...[
+            _TinyTitle('优先清库存', C.red),
+            const SizedBox(height: 7),
+            ...stale
+                .take(3)
+                .map(
+                  (d) => _ModelLine(
+                    name: '${d.model} ${d.capacity}',
+                    meta: '${d.stockDays}天 · 成本${yuan(d.purchaseCost)}',
+                    value: d.sellPrice > 0 ? yuan(d.sellPrice) : '未定价',
+                    color: C.red,
+                  ),
+                ),
+            const SizedBox(height: 10),
+          ],
+          if (profitModels.isNotEmpty) ...[
+            _TinyTitle('赚钱型号', C.mint),
+            const SizedBox(height: 7),
+            ...profitModels.map(
+              (m) => _ModelLine(
+                name: m['model'] as String,
+                meta: '${m['count']}台 · 成交${yuan(m['revenue'] as int)}',
+                value: yuan(m['profit'] as int),
+                color: (m['profit'] as int) >= 0 ? C.mint : C.red,
+              ),
+            ),
+          ],
+          if (stale.isEmpty && profitModels.isEmpty)
+            const Text(
+              '暂时没有足够的型号数据。先完成几单销售记录，这里会自动变成型号雷达。',
+              style: TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiBriefCard(Stats s) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDA0D111A),
+      borderColor: C.purple.withValues(alpha: 0.22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Container(
-                width: 3,
-                height: 16,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(2),
+                  color: C.purple.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: C.purple,
+                  size: 18,
                 ),
               ),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: C.t1,
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI复盘',
+                      style: TextStyle(
+                        color: C.t1,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '本地动作在上面，AI只补判断依据',
+                      style: TextStyle(color: C.t3, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          ...items.map(
-            (item) => Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 5),
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: accent,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item,
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: C.t1,
-                        height: 1.5,
-                      ),
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 12),
+          if (loading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: LinearProgressIndicator(minHeight: 3, color: C.purple),
+            )
+          else if (report != null)
+            Text(
+              report!,
+              style: const TextStyle(
+                color: C.t2,
+                fontSize: 12.5,
+                height: 1.65,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            Text(
+              s.orderCount == 0 && s.inStockCount == 0
+                  ? '先录入库存或订单，AI复盘才会有真实上下文。'
+                  : '需要更像老板口吻的复盘时再点这里，不影响上面的本地行动清单。',
+              style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+            ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: loading ? null : _gen,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: Text(report == null ? '生成AI复盘' : '重新复盘'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: C.purple,
+                side: BorderSide(color: C.purple.withValues(alpha: 0.45)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const StadiumBorder(),
               ),
             ),
           ),
@@ -345,19 +597,235 @@ class _AiReportPageState extends State<AiReportPage> {
     );
   }
 
-  Widget _d(String l, String v) => Expanded(
-    child: Column(
-      children: [
-        Text(
-          v,
-          style: TextStyle(
+  _WeekSummary _weekSummary() {
+    final daily = gStorage.getDailyStats(days: 7);
+    final profit = daily.fold<int>(0, (sum, d) => sum + d.profit);
+    final gmv = daily.fold<int>(0, (sum, d) => sum + d.gmv);
+    final activeDays = daily.where((d) => d.gmv > 0 || d.profit != 0).length;
+    return _WeekSummary(gmv: gmv, profit: profit, activeDays: activeDays);
+  }
+
+  String _clockText() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _dateKey(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+}
+
+class _OpsAction {
+  final int priority;
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String value;
+  final String detail;
+  final String reason;
+  final String? action;
+  final List<String> lines;
+  final VoidCallback? onTap;
+
+  const _OpsAction({
+    required this.priority,
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.value,
+    required this.detail,
+    required this.reason,
+    required this.action,
+    required this.lines,
+    this.onTap,
+  });
+}
+
+class _WeekSummary {
+  final int gmv;
+  final int profit;
+  final int activeDays;
+
+  const _WeekSummary({
+    required this.gmv,
+    required this.profit,
+    required this.activeDays,
+  });
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _SectionHeader({required this.title, required this.subtitle});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          title,
+          style: const TextStyle(
+            color: C.t1,
             fontSize: 15,
-            fontWeight: FontWeight.w800,
-            color: C.neonOrange,
+            fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(l, style: TextStyle(fontSize: 10, color: C.t2)),
+      ),
+      Text(
+        subtitle,
+        style: const TextStyle(
+          color: C.t3,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ],
+  );
+}
+
+class _MetricBlock extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MetricBlock(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: C.t3,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _MetricDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    height: 38,
+    color: Colors.white.withValues(alpha: 0.08),
+  );
+}
+
+class _InfoPill extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _InfoPill(this.text, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(18),
+      border: Border.all(color: color.withValues(alpha: 0.18)),
+    ),
+    child: Text(
+      text,
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
+    ),
+  );
+}
+
+class _TinyTitle extends StatelessWidget {
+  final String text;
+  final Color color;
+
+  const _TinyTitle(this.text, this.color);
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Icon(Icons.circle, size: 8, color: color),
+      const SizedBox(width: 6),
+      Text(
+        text,
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    ],
+  );
+}
+
+class _ModelLine extends StatelessWidget {
+  final String name;
+  final String meta;
+  final String value;
+  final Color color;
+
+  const _ModelLine({
+    required this.name,
+    required this.meta,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: C.t1,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                meta,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: C.t3, fontSize: 10.5),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
       ],
     ),
   );

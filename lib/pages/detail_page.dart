@@ -1,7 +1,5 @@
 import 'dart:io';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
@@ -9,6 +7,8 @@ import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
 import '../ai_service.dart';
+import '../services/device_export_service.dart';
+import '../services/xianyu_copy_service.dart';
 import 'sell_page.dart';
 
 class DetailPage extends StatefulWidget {
@@ -22,14 +22,83 @@ class _DetailPageState extends State<DetailPage> {
   String? aiPrice;
   bool loading = false;
   bool downloading = false;
+  bool savingInfo = false;
+  bool regeneratingDescription = false;
   late Device device;
-  final GlobalKey _coverKey = GlobalKey();
-  static const _galleryChannel = MethodChannel('ipad_boss_app/gallery');
+  final _modelCtrl = TextEditingController();
+  final _serialCtrl = TextEditingController();
+  final _capacityCtrl = TextEditingController();
+  final _colorCtrl = TextEditingController();
+  final _networkCtrl = TextEditingController();
+  final _conditionCtrl = TextEditingController();
+  final _batteryCtrl = TextEditingController();
+  final _cycleCtrl = TextEditingController();
+  final _accessoriesCtrl = TextEditingController();
+  final _costCtrl = TextEditingController();
+  final _channelCtrl = TextEditingController();
+  final _dateCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  bool _idClean = true;
+  String _status = 'in_stock';
+  static const _capacityOptions = ['64G', '128G', '256G', '512G', '1TB', '2TB'];
+  static const _colorOptions = ['深空灰', '银色', '星光色', '粉色', '紫色', '蓝色'];
+  static const _accessoryOptions = [
+    '裸机',
+    '盒装',
+    '原装充电器',
+    '妙控键盘',
+    'Apple Pencil',
+  ];
 
   @override
   void initState() {
     super.initState();
     device = widget.device;
+    _loadEditorsFromDevice();
+  }
+
+  @override
+  void dispose() {
+    for (final controller in [
+      _modelCtrl,
+      _serialCtrl,
+      _capacityCtrl,
+      _colorCtrl,
+      _networkCtrl,
+      _conditionCtrl,
+      _batteryCtrl,
+      _cycleCtrl,
+      _accessoriesCtrl,
+      _costCtrl,
+      _channelCtrl,
+      _dateCtrl,
+      _priceCtrl,
+      _descCtrl,
+    ]) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  void _loadEditorsFromDevice() {
+    _modelCtrl.text = device.model;
+    _serialCtrl.text = device.serial;
+    _capacityCtrl.text = device.capacity;
+    _colorCtrl.text = device.color;
+    _networkCtrl.text = device.network;
+    _conditionCtrl.text = device.condition;
+    _batteryCtrl.text = '${device.batteryHealth}';
+    _cycleCtrl.text = '${device.cycleCount}';
+    _accessoriesCtrl.text = device.accessories;
+    _costCtrl.text = (device.purchaseCost / 100).round().toString();
+    _channelCtrl.text = device.purchaseChannel;
+    _dateCtrl.text = device.purchaseDate;
+    _priceCtrl.text =
+        device.sellPrice > 0 ? (device.sellPrice / 100).round().toString() : '';
+    _descCtrl.text = device.description ?? '';
+    _idClean = device.idLockClean;
+    _status = device.status;
   }
 
   Future<void> _askAi() async {
@@ -50,54 +119,6 @@ class _DetailPageState extends State<DetailPage> {
     });
   }
 
-  void _adjustPrice() async {
-    final ctrl = TextEditingController(
-      text:
-          device.sellPrice > 0
-              ? (device.sellPrice / 100).toStringAsFixed(0)
-              : '',
-    );
-    final result = await showAppFormDialog<int>(
-      context: context,
-      title: '售价微调',
-      subtitle: '${device.model} ${device.capacity}',
-      maxHeightFactor: 0.52,
-      child: Builder(
-        builder:
-            (sheetContext) => Column(
-              children: [
-                AppFormField(
-                  controller: ctrl,
-                  label: '新售价(元)',
-                  icon: Icons.sell_outlined,
-                  keyboardType: TextInputType.number,
-                  autofocus: true,
-                ),
-                const SizedBox(height: 18),
-                AppSheetActions(
-                  primaryLabel: '确定',
-                  onPrimary: () {
-                    final v = (double.tryParse(ctrl.text) ?? 0) * 100;
-                    Navigator.pop(sheetContext, v.toInt());
-                  },
-                ),
-              ],
-            ),
-      ),
-    );
-    ctrl.dispose();
-    if (result == null) return;
-    if (result <= 0) {
-      toast(context, '售价需大于0');
-      return;
-    }
-    device.sellPrice = result;
-    if (device.status == 'in_stock') device.status = 'listed';
-    await gStorage.updateDevice(device);
-    setState(() {});
-    toast(context, '售价已调整为${yuan(result)}');
-  }
-
   int _moneyFen(String raw, int fallback) {
     final clean = raw.replaceAll('¥', '').replaceAll(',', '').trim();
     if (clean.isEmpty) return fallback;
@@ -112,320 +133,132 @@ class _DetailPageState extends State<DetailPage> {
     return int.tryParse(clean) ?? fallback;
   }
 
-  Future<void> _editDevice() async {
-    final modelCtrl = TextEditingController(text: device.model);
-    final serialCtrl = TextEditingController(text: device.serial);
-    final capacityCtrl = TextEditingController(text: device.capacity);
-    final colorCtrl = TextEditingController(text: device.color);
-    final networkCtrl = TextEditingController(text: device.network);
-    final conditionCtrl = TextEditingController(text: device.condition);
-    final batteryCtrl = TextEditingController(text: '${device.batteryHealth}');
-    final cycleCtrl = TextEditingController(text: '${device.cycleCount}');
-    final accessoriesCtrl = TextEditingController(text: device.accessories);
-    final costCtrl = TextEditingController(
-      text: (device.purchaseCost / 100).round().toString(),
+  void _setControllerText(TextEditingController controller, String value) {
+    controller.value = TextEditingValue(
+      text: value,
+      selection: TextSelection.collapsed(offset: value.length),
     );
-    final channelCtrl = TextEditingController(text: device.purchaseChannel);
-    final dateCtrl = TextEditingController(text: device.purchaseDate);
-    final priceCtrl = TextEditingController(
-      text:
-          device.sellPrice > 0
-              ? (device.sellPrice / 100).round().toString()
-              : '',
-    );
-    final descCtrl = TextEditingController(text: device.description ?? '');
-    var idClean = device.idLockClean;
-    var status = device.status;
+    setState(() {});
+  }
 
-    final saved = await showAppFormDialog<bool>(
+  Future<void> _pickPurchaseDate() async {
+    final firstDate = DateTime(2020);
+    final lastDate = DateTime.now().add(const Duration(days: 1));
+    DateTime initial;
+    try {
+      initial = DateTime.parse(_dateCtrl.text.trim());
+    } catch (_) {
+      initial = DateTime.now();
+    }
+    if (initial.isBefore(firstDate)) initial = firstDate;
+    if (initial.isAfter(lastDate)) initial = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
-      title: '编辑设备信息',
-      subtitle: '${device.model} ${device.capacity}',
-      maxWidth: 460,
-      maxHeightFactor: 0.86,
-      child: StatefulBuilder(
-        builder: (sheetContext, setSheet) {
-          Widget statusOption(
-            String value,
-            String label,
-            Color color,
-          ) => GestureDetector(
-            onTap: () => setSheet(() => status = value),
-            child: AnimatedContainer(
-              duration: C.fast,
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
-              decoration: BoxDecoration(
-                color: status == value ? color : Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(18),
-                border: Border.all(
-                  color:
-                      status == value ? color : Colors.white.withOpacity(0.09),
-                ),
-              ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: status == value ? Colors.black : C.t2,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
+      initialDate: initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      builder:
+          (context, child) => Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.dark(
+                primary: C.cyan,
+                onPrimary: Colors.black,
+                surface: C.bgCard,
+                onSurface: C.t1,
               ),
             ),
-          );
-
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppFormField(
-                controller: modelCtrl,
-                label: '型号',
-                icon: Icons.tablet_mac_rounded,
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              AppFormField(
-                controller: serialCtrl,
-                label: '序列号',
-                icon: Icons.confirmation_number_outlined,
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppFormField(
-                      controller: capacityCtrl,
-                      label: '容量',
-                      icon: Icons.sd_storage_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AppFormField(
-                      controller: colorCtrl,
-                      label: '颜色',
-                      icon: Icons.palette_outlined,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppFormField(
-                      controller: networkCtrl,
-                      label: '网络',
-                      icon: Icons.wifi_rounded,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AppFormField(
-                      controller: conditionCtrl,
-                      label: '成色',
-                      icon: Icons.verified_outlined,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppFormField(
-                      controller: batteryCtrl,
-                      label: '电池健康(%)',
-                      icon: Icons.battery_5_bar_rounded,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AppFormField(
-                      controller: cycleCtrl,
-                      label: '循环次数',
-                      icon: Icons.refresh_rounded,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              AppFormField(
-                controller: accessoriesCtrl,
-                label: '配件',
-                icon: Icons.inventory_2_outlined,
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                '安全与状态',
-                style: TextStyle(
-                  color: C.t1,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setSheet(() => idClean = true),
-                      child: _EditToggle(
-                        label: 'ID 无锁',
-                        selected: idClean,
-                        color: C.mint,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => setSheet(() => idClean = false),
-                      child: _EditToggle(
-                        label: 'ID 异常',
-                        selected: !idClean,
-                        color: C.red,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  statusOption('in_stock', '库存', C.mint),
-                  statusOption('listed', '在售', C.cyan),
-                  statusOption('sold', '已售', C.purple),
-                  statusOption('returned', '退回', C.orange),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Expanded(
-                    child: AppFormField(
-                      controller: costCtrl,
-                      label: '采购成本(元)',
-                      icon: Icons.payments_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AppFormField(
-                      controller: priceCtrl,
-                      label: '售价(元)',
-                      icon: Icons.sell_outlined,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              AppFormField(
-                controller: channelCtrl,
-                label: '采购渠道',
-                icon: Icons.storefront_outlined,
-              ),
-              const SizedBox(height: 12),
-              AppFormField(
-                controller: dateCtrl,
-                label: '收购日期',
-                hint: 'YYYY-MM-DD',
-                icon: Icons.event_outlined,
-              ),
-              const SizedBox(height: 12),
-              AppFormField(
-                controller: descCtrl,
-                label: '商品描述',
-                icon: Icons.notes_rounded,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 18),
-              AppSheetActions(
-                primaryLabel: '保存',
-                onPrimary: () {
-                  final model = modelCtrl.text.trim();
-                  if (model.isEmpty) {
-                    toast(context, '型号不能为空');
-                    return;
-                  }
-                  device.model = model;
-                  device.serial = serialCtrl.text.trim();
-                  device.capacity = capacityCtrl.text.trim();
-                  device.color = colorCtrl.text.trim();
-                  device.network = networkCtrl.text.trim();
-                  device.condition = conditionCtrl.text.trim();
-                  device.batteryHealth =
-                      _intValue(
-                        batteryCtrl.text,
-                        device.batteryHealth,
-                      ).clamp(0, 100).toInt();
-                  device.cycleCount = _intValue(
-                    cycleCtrl.text,
-                    device.cycleCount,
-                  );
-                  device.idLockClean = idClean;
-                  device.accessories =
-                      accessoriesCtrl.text.trim().isEmpty
-                          ? '裸机'
-                          : accessoriesCtrl.text.trim();
-                  device.purchaseCost = _moneyFen(
-                    costCtrl.text,
-                    device.purchaseCost,
-                  );
-                  device.purchaseChannel = channelCtrl.text.trim();
-                  device.purchaseDate =
-                      dateCtrl.text.trim().isEmpty
-                          ? device.purchaseDate
-                          : dateCtrl.text.trim();
-                  device.sellPrice = _moneyFen(priceCtrl.text, 0);
-                  device.status = status;
-                  device.description =
-                      descCtrl.text.trim().isEmpty
-                          ? null
-                          : descCtrl.text.trim();
-                  () async {
-                    await gStorage.updateDevice(device);
-                    if (!mounted) return;
-                    setState(() {});
-                    Navigator.pop(sheetContext, true);
-                    toast(context, '设备信息已更新');
-                  }();
-                },
-              ),
-            ],
-          );
-        },
-      ),
+            child: child!,
+          ),
     );
+    if (picked == null) return;
+    _setControllerText(_dateCtrl, fmtDate(picked));
+  }
 
-    for (final c in [
-      modelCtrl,
-      serialCtrl,
-      capacityCtrl,
-      colorCtrl,
-      networkCtrl,
-      conditionCtrl,
-      batteryCtrl,
-      cycleCtrl,
-      accessoriesCtrl,
-      costCtrl,
-      channelCtrl,
-      dateCtrl,
-      priceCtrl,
-      descCtrl,
-    ]) {
-      c.dispose();
+  Future<bool> _saveInlineInfo({bool showToast = true}) async {
+    if (savingInfo) return false;
+    final model = _modelCtrl.text.trim();
+    if (model.isEmpty) {
+      toast(context, '型号不能为空');
+      return false;
     }
-    if (saved == true) setState(() {});
+    setState(() => savingInfo = true);
+    device.model = model;
+    device.serial = _serialCtrl.text.trim();
+    device.capacity = _capacityCtrl.text.trim();
+    device.color = _colorCtrl.text.trim();
+    device.network = _networkCtrl.text.trim();
+    device.condition = _conditionCtrl.text.trim();
+    device.batteryHealth =
+        _intValue(
+          _batteryCtrl.text,
+          device.batteryHealth,
+        ).clamp(0, 100).toInt();
+    device.cycleCount = _intValue(_cycleCtrl.text, device.cycleCount);
+    device.idLockClean = _idClean;
+    device.accessories =
+        _accessoriesCtrl.text.trim().isEmpty
+            ? '裸机'
+            : _accessoriesCtrl.text.trim();
+    device.purchaseCost = _moneyFen(_costCtrl.text, device.purchaseCost);
+    device.purchaseChannel = _channelCtrl.text.trim();
+    device.purchaseDate =
+        _dateCtrl.text.trim().isEmpty
+            ? device.purchaseDate
+            : _dateCtrl.text.trim();
+    device.sellPrice = _moneyFen(_priceCtrl.text, 0);
+    device.status = _status;
+    device.description =
+        _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
+
+    await gStorage.updateDevice(device);
+    if (!mounted) return true;
+    setState(() => savingInfo = false);
+    if (showToast) toast(context, '设备信息已保存');
+    return true;
+  }
+
+  Future<void> _regenerateDescription() async {
+    if (regeneratingDescription) return;
+    final model = _modelCtrl.text.trim();
+    if (model.isEmpty) {
+      toast(context, '请先填写型号');
+      return;
+    }
+    setState(() => regeneratingDescription = true);
+    final copyReference = XianyuCopyService.buildReferenceContext(
+      gStorage,
+      model: model,
+      condition: _conditionCtrl.text.trim(),
+    );
+    final desc = await AiService.generateDescription(
+      model: model,
+      capacity: _capacityCtrl.text.trim(),
+      color: _colorCtrl.text.trim(),
+      network: _networkCtrl.text.trim(),
+      condition: _conditionCtrl.text.trim(),
+      batteryHealth: _intValue(_batteryCtrl.text, device.batteryHealth),
+      cycleCount: _intValue(_cycleCtrl.text, device.cycleCount),
+      idLockClean: _idClean,
+      accessories:
+          _accessoriesCtrl.text.trim().isEmpty
+              ? '裸机'
+              : _accessoriesCtrl.text.trim(),
+      copywritingReference: copyReference,
+    );
+    if (!mounted) return;
+    setState(() => regeneratingDescription = false);
+    if (desc.startsWith('AI调用') || desc.startsWith('AI返回')) {
+      toast(context, desc);
+      return;
+    }
+    _descCtrl.text = desc;
+    await _saveInlineInfo(showToast: false);
+    if (!mounted) return;
+    toast(context, 'AI描述已重新生成');
   }
 
   void _genReport() {
-    final report = '''【机掌柜验机报告】
+    final report = '''【货脉验机报告】
 
 设备：${device.model} ${device.capacity} ${device.color}
 序列号：${device.serial}
@@ -445,7 +278,7 @@ ID锁状态：${device.idLockClean ? "正常 ✓" : "异常 ✗"}
 ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "⚠️ 该设备存在ID锁风险，建议谨慎"}
 
 检测时间：${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}-${DateTime.now().day.toString().padLeft(2, '0')}
-报告由「机掌柜」自动生成''';
+报告由「货脉」自动生成''';
     Clipboard.setData(ClipboardData(text: report));
     toast(context, '验机报告已复制到剪贴板，可粘贴发给买家');
   }
@@ -456,59 +289,13 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     if (downloading) return;
     setState(() => downloading = true);
     try {
-      // 1. 截取自制封面图（RepaintBoundary 渲染的设备信息卡）
-      String? coverPath;
-      final ctx = _coverKey.currentContext;
-      if (ctx != null) {
-        final boundary = ctx.findRenderObject() as RenderRepaintBoundary;
-        final image = await boundary.toImage(pixelRatio: 2.5);
-        final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-        if (byteData != null) {
-          final coverFile = File(
-            '$gDocDir/cover_${device.id}_${DateTime.now().millisecondsSinceEpoch}.png',
-          );
-          await coverFile.writeAsBytes(byteData.buffer.asUint8List());
-          coverPath = coverFile.path;
-        }
-      }
-
-      // 2. 组装图片列表：封面图在最前 + 设备实拍图
-      final images = <String>[];
-      if (coverPath != null) images.add(coverPath);
-      if (device.imagePath != null && device.imagePath!.isNotEmpty) {
-        images.addAll(
-          device.imagePath!
-              .split(';')
-              .where((s) => s.isNotEmpty && File(s).existsSync()),
-        );
-      }
-
-      // 3. 商品描述复制到剪贴板
-      final desc = (device.description ?? '').trim();
-      if (desc.isNotEmpty) {
-        await Clipboard.setData(ClipboardData(text: desc));
-      }
-
-      // 4. 调用原生通道把图片保存到手机相册
-      if (images.isEmpty) {
-        toast(context, desc.isNotEmpty ? '✅ 描述已复制到剪贴板（暂无图片）' : '暂无可下载的图片与描述');
-        return;
-      }
-      final result = await _galleryChannel.invokeMethod('saveImagesToGallery', {
-        'paths': images,
-        'albumName': '机掌柜',
-      });
-      final saved = (result is Map) ? (result['saved'] as int? ?? 0) : 0;
-      final msg = StringBuffer('✅ 已保存${saved}张图到相册');
-      if (desc.isNotEmpty) msg.write('，描述已复制到剪贴板');
-      toast(context, msg.toString());
-
-      // 5. 按需拉起闲鱼
-      if (openXianyu) {
-        await Future.delayed(const Duration(milliseconds: 800));
-        if (!mounted) return;
-        await _openXianyu();
-      }
+      final result = await DeviceExportService.downloadListing(
+        device: device,
+        docDir: gDocDir,
+        openXianyu: openXianyu,
+      );
+      if (!mounted) return;
+      toast(context, result.message);
     } catch (e) {
       toast(context, '下载失败：$e');
     } finally {
@@ -516,27 +303,10 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     }
   }
 
-  /// 拉起闲鱼 app（已安装则直接打开，未安装提示去应用商店）
-  Future<void> _openXianyu() async {
-    try {
-      final result = await _galleryChannel.invokeMethod('openXianyu');
-      if (result is Map && result['success'] == true) {
-        toast(context, '已打开闲鱼，去发布商品吧');
-      } else {
-        // 闲鱼未安装，提示用户
-        toast(context, '未检测到闲鱼，请先安装闲鱼 app');
-      }
-    } catch (e) {
-      toast(context, '拉起闲鱼失败：$e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final hasImg = device.imagePath != null && device.imagePath!.isNotEmpty;
     final images = hasImg ? device.imagePath!.split(';') : <String>[];
-    final hasDesc =
-        device.description != null && device.description!.trim().isNotEmpty;
     return Scaffold(
       backgroundColor: C.bgDeep,
       body: SafeArea(
@@ -580,24 +350,6 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             size: 28,
                           ),
                           onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      right: 10,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.32),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.edit_rounded,
-                            color: Colors.white,
-                            size: 22,
-                          ),
-                          onPressed: _editDevice,
                         ),
                       ),
                     ),
@@ -695,74 +447,8 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 9,
-                    crossAxisSpacing: 9,
-                    childAspectRatio: 3.2,
-                    children: [
-                      _a('型号', device.model),
-                      _a('容量/颜色', '${device.capacity} ${device.color}'),
-                      _a('网络', device.network),
-                      _a('成色', device.condition),
-                      _a('电池健康', '${device.batteryHealth}%'),
-                      _a('循环次数', '${device.cycleCount}次'),
-                      _a(
-                        'ID锁检测',
-                        device.idLockClean ? '✓ 无锁' : '✗ 有锁',
-                        vc: device.idLockClean ? C.green : C.red,
-                      ),
-                      _a(
-                        '在库天数',
-                        '${device.stockDays}天${device.isStagnant ? "(滞销)" : ""}',
-                      ),
-                    ],
-                  ),
-                ),
-                // 商品描述（AI生成，三行高度可滑动，不占太多篇幅）
-                CardBox(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionTitle('商品描述', trailing: 'AI生成'),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 66, // 约三行高度
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: C.bgDeep,
-                          borderRadius: BorderRadius.circular(9),
-                          border: Border.all(color: C.border),
-                        ),
-                        child:
-                            hasDesc
-                                ? SingleChildScrollView(
-                                  child: SelectableText(
-                                    device.description!,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: C.t2,
-                                      height: 1.5,
-                                    ),
-                                  ),
-                                )
-                                : Center(
-                                  child: Text(
-                                    '暂无AI描述（入库时未生成）',
-                                    style: TextStyle(fontSize: 12, color: C.t3),
-                                  ),
-                                ),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildInlineInfoCard(),
+                _buildDescriptionCard(),
                 CardBox(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -905,19 +591,6 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                     ),
                   ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: ghostBtn(
-                    '编辑设备信息',
-                    _editDevice,
-                    icon: Icons.edit_rounded,
-                  ),
-                ),
-                if (device.status == 'in_stock' || device.status == 'listed')
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                    child: ghostBtn('售价微调', _adjustPrice),
-                  ),
-                Padding(
                   padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
                   child: ghostBtn('生成验机报告', _genReport),
                 ),
@@ -964,198 +637,350 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                 ),
               ],
             ),
-            // 屏幕外的自制封面图（用于一键下载时截图，置顶相册防止闲鱼错乱）
-            Positioned(
-              left: -10000,
-              top: 0,
-              child: RepaintBoundary(key: _coverKey, child: _buildCoverImage()),
-            ),
           ],
         ),
       ),
     );
   }
 
-  /// 自制封面图：包含设备核心信息，下载时截图置顶相册
-  Widget _buildCoverImage() {
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: 360,
-        height: 480,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [C.bgSurface, C.bgDeep],
-          ),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: C.selected,
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: const Icon(
-                    Icons.tablet_mac_rounded,
-                    color: C.cyan,
-                    size: 19,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                const Text(
-                  '机掌柜',
-                  style: TextStyle(
-                    color: C.t1,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color: C.green.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    device.idLockClean ? 'ID无锁' : 'ID有锁',
-                    style: TextStyle(
-                      color: device.idLockClean ? C.green : C.red,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 28),
-            Text(
-              device.model,
-              style: const TextStyle(
-                color: C.t1,
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 6),
-            Text(
-              '${device.capacity} · ${device.color} · ${device.network}',
-              style: const TextStyle(
-                color: C.t3,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 24),
-            _coverRow('成色', device.condition),
-            _coverRow('电池健康', '${device.batteryHealth}%'),
-            _coverRow('充电循环', '${device.cycleCount}次'),
-            _coverRow('序列号', device.serial),
-            const Spacer(),
-            Container(
-              padding: EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: C.border),
-              ),
-              child: Row(
-                children: [
-                  Text('售价', style: TextStyle(color: C.t2, fontSize: 13)),
-                  const Spacer(),
-                  Text(
-                    device.sellPrice > 0 ? yuan(device.sellPrice) : '未定价',
-                    style: const TextStyle(
-                      color: C.t3,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            Center(
-              child: Text(
-                '${device.purchaseDate} · 实拍图见后续',
-                style: TextStyle(color: C.t3, fontSize: 11),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _coverRow(String k, String v) => Padding(
-    padding: EdgeInsets.only(bottom: 10),
-    child: Row(
-      children: [
-        SizedBox(
-          width: 72,
-          child: Text(k, style: TextStyle(color: C.t2, fontSize: 13)),
-        ),
-        Expanded(
-          child: Text(
-            v,
-            style: TextStyle(
-              color: C.t1,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    ),
-  );
-  Widget _a(String l, String v, {Color? vc}) => Container(
-    padding: const EdgeInsets.all(11),
-    decoration: BoxDecoration(
-      color: C.bgCardMuted,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: C.border),
-    ),
+  Widget _buildInlineInfoCard() => CardBox(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          l,
-          style: TextStyle(
-            fontSize: 10,
-            color: C.t2,
-            fontWeight: FontWeight.w600,
+        const SectionTitle('基本信息', icon: Icons.tune_rounded),
+        _fieldRow(
+          _field(_modelCtrl, '型号', Icons.tablet_mac_rounded),
+          _field(_serialCtrl, '序列号', Icons.confirmation_number_outlined),
+        ),
+        const SizedBox(height: 12),
+        _fieldRow(
+          _choiceField(
+            _capacityCtrl,
+            '容量',
+            Icons.sd_storage_outlined,
+            _capacityOptions,
+          ),
+          _choiceField(_colorCtrl, '颜色', Icons.palette_outlined, _colorOptions),
+        ),
+        const SizedBox(height: 12),
+        _fieldRow(
+          _choiceField(_networkCtrl, '网络', Icons.wifi_rounded, iPadNetworks),
+          _choiceField(
+            _conditionCtrl,
+            '成色',
+            Icons.verified_outlined,
+            iPadConditions,
           ),
         ),
-        const SizedBox(height: 3),
-        Text(
-          v,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: vc ?? C.t1,
+        const SizedBox(height: 12),
+        _fieldRow(
+          _field(
+            _batteryCtrl,
+            '电池健康(%)',
+            Icons.battery_5_bar_rounded,
+            keyboardType: TextInputType.number,
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          _field(
+            _cycleCtrl,
+            '循环次数',
+            Icons.refresh_rounded,
+            keyboardType: TextInputType.number,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _fieldRow(
+          _choiceField(
+            _accessoriesCtrl,
+            '配件',
+            Icons.inventory_2_outlined,
+            _accessoryOptions,
+          ),
+          _dateField(),
+        ),
+        const SizedBox(height: 12),
+        _fieldRow(
+          _field(
+            _costCtrl,
+            '采购成本(元)',
+            Icons.payments_outlined,
+            keyboardType: TextInputType.number,
+          ),
+          _field(
+            _priceCtrl,
+            '售价(元)',
+            Icons.sell_outlined,
+            keyboardType: TextInputType.number,
+          ),
+        ),
+        const SizedBox(height: 12),
+        _choiceField(
+          _channelCtrl,
+          '采购渠道',
+          Icons.storefront_outlined,
+          PurchaseChannels,
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _idClean = true),
+                child: _EditToggle(
+                  label: 'ID 无锁',
+                  selected: _idClean,
+                  color: C.mint,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: GestureDetector(
+                onTap: () => setState(() => _idClean = false),
+                child: _EditToggle(
+                  label: 'ID 异常',
+                  selected: !_idClean,
+                  color: C.red,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 13),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _statusOption('in_stock', '库存', C.mint),
+            _statusOption('listed', '在售', C.cyan),
+            _statusOption('sold', '已售', C.purple),
+            _statusOption('returned', '退回', C.orange),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: savingInfo ? null : () => _saveInlineInfo(),
+            icon:
+                savingInfo
+                    ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.black,
+                      ),
+                    )
+                    : const Icon(Icons.save_rounded, size: 18),
+            style: FilledButton.styleFrom(
+              backgroundColor: C.cyan,
+              foregroundColor: Colors.black,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: const StadiumBorder(),
+            ),
+            label: Text(
+              savingInfo ? '保存中' : '保存修改',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
         ),
       ],
     ),
   );
+
+  Widget _buildDescriptionCard() => CardBox(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('商品描述', icon: Icons.notes_rounded),
+        AppFormField(
+          controller: _descCtrl,
+          label: '商品描述',
+          icon: Icons.notes_rounded,
+          maxLines: 5,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: savingInfo ? null : () => _saveInlineInfo(),
+                icon: const Icon(Icons.save_outlined, size: 17),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: C.t1,
+                  side: BorderSide(color: Colors.white.withOpacity(0.12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: const StadiumBorder(),
+                ),
+                label: const Text(
+                  '保存描述',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed:
+                    regeneratingDescription ? null : _regenerateDescription,
+                icon:
+                    regeneratingDescription
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                        : const Icon(Icons.auto_awesome_rounded, size: 17),
+                style: FilledButton.styleFrom(
+                  backgroundColor: C.purple,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: const StadiumBorder(),
+                ),
+                label: Text(
+                  regeneratingDescription ? '生成中' : 'AI重新生成',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    String? hint,
+    TextInputType? keyboardType,
+  }) => AppFormField(
+    controller: controller,
+    label: label,
+    hint: hint,
+    icon: icon,
+    keyboardType: keyboardType,
+  );
+
+  Widget _choiceField(
+    TextEditingController controller,
+    String label,
+    IconData icon,
+    List<String> options,
+  ) {
+    final values = _optionsWithCurrent(options, controller.text.trim());
+    final current = controller.text.trim();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      constraints: const BoxConstraints(minHeight: 48),
+      decoration: BoxDecoration(
+        color: C.bgDeep,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: C.border),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: C.t3, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: C.t3,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: current.isEmpty ? null : current,
+                isExpanded: true,
+                dropdownColor: C.bgCard,
+                icon: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: C.t3,
+                ),
+                hint: const Text(
+                  '未选择',
+                  style: TextStyle(
+                    color: C.t3,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                style: const TextStyle(
+                  color: C.t1,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+                items:
+                    values
+                        .map(
+                          (item) => DropdownMenuItem<String>(
+                            value: item,
+                            child: Text(
+                              item,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  _setControllerText(controller, value);
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<String> _optionsWithCurrent(List<String> options, String current) {
+    final values = [...options];
+    if (current.isNotEmpty && !values.contains(current))
+      values.insert(0, current);
+    return values;
+  }
+
+  Widget _dateField() => GestureDetector(
+    onTap: _pickPurchaseDate,
+    child: AbsorbPointer(
+      child: _field(_dateCtrl, '收购日期', Icons.event_outlined, hint: '点击选择日期'),
+    ),
+  );
+
+  Widget _fieldRow(Widget left, Widget right) => LayoutBuilder(
+    builder: (context, constraints) {
+      if (constraints.maxWidth < 280) {
+        return Column(children: [left, const SizedBox(height: 12), right]);
+      }
+      return Row(
+        children: [
+          Expanded(child: left),
+          const SizedBox(width: 10),
+          Expanded(child: right),
+        ],
+      );
+    },
+  );
+
+  Widget _statusOption(String value, String label, Color color) =>
+      AppChoicePill(
+        label: label,
+        selected: _status == value,
+        color: color,
+        onTap: () => setState(() => _status = value),
+      );
+
   Widget _tl(String tt, String td, bool active, {bool last = false}) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -1215,11 +1040,9 @@ class _EditToggle extends StatelessWidget {
     height: 48,
     alignment: Alignment.center,
     decoration: BoxDecoration(
-      color: selected ? color : Colors.white.withOpacity(0.06),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: selected ? color : Colors.white.withOpacity(0.09),
-      ),
+      color: selected ? color : C.bgDeep,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: selected ? color : C.border),
     ),
     child: Text(
       label,

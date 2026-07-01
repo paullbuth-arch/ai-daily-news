@@ -48,7 +48,7 @@ class MainActivity : FlutterActivity() {
                     }
                     "saveImagesToGallery" -> {
                         val paths = call.argument<List<String>>("paths") ?: emptyList()
-                        val albumName = call.argument<String>("albumName") ?: "机掌柜"
+                        val albumName = call.argument<String>("albumName") ?: "货脉"
                         if (paths.isEmpty()) {
                             result.error("empty", "文件路径列表为空", null)
                             return@setMethodCallHandler

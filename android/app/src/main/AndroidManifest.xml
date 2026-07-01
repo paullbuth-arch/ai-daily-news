@@ -17,7 +17,7 @@
     </queries>
 
     <application
-        android:label="机掌柜"
+        android:label="货脉"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:requestLegacyExternalStorage="true">

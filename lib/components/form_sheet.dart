@@ -29,9 +29,9 @@ Future<T?> showAppFormSheet<T>({
               (context, scrollController) => GlassPanel(
                 margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 padding: EdgeInsets.zero,
-                radius: 30,
-                color: const Color(0xF20B1018),
-                borderColor: Colors.white.withOpacity(0.13),
+                radius: 18,
+                color: C.bgCard,
+                borderColor: C.border,
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
@@ -39,7 +39,7 @@ Future<T?> showAppFormSheet<T>({
                       width: 46,
                       height: 4,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.20),
+                        color: C.borderGlow,
                         borderRadius: BorderRadius.circular(99),
                       ),
                     ),
@@ -128,9 +128,9 @@ Future<T?> showAppFormDialog<T>({
               color: Colors.transparent,
               child: GlassPanel(
                 padding: EdgeInsets.zero,
-                radius: 26,
-                color: const Color(0xF20B1018),
-                borderColor: Colors.white.withOpacity(0.13),
+                radius: 18,
+                color: C.bgCard,
+                borderColor: C.border,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -203,6 +203,9 @@ class AppFormField extends StatelessWidget {
   final TextInputType? keyboardType;
   final int maxLines;
   final bool autofocus;
+  final bool readOnly;
+  final bool obscureText;
+  final Widget? suffixIcon;
   final ValueChanged<String>? onChanged;
 
   const AppFormField({
@@ -214,6 +217,9 @@ class AppFormField extends StatelessWidget {
     this.keyboardType,
     this.maxLines = 1,
     this.autofocus = false,
+    this.readOnly = false,
+    this.obscureText = false,
+    this.suffixIcon,
     this.onChanged,
   }) : super(key: key);
 
@@ -223,25 +229,90 @@ class AppFormField extends StatelessWidget {
     keyboardType: keyboardType,
     maxLines: maxLines,
     autofocus: autofocus,
+    readOnly: readOnly,
+    obscureText: obscureText,
     onChanged: onChanged,
     style: const TextStyle(
       color: C.t1,
-      fontSize: 15,
-      fontWeight: FontWeight.w800,
+      fontSize: 14,
+      fontWeight: FontWeight.w700,
     ),
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
       prefixIcon: icon == null ? null : Icon(icon, color: C.t3, size: 18),
-      fillColor: C.bgSurface.withOpacity(0.62),
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: C.bgDeep,
+      labelStyle: const TextStyle(color: C.t2, fontSize: 12),
+      hintStyle: const TextStyle(color: C.t3, fontSize: 13),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.09)),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: C.cyan, width: 1.3),
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.cyan, width: 1.2),
       ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: C.border),
+      ),
+    ),
+  );
+}
+
+class AppDropdownField<T> extends StatelessWidget {
+  final T? value;
+  final String hint;
+  final List<T> options;
+  final ValueChanged<T?> onChanged;
+  final String Function(T value) labelBuilder;
+  final double fontSize;
+
+  const AppDropdownField({
+    Key? key,
+    required this.value,
+    required this.hint,
+    required this.options,
+    required this.onChanged,
+    required this.labelBuilder,
+    this.fontSize = 14,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12),
+    constraints: const BoxConstraints(minHeight: 48),
+    decoration: BoxDecoration(
+      color: C.bgDeep,
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: C.border),
+    ),
+    child: DropdownButton<T>(
+      value: value,
+      isExpanded: true,
+      underline: const SizedBox(),
+      dropdownColor: C.bgCard,
+      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
+      hint: Text(hint, style: TextStyle(color: C.t3, fontSize: fontSize)),
+      style: TextStyle(color: C.t1, fontSize: fontSize),
+      items:
+          options
+              .map(
+                (item) => DropdownMenuItem<T>(
+                  value: item,
+                  child: Text(
+                    labelBuilder(item),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: fontSize - 1),
+                  ),
+                ),
+              )
+              .toList(),
+      onChanged: onChanged,
     ),
   );
 }
@@ -268,6 +339,12 @@ class AppSheetActions extends StatelessWidget {
       Expanded(
         child: OutlinedButton(
           onPressed: onSecondary ?? () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 13),
+          ),
           child: Text(secondaryLabel),
         ),
       ),
@@ -278,6 +355,10 @@ class AppSheetActions extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: primaryColor,
             foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 13),
           ),
           child: Text(primaryLabel),
         ),
@@ -307,11 +388,9 @@ class AppChoicePill extends StatelessWidget {
       duration: C.fast,
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       decoration: BoxDecoration(
-        color: selected ? color : Colors.white.withOpacity(0.06),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: selected ? color : Colors.white.withOpacity(0.09),
-        ),
+        color: selected ? color : C.bgDeep,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: selected ? color : C.border),
       ),
       child: Text(
         label,
@@ -351,12 +430,9 @@ class AppSelectionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color:
-            selected ? color.withOpacity(0.16) : Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: selected ? color : Colors.white.withOpacity(0.09),
-        ),
+        color: selected ? color.withOpacity(0.16) : C.bgDeep,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: selected ? color : C.border),
       ),
       child: Row(
         children: [
@@ -364,8 +440,8 @@ class AppSelectionTile extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: selected ? color : Colors.white.withOpacity(0.07),
-              shape: BoxShape.circle,
+              color: selected ? color : C.bgSurface,
+              borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(icon, color: selected ? Colors.black : C.t2, size: 18),
           ),

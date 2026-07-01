@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../main.dart';
 import '../ai_service.dart';
 
@@ -116,31 +115,12 @@ class _AiConfigPageState extends State<AiConfigPage> {
               children: [
                 Text('模型提供商', style: TextStyle(fontSize: 13, color: C.t2)),
                 const SizedBox(height: 8),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: C.bgDeep,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.border),
-                  ),
-                  child: DropdownButton<int>(
-                    value: _providerIndex,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    dropdownColor: C.bgCard,
-                    style: TextStyle(color: C.t1, fontSize: 14),
-                    items: List.generate(
-                      _providers.length,
-                      (i) => DropdownMenuItem(
-                        value: i,
-                        child: Text(
-                          _providers[i].name,
-                          style: const TextStyle(fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    onChanged: _onProviderChanged,
-                  ),
+                AppDropdownField<int>(
+                  value: _providerIndex,
+                  hint: '选择模型提供商',
+                  options: List.generate(_providers.length, (i) => i),
+                  labelBuilder: (i) => _providers[i].name,
+                  onChanged: _onProviderChanged,
                 ),
               ],
             ),
@@ -155,32 +135,19 @@ class _AiConfigPageState extends State<AiConfigPage> {
                   style: TextStyle(fontSize: 13, color: C.t2),
                 ),
                 const SizedBox(height: 8),
-                TextField(
+                AppFormField(
                   controller: _apiKeyCtrl,
+                  label: 'API Token',
+                  hint: '输入你的 API 密钥',
+                  icon: Icons.vpn_key_outlined,
                   obscureText: _obscureKey,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: '输入你的 API 密钥',
-                    hintStyle: TextStyle(color: C.t3, fontSize: 12),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureKey ? Icons.visibility_off : Icons.visibility,
+                      color: C.t3,
+                      size: 18,
                     ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.t3),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscureKey ? Icons.visibility_off : Icons.visibility,
-                        color: C.t3,
-                        size: 18,
-                      ),
-                      onPressed:
-                          () => setState(() => _obscureKey = !_obscureKey),
-                    ),
+                    onPressed: () => setState(() => _obscureKey = !_obscureKey),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -281,23 +248,11 @@ class _AiConfigPageState extends State<AiConfigPage> {
                   style: TextStyle(fontSize: 10, color: C.t3),
                 ),
                 const SizedBox(height: 8),
-                TextField(
+                AppFormField(
                   controller: _modelCtrl,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: '留空自动选择',
-                    hintStyle: TextStyle(color: C.t3, fontSize: 12),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.t3),
-                    ),
-                  ),
+                  label: '模型名称',
+                  hint: '留空自动选择',
+                  icon: Icons.memory_rounded,
                 ),
                 if (_fetchedModels != null) ...[
                   const SizedBox(height: 8),

@@ -24,18 +24,22 @@ class BackupService {
       'orderCount': storage.getOrders().length,
     };
     final manifestBytes = utf8.encode(json.encode(manifest));
-    archive.addFile(ArchiveFile('manifest.json', manifestBytes.length, manifestBytes));
+    archive.addFile(
+      ArchiveFile('manifest.json', manifestBytes.length, manifestBytes),
+    );
     // 2) data.json
     final dataFile = File('$docDir/$kDataFile');
     if (await dataFile.exists()) {
       final dataBytes = await dataFile.readAsBytes();
-      archive.addFile(ArchiveFile('data/$kDataFile', dataBytes.length, dataBytes));
+      archive.addFile(
+        ArchiveFile('data/$kDataFile', dataBytes.length, dataBytes),
+      );
     }
     // 3) 图片：扫描 gDocDir 下所有 about_*.jpg / dev_*.jpg / cover_*.png
     await _addImages(archive, docDir);
     // 4) 编码 zip
     final bytes = ZipEncoder().encode(archive);
-    final name = '机掌柜备份_${_ts(DateTime.now())}.zip';
+    final name = '货脉备份_${_ts(DateTime.now())}.zip';
     final zipPath = '$outDir/$name';
     await File(zipPath).writeAsBytes(bytes!);
     return zipPath;
@@ -58,8 +62,12 @@ class BackupService {
   }
 
   static bool _isImageName(String n) =>
-      n.startsWith('about_') || n.startsWith('dev_') || n.startsWith('cover_') ||
-      n.endsWith('.jpg') || n.endsWith('.png') || n.endsWith('.jpeg');
+      n.startsWith('about_') ||
+      n.startsWith('dev_') ||
+      n.startsWith('cover_') ||
+      n.endsWith('.jpg') ||
+      n.endsWith('.png') ||
+      n.endsWith('.jpeg');
 
   /// 导入。返回 {deviceCount, orderCount, imageCount}。
   /// 流程：解压 → 先备份当前 data.json 为 .bak → 覆盖 data.json → 还原图片 → 重写 imagePath → reload。
@@ -76,7 +84,9 @@ class BackupService {
     // 2) 覆盖 data.json
     final dataArc = archive.findFile('data/$kDataFile');
     if (dataArc != null) {
-      await File('$docDir/$kDataFile').writeAsBytes(dataArc.content as List<int>);
+      await File(
+        '$docDir/$kDataFile',
+      ).writeAsBytes(dataArc.content as List<int>);
     }
     // 3) 还原图片（按 basename 写回 docDir）
     int imgCount = 0;
@@ -98,7 +108,10 @@ class BackupService {
   }
 
   /// 把每台设备的 imagePath 各段重写为 {docDir}/{basename}，保证跨设备路径可用。
-  static Future<void> _remapImagePaths({required Storage storage, required String docDir}) async {
+  static Future<void> _remapImagePaths({
+    required Storage storage,
+    required String docDir,
+  }) async {
     final devices = storage.getDevices();
     for (final d in devices) {
       if (d.imagePath == null || d.imagePath!.isEmpty) continue;
@@ -113,16 +126,22 @@ class BackupService {
   }
 
   /// 导入前自动备份（额外安全网，把当前 data.json 复制成带时间戳的副本）
-  static Future<String?> backupCurrent({required String docDir, required String outDir}) async {
+  static Future<String?> backupCurrent({
+    required String docDir,
+    required String outDir,
+  }) async {
     final cur = File('$docDir/$kDataFile');
     if (!await cur.exists()) return null;
-    final path = '$outDir/机掌柜自动备份_${_ts(DateTime.now())}.json';
+    final path = '$outDir/货脉自动备份_${_ts(DateTime.now())}.json';
     await cur.copy(path);
     return path;
   }
 
   /// 恢复 .bak 文件（导入后如果数据有问题，可应急恢复）
-  static Future<bool> restoreBak({required String docDir, required Storage storage}) async {
+  static Future<bool> restoreBak({
+    required String docDir,
+    required Storage storage,
+  }) async {
     final bak = File('$docDir/$kDataFile.bak');
     if (!await bak.exists()) return false;
     await bak.copy('$docDir/$kDataFile');

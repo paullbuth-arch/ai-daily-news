@@ -9,6 +9,7 @@ import '../models.dart';
 import '../ai_service.dart';
 import '../serial_decoder.dart';
 import '../main.dart';
+import '../services/xianyu_copy_service.dart';
 
 class ScanPage extends StatefulWidget {
   const ScanPage({Key? key}) : super(key: key);
@@ -57,6 +58,13 @@ class _ScanPageState extends State<ScanPage> {
     setState(() {
       idCheck = c;
     });
+  }
+
+  List<String> _optionsWithCurrent(List<String> options, String current) {
+    final values = [...options];
+    if (current.isNotEmpty && !values.contains(current))
+      values.insert(0, current);
+    return values;
   }
 
   /// 拍"关于本机"截图，AI识别序列号
@@ -279,6 +287,11 @@ class _ScanPageState extends State<ScanPage> {
     // 需要AI生成时
     if (description == null) {
       try {
+        final copyReference = XianyuCopyService.buildReferenceContext(
+          gStorage,
+          model: selectedModel,
+          condition: selectedCondition,
+        );
         description = await AiService.generateDescription(
           model: selectedModel,
           capacity: selectedCapacity,
@@ -289,6 +302,7 @@ class _ScanPageState extends State<ScanPage> {
           cycleCount: cycleCount,
           idLockClean: idClean,
           accessories: '裸机',
+          copywritingReference: copyReference,
         );
         if (description.startsWith('AI调用') || description.startsWith('AI返回')) {
           description = null;
@@ -556,23 +570,11 @@ class _ScanPageState extends State<ScanPage> {
                       style: TextStyle(fontSize: 12, color: C.t2),
                     ),
                     const SizedBox(height: 6),
-                    TextField(
+                    AppFormField(
                       controller: _serialCtrl,
-                      style: TextStyle(color: C.t1, fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: '输入或AI识别后自动填入',
-                        hintStyle: TextStyle(color: C.t3),
-                        filled: true,
-                        fillColor: C.bgDeep,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: BorderSide(color: C.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(10),
-                          borderSide: const BorderSide(color: C.t3),
-                        ),
-                      ),
+                      label: '序列号',
+                      hint: '输入或AI识别后自动填入',
+                      icon: Icons.confirmation_number_outlined,
                     ),
                   ],
                 ),
@@ -586,38 +588,15 @@ class _ScanPageState extends State<ScanPage> {
                   children: [
                     Text('型号', style: TextStyle(fontSize: 12, color: C.t2)),
                     const SizedBox(height: 6),
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: C.bgDeep,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: C.border),
+                    AppDropdownField<String>(
+                      value: selectedModel.isEmpty ? null : selectedModel,
+                      hint: '选择iPad型号',
+                      options: _optionsWithCurrent(
+                        iPadModels.map((m) => m['name']!).toList(),
+                        selectedModel,
                       ),
-                      child: DropdownButton<String>(
-                        value: selectedModel.isEmpty ? null : selectedModel,
-                        hint: Text(
-                          '选择iPad型号',
-                          style: TextStyle(color: C.t3, fontSize: 13),
-                        ),
-                        isExpanded: true,
-                        underline: const SizedBox(),
-                        dropdownColor: C.bgCard,
-                        style: TextStyle(color: C.t1, fontSize: 13),
-                        items:
-                            iPadModels
-                                .map(
-                                  (m) => DropdownMenuItem(
-                                    value: m['name'],
-                                    child: Text(
-                                      m['name']!,
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                        onChanged:
-                            (v) => setState(() => selectedModel = v ?? ''),
-                      ),
+                      labelBuilder: (value) => value,
+                      onChanged: (v) => setState(() => selectedModel = v ?? ''),
                     ),
                   ],
                 ),
@@ -640,45 +619,22 @@ class _ScanPageState extends State<ScanPage> {
                                 style: TextStyle(fontSize: 11, color: C.t2),
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                decoration: BoxDecoration(
-                                  color: C.bgDeep,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.border),
+                              AppDropdownField<String>(
+                                value:
+                                    selectedCapacity.isEmpty
+                                        ? null
+                                        : selectedCapacity,
+                                hint: '容量',
+                                options: _optionsWithCurrent(
+                                  iPadCapacities,
+                                  selectedCapacity,
                                 ),
-                                child: DropdownButton<String>(
-                                  value:
-                                      selectedCapacity.isEmpty
-                                          ? null
-                                          : selectedCapacity,
-                                  hint: Text(
-                                    '容量',
-                                    style: TextStyle(color: C.t3, fontSize: 12),
-                                  ),
-                                  isExpanded: true,
-                                  underline: const SizedBox(),
-                                  dropdownColor: C.bgCard,
-                                  style: TextStyle(color: C.t1, fontSize: 12),
-                                  items:
-                                      iPadCapacities
-                                          .map(
-                                            (c) => DropdownMenuItem(
-                                              value: c,
-                                              child: Text(
-                                                c,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (v) => setState(
-                                        () => selectedCapacity = v ?? '',
-                                      ),
-                                ),
+                                labelBuilder: (value) => value,
+                                fontSize: 12,
+                                onChanged:
+                                    (v) => setState(
+                                      () => selectedCapacity = v ?? '',
+                                    ),
                               ),
                             ],
                           ),
@@ -693,45 +649,21 @@ class _ScanPageState extends State<ScanPage> {
                                 style: TextStyle(fontSize: 11, color: C.t2),
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                decoration: BoxDecoration(
-                                  color: C.bgDeep,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.border),
+                              AppDropdownField<String>(
+                                value:
+                                    selectedColor.isEmpty
+                                        ? null
+                                        : selectedColor,
+                                hint: '颜色',
+                                options: _optionsWithCurrent(
+                                  iPadColors,
+                                  selectedColor,
                                 ),
-                                child: DropdownButton<String>(
-                                  value:
-                                      selectedColor.isEmpty
-                                          ? null
-                                          : selectedColor,
-                                  hint: Text(
-                                    '颜色',
-                                    style: TextStyle(color: C.t3, fontSize: 12),
-                                  ),
-                                  isExpanded: true,
-                                  underline: const SizedBox(),
-                                  dropdownColor: C.bgCard,
-                                  style: TextStyle(color: C.t1, fontSize: 12),
-                                  items:
-                                      iPadColors
-                                          .map(
-                                            (c) => DropdownMenuItem(
-                                              value: c,
-                                              child: Text(
-                                                c,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (v) => setState(
-                                        () => selectedColor = v ?? '',
-                                      ),
-                                ),
+                                labelBuilder: (value) => value,
+                                fontSize: 12,
+                                onChanged:
+                                    (v) =>
+                                        setState(() => selectedColor = v ?? ''),
                               ),
                             ],
                           ),
@@ -746,38 +678,19 @@ class _ScanPageState extends State<ScanPage> {
                                 style: TextStyle(fontSize: 11, color: C.t2),
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 10),
-                                decoration: BoxDecoration(
-                                  color: C.bgDeep,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: C.border),
+                              AppDropdownField<String>(
+                                value: selectedNetwork,
+                                hint: '网络',
+                                options: _optionsWithCurrent(
+                                  iPadNetworks,
+                                  selectedNetwork,
                                 ),
-                                child: DropdownButton<String>(
-                                  value: selectedNetwork,
-                                  isExpanded: true,
-                                  underline: const SizedBox(),
-                                  dropdownColor: C.bgCard,
-                                  style: TextStyle(color: C.t1, fontSize: 12),
-                                  items:
-                                      iPadNetworks
-                                          .map(
-                                            (n) => DropdownMenuItem(
-                                              value: n,
-                                              child: Text(
-                                                n,
-                                                style: const TextStyle(
-                                                  fontSize: 12,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                          .toList(),
-                                  onChanged:
-                                      (v) => setState(
-                                        () => selectedNetwork = v ?? '',
-                                      ),
-                                ),
+                                labelBuilder: (value) => value,
+                                fontSize: 12,
+                                onChanged:
+                                    (v) => setState(
+                                      () => selectedNetwork = v ?? '',
+                                    ),
                               ),
                             ],
                           ),
@@ -796,30 +709,17 @@ class _ScanPageState extends State<ScanPage> {
                   children: [
                     Text('成色', style: TextStyle(fontSize: 12, color: C.t2)),
                     const SizedBox(height: 6),
-                    Wrap(
-                      children:
-                          iPadConditions
-                              .map(
-                                (c) => Padding(
-                                  padding: const EdgeInsets.only(
-                                    right: 6,
-                                    bottom: 4,
-                                  ),
-                                  child: ChoiceChip(
-                                    label: Text(
-                                      c,
-                                      style: const TextStyle(fontSize: 11),
-                                    ),
-                                    selected: selectedCondition == c,
-                                    selectedColor: C.cyan,
-                                    onSelected:
-                                        (_) => setState(
-                                          () => selectedCondition = c,
-                                        ),
-                                  ),
-                                ),
-                              )
-                              .toList(),
+                    AppDropdownField<String>(
+                      value:
+                          selectedCondition.isEmpty ? null : selectedCondition,
+                      hint: '选择成色',
+                      options: _optionsWithCurrent(
+                        iPadConditions,
+                        selectedCondition,
+                      ),
+                      labelBuilder: (value) => value,
+                      onChanged:
+                          (v) => setState(() => selectedCondition = v ?? ''),
                     ),
                   ],
                 ),
@@ -834,20 +734,11 @@ class _ScanPageState extends State<ScanPage> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextField(
+                          child: AppFormField(
                             controller: _costCtrl,
                             keyboardType: TextInputType.number,
-                            style: TextStyle(color: C.t1, fontSize: 14),
-                            decoration: InputDecoration(
-                              labelText: '采购成本(元)',
-                              labelStyle: TextStyle(color: C.t2),
-                              filled: true,
-                              fillColor: C.bgDeep,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                borderSide: BorderSide(color: C.border),
-                              ),
-                            ),
+                            label: '采购成本(元)',
+                            icon: Icons.payments_outlined,
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -856,59 +747,28 @@ class _ScanPageState extends State<ScanPage> {
                     const SizedBox(height: 10),
                     Text('采购渠道', style: TextStyle(fontSize: 12, color: C.t2)),
                     const SizedBox(height: 6),
-                    Wrap(
-                      children:
-                          PurchaseChannels.map(
-                            (c) => Padding(
-                              padding: const EdgeInsets.only(
-                                right: 6,
-                                bottom: 4,
-                              ),
-                              child: ChoiceChip(
-                                label: Text(
-                                  c,
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                selected:
-                                    !isCustomChannel && selectedChannel == c,
-                                selectedColor: C.cyan,
-                                onSelected:
-                                    (_) => setState(() {
-                                      selectedChannel = c;
-                                      isCustomChannel = false;
-                                    }),
-                              ),
-                            ),
-                          ).toList(),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(right: 6, bottom: 4),
-                      child: ChoiceChip(
-                        label: const Text(
-                          '自定义',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        selected: isCustomChannel,
-                        selectedColor: C.cyan,
-                        onSelected:
-                            (_) => setState(() {
+                    AppDropdownField<String>(
+                      value: isCustomChannel ? '自定义' : selectedChannel,
+                      hint: '选择采购渠道',
+                      options: const [...PurchaseChannels, '自定义'],
+                      labelBuilder: (value) => value,
+                      onChanged:
+                          (v) => setState(() {
+                            if (v == '自定义') {
                               isCustomChannel = true;
-                            }),
-                      ),
+                            } else {
+                              selectedChannel = v ?? selectedChannel;
+                              isCustomChannel = false;
+                            }
+                          }),
                     ),
                     if (isCustomChannel)
-                      TextField(
-                        controller: _customChannelCtrl,
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '输入渠道名称',
-                          labelStyle: TextStyle(color: C.t2),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: AppFormField(
+                          controller: _customChannelCtrl,
+                          label: '输入渠道名称',
+                          icon: Icons.storefront_outlined,
                         ),
                       ),
                   ],
@@ -1291,14 +1151,11 @@ class _ScanPageState extends State<ScanPage> {
   Widget _lockCheck(String label, bool val, ValueChanged<bool> onChanged) =>
       Padding(
         padding: EdgeInsets.only(right: 8, bottom: 6),
-        child: FilterChip(
-          label: Text(
-            label,
-            style: TextStyle(fontSize: 11, color: val ? Colors.white : C.t2),
-          ),
+        child: AppChoicePill(
+          label: label,
           selected: val,
-          selectedColor: C.red,
-          onSelected: onChanged,
+          color: C.red,
+          onTap: () => onChanged(!val),
         ),
       );
   Widget _kv(String k, String v) => Padding(

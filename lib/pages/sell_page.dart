@@ -28,6 +28,38 @@ class _SellPageState extends State<SellPage> {
           .where((d) => d.status == 'in_stock' || d.status == 'listed')
           .toList();
 
+  bool get _isXianyu => channel == '闲鱼';
+
+  String _moneyInput(double value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2);
+  }
+
+  void _syncPlatformFee() {
+    if (!_isXianyu) return;
+    final priceValue = double.tryParse(_priceCtrl.text);
+    final text =
+        priceValue == null || priceValue <= 0
+            ? ''
+            : _moneyInput(priceValue * 0.016);
+    if (_feeCtrl.text == text) return;
+    _feeCtrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
+  void _onPriceChanged(String _) {
+    _syncPlatformFee();
+    _computeProfit();
+  }
+
+  void _selectChannel(String value) {
+    setState(() => channel = value);
+    _syncPlatformFee();
+    _computeProfit();
+  }
+
   void _computeProfit() {
     final price = (double.tryParse(_priceCtrl.text) ?? 0) * 100;
     final repair = (double.tryParse(_repairCtrl.text) ?? 0) * 100;
@@ -181,113 +213,69 @@ class _SellPageState extends State<SellPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                TextField(
+                AppFormField(
                   controller: _priceCtrl,
                   keyboardType: TextInputType.number,
-                  onChanged: (_) => _computeProfit(),
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    labelText: '售价(元)',
-                    labelStyle: TextStyle(color: C.t2),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
-                    ),
-                  ),
+                  onChanged: _onPriceChanged,
+                  label: '售价(元)',
+                  icon: Icons.sell_outlined,
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
                     Expanded(
-                      child: TextField(
+                      child: AppFormField(
                         controller: _repairCtrl,
                         keyboardType: TextInputType.number,
                         onChanged: (_) => _computeProfit(),
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '维修成本',
-                          labelStyle: TextStyle(color: C.t2),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
-                        ),
+                        label: '维修成本',
+                        icon: Icons.build_outlined,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: TextField(
+                      child: AppFormField(
                         controller: _feeCtrl,
                         keyboardType: TextInputType.number,
+                        readOnly: _isXianyu,
                         onChanged: (_) => _computeProfit(),
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '平台佣金',
-                          labelStyle: TextStyle(color: C.t2),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
-                        ),
+                        label: '平台手续费',
+                        hint: _isXianyu ? '闲鱼自动按售价 1.6%' : null,
+                        icon: Icons.percent_rounded,
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: TextField(
+                      child: AppFormField(
                         controller: _logisticsCtrl,
                         keyboardType: TextInputType.number,
                         onChanged: (_) => _computeProfit(),
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '物流',
-                          labelStyle: TextStyle(color: C.t2),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
-                        ),
+                        label: '物流',
+                        icon: Icons.local_shipping_outlined,
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-                TextField(
+                AppFormField(
                   controller: _buyerCtrl,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    labelText: '买家',
-                    labelStyle: TextStyle(color: C.t2),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
-                    ),
-                  ),
+                  label: '买家',
+                  icon: Icons.person_outline_rounded,
                 ),
                 const SizedBox(height: 10),
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('渠道：', style: TextStyle(fontSize: 12, color: C.t2)),
-                    const SizedBox(width: 8),
-                    ...['闲鱼', '抖音', '转转', '私域', '同行'].map(
-                      (c) => Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: ChoiceChip(
-                          label: Text(c, style: const TextStyle(fontSize: 11)),
-                          selected: channel == c,
-                          selectedColor: C.cyan,
-                          onSelected: (_) => setState(() => channel = c),
-                        ),
-                      ),
+                    Text('渠道', style: TextStyle(fontSize: 12, color: C.t2)),
+                    const SizedBox(height: 6),
+                    AppDropdownField<String>(
+                      value: channel,
+                      hint: '选择销售渠道',
+                      options: const ['闲鱼', '抖音', '转转', '私域', '同行'],
+                      labelBuilder: (value) => value,
+                      onChanged: (value) {
+                        if (value != null) _selectChannel(value);
+                      },
                     ),
                   ],
                 ),

@@ -5,6 +5,7 @@ import '../theme/colors.dart';
 import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
+import '../services/device_export_service.dart';
 import 'detail_page.dart';
 import 'scan_page.dart';
 
@@ -20,8 +21,31 @@ class StockPageState extends State<StockPage> {
   String searchKw = '';
   final searchCtrl = TextEditingController();
   final chips = ['全部', 'iPad Pro', 'iPad Air', '数字系列', 'iPad mini'];
+  String? downloadingDeviceId;
 
   void refresh() => setState(() {});
+
+  Future<void> _downloadDevice(
+    Device device, {
+    required bool openXianyu,
+  }) async {
+    if (downloadingDeviceId != null) return;
+    setState(() => downloadingDeviceId = device.id);
+    try {
+      final result = await DeviceExportService.downloadListing(
+        device: device,
+        docDir: gDocDir,
+        openXianyu: openXianyu,
+      );
+      if (!mounted) return;
+      toast(context, result.message);
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, '下载失败：$e');
+    } finally {
+      if (mounted) setState(() => downloadingDeviceId = null);
+    }
+  }
 
   @override
   void dispose() {
@@ -220,12 +244,23 @@ class StockPageState extends State<StockPage> {
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                           childAspectRatio:
-                              columns == 1 ? (phoneTile ? 1.68 : 1.55) : 1.35,
+                              columns == 1 ? (phoneTile ? 1.32 : 1.28) : 1.08,
                         ),
                         delegate: SliverChildBuilderDelegate((context, i) {
                           return RepaintBoundary(
                             child: _DeviceProjectCard(
                               device: devices[i],
+                              busy: downloadingDeviceId == devices[i].id,
+                              onDownload:
+                                  () => _downloadDevice(
+                                    devices[i],
+                                    openXianyu: false,
+                                  ),
+                              onDownloadAndOpen:
+                                  () => _downloadDevice(
+                                    devices[i],
+                                    openXianyu: true,
+                                  ),
                               onTap:
                                   () => Navigator.push(
                                     context,
@@ -305,9 +340,9 @@ class _SearchField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
-    radius: 28,
-    color: const Color(0xE60F151F),
-    borderColor: Colors.white.withOpacity(0.11),
+    radius: 10,
+    color: C.bgDeep,
+    borderColor: C.border,
     child: Row(
       children: [
         const Icon(Icons.search_rounded, color: C.t2, size: 24),
@@ -330,6 +365,7 @@ class _SearchField extends StatelessWidget {
               filled: false,
               contentPadding: EdgeInsets.symmetric(vertical: 14),
               hintText: '搜索型号、序列号、容量',
+              hintStyle: TextStyle(color: C.t3, fontSize: 13),
             ),
           ),
         ),
@@ -385,8 +421,17 @@ class _FilterPill extends StatelessWidget {
 class _DeviceProjectCard extends StatelessWidget {
   final Device device;
   final VoidCallback onTap;
+  final VoidCallback onDownload;
+  final VoidCallback onDownloadAndOpen;
+  final bool busy;
 
-  const _DeviceProjectCard({required this.device, required this.onTap});
+  const _DeviceProjectCard({
+    required this.device,
+    required this.onTap,
+    required this.onDownload,
+    required this.onDownloadAndOpen,
+    required this.busy,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -527,6 +572,30 @@ class _DeviceProjectCard extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 11),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _CardActionButton(
+                                    label: '仅下载',
+                                    icon: Icons.download_rounded,
+                                    onTap: onDownload,
+                                    busy: busy,
+                                    filled: false,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: _CardActionButton(
+                                    label: '下载并去闲鱼',
+                                    icon: Icons.open_in_new_rounded,
+                                    onTap: onDownloadAndOpen,
+                                    busy: busy,
+                                    filled: true,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -560,6 +629,70 @@ class _DeviceProjectCard extends StatelessWidget {
     if (d.isStagnant) return C.red;
     if (d.sellPrice <= 0) return C.orange;
     return d.status == 'listed' ? C.cyan : C.mint;
+  }
+}
+
+class _CardActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+  final bool busy;
+  final bool filled;
+
+  const _CardActionButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+    required this.busy,
+    required this.filled,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = filled ? C.cyan : Colors.white.withOpacity(0.09);
+    final fg = filled ? Colors.black : C.t1;
+    return SizedBox(
+      height: 34,
+      child: TextButton(
+        onPressed: busy ? null : onTap,
+        style: TextButton.styleFrom(
+          backgroundColor: bg,
+          disabledBackgroundColor: bg.withOpacity(0.55),
+          foregroundColor: fg,
+          disabledForegroundColor: fg.withOpacity(0.55),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          shape: const StadiumBorder(),
+          side:
+              filled
+                  ? BorderSide.none
+                  : BorderSide(color: Colors.white.withOpacity(0.12)),
+        ),
+        child:
+            busy
+                ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: fg),
+                )
+                : FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(icon, size: 15),
+                      const SizedBox(width: 5),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+      ),
+    );
   }
 }
 

@@ -24,8 +24,8 @@ const String kDefaultAiBaseUrl =
     'https://open.bigmodel.cn/api/paas/v4/chat/completions';
 const String kDefaultAiModelsUrl =
     'https://open.bigmodel.cn/api/paas/v4/models';
-const String kDefaultAiModel = 'glm-4.7-flash';
-const String kDefaultAiVisionModel = 'glm-4.1v-thinking-flash';
+const String kDefaultAiModel = 'GLM-4-Flash-250414';
+const String kDefaultAiVisionModel = 'GLM-4.1V-Thinking-Flash';
 const String kDefaultAiApiKey =
     '7caa9ea50e4247c9ac479d0f1d457c04.eh8Big07dnQ3NjV6';
 
@@ -425,12 +425,12 @@ class AiService {
     required List<String> stagnantModels,
   }) async {
     final sys =
-        '你是二手iPad生意经营顾问。用结构化格式输出今日经营日报。'
-        '严格用以下固定格式（emoji标记不能少，每条不超过20字）：\n'
-        '【亮点】\n• xxx（今日表现好的地方，不超过3条）\n\n'
-        '【待关注】\n• xxx（需要留意的问题，不超过3条）\n\n'
-        '【明日建议】\n• xxx（具体可执行的行动，不超过3条）\n\n'
-        '不要多余的文字。';
+        '你是二手iPad门店经营参谋。不要写空泛日报，只输出能让老板今天行动的复盘。'
+        '严格用以下格式，每条必须包含具体对象或数字，每条不超过28字：\n'
+        '【今天先处理】\n• xxx（最高优先级动作，1-3条）\n\n'
+        '【风险信号】\n• xxx（资金、滞销、毛利、订单风险，1-3条）\n\n'
+        '【明天保留动作】\n• xxx（可以延后但要跟进的动作，1-2条）\n\n'
+        '如果数据不足，直接指出要补齐哪些记录。不要多余的开场白。';
     return chat(
       sys,
       '今日GMV ${(gmv / 100).toStringAsFixed(0)}元，毛利${(grossProfit / 100).toStringAsFixed(0)}元'
@@ -467,11 +467,14 @@ class AiService {
     required int cycleCount,
     required bool idLockClean,
     String accessories = '裸机',
+    String copywritingReference = '',
   }) async {
+    final reference = copywritingReference.trim();
     final sys =
         '你是闲鱼二手iPad商品文案专家。根据给定的设备准确信息，写一段真实、专业、有吸引力的商品描述。'
         '要求：①突出成色、电池健康、ID锁状态等买家最关心的点；②语言自然不浮夸，不夸大；③包含配置亮点和适用场景；'
-        '④100-180字，纯文本不带emoji和特殊符号、不带价格；⑤不要分点编号，写成流畅的一段话。';
+        '④100-180字，纯文本不带emoji和特殊符号、不带价格；⑤不要分点编号，写成流畅的一段话。'
+        '${reference.isEmpty ? "" : "\n\n$reference"}';
     final r = await chat(
       sys,
       '请为以下设备写商品描述：\n型号：$model\n容量：$capacity\n颜色：$color\n网络：$network\n成色：$condition\n'
@@ -501,8 +504,12 @@ class AiService {
     List<Map<String, dynamic>>? marketHistory,
   }) async {
     final sys =
-        '你是二手iPad采购决策顾问。综合"今日市场行情、历史销售数据、拟采购成本"判断"是否建议按此成本采购该数量"。'
-        '输出格式：\n【结论】建议收 / 谨慎收 / 不建议\n【理由】不超过3条\n【风险】1条\n中文，简洁，总字数≤260。';
+        '你是二手iPad采购风控参谋。综合今日市场行情、历史销售数据、拟采购成本，判断这批货是否值得收。'
+        '不要写泛泛建议，必须围绕“压价线、净利、周转、库存压力”。'
+        '输出格式：\n【结论】建议收 / 压价再收 / 谨慎试收 / 不建议\n'
+        '【报价】给出一句最高可接受收货价或压价理由\n'
+        '【原因】不超过3条，每条带数字\n'
+        '【下一步】一句可执行动作\n中文，简洁，总字数≤260。';
     final a = analysis;
     final suppliersStr = (a['suppliers'] as List)
         .map(

@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
-import '../models.dart';
 import '../main.dart';
 import '../ai_service.dart';
+import 'market_price_page.dart';
 import 'restock_suggestion_page.dart';
 
 class PurchaseDecisionPage extends StatefulWidget {
@@ -23,26 +22,45 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
   List<Map<String, dynamic>>? _marketHistory;
   String? _aiResult;
   bool _loading = false;
-  Map<String, dynamic>? _refPrices; // 参考价
+  bool _suppressInputNotify = false;
+  Map<String, dynamic>? _refPrices;
+
+  static const int _targetProfit = 35000;
+  static const int _afterSaleReserve = 6000;
+  static const int _defaultLogistics = 1500;
+
+  @override
+  void initState() {
+    super.initState();
+    _costCtrl.addListener(_onInputChanged);
+    _qtyCtrl.addListener(_onInputChanged);
+  }
 
   @override
   void dispose() {
+    _costCtrl.removeListener(_onInputChanged);
+    _qtyCtrl.removeListener(_onInputChanged);
     _costCtrl.dispose();
     _qtyCtrl.dispose();
     super.dispose();
   }
 
+  void _onInputChanged() {
+    if (_suppressInputNotify || !mounted) return;
+    setState(() => _aiResult = null);
+  }
+
   List<String> get _modelOptions {
     final dbModels = gStorage.getDevices().map((d) => d.model).toSet().toList();
+    final marketModels = gStorage.getAllLatestMarketPrices().keys.toList();
     final preset = iPadModels.map((m) => m['name']!).toList();
     final all = <String>[...preset];
-    for (final m in dbModels) {
+    for (final m in [...dbModels, ...marketModels]) {
       if (!all.contains(m)) all.add(m);
     }
     return all;
   }
 
-  /// 计算该型号的参考价格
   Map<String, dynamic> _computeRefPrices(String model) {
     final devices = gStorage.getDevices();
     final sameModel = devices.where((d) => d.model == model).toList();
@@ -55,24 +73,23 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
     final avgPurchase =
         sameModel.isEmpty
             ? 0
-            : sameModel.map((d) => d.purchaseCost).reduce((a, b) => a + b) ~/
+            : sameModel.fold<int>(0, (sum, d) => sum + d.purchaseCost) ~/
                 sameModel.length;
     final avgSell =
         sold.isEmpty
             ? 0
-            : sold.map((d) => d.sellPrice).reduce((a, b) => a + b) ~/
-                sold.length;
+            : sold.fold<int>(0, (sum, d) => sum + d.sellPrice) ~/ sold.length;
     final bestPurchase =
         sameModel.isEmpty
             ? 0
             : sameModel
                 .map((d) => d.purchaseCost)
                 .reduce((a, b) => a < b ? a : b);
-    final totalProfit =
-        sold.isEmpty ? 0 : sold.map((d) => d.netProfit).reduce((a, b) => a + b);
-    final avgProfit = sold.isEmpty ? 0 : totalProfit ~/ sold.length;
+    final avgProfit =
+        sold.isEmpty
+            ? 0
+            : sold.fold<int>(0, (sum, d) => sum + d.netProfit) ~/ sold.length;
 
-    // 近30天销量
     final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
     final sales30d =
         sold.where((d) {
@@ -85,22 +102,40 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           }
         }).length;
 
-    // 维修/佣金/物流均价
+    int turnoverTotal = 0;
+    int turnoverCount = 0;
+    for (final d in sold) {
+      final sd = d.sellDate;
+      if (sd == null) continue;
+      try {
+        turnoverTotal +=
+            DateTime.parse(
+              sd,
+            ).difference(DateTime.parse(d.purchaseDate)).inDays;
+        turnoverCount++;
+      } catch (_) {}
+    }
+
     final repairAvg =
         sold.isEmpty
             ? 0
-            : sold.map((d) => d.repairCost ?? 0).reduce((a, b) => a + b) ~/
+            : sold.fold<int>(0, (sum, d) => sum + (d.repairCost ?? 0)) ~/
                 sold.length;
     final feeAvg =
         sold.isEmpty
             ? 0
-            : sold.map((d) => d.platformFee ?? 0).reduce((a, b) => a + b) ~/
+            : sold.fold<int>(0, (sum, d) => sum + (d.platformFee ?? 0)) ~/
                 sold.length;
     final logisticsAvg =
         sold.isEmpty
             ? 0
-            : sold.map((d) => d.logisticsCost ?? 0).reduce((a, b) => a + b) ~/
+            : sold.fold<int>(0, (sum, d) => sum + (d.logisticsCost ?? 0)) ~/
                 sold.length;
+    final stagnant = inStock.where((d) => d.isStagnant).length;
+    final oldestStockDays =
+        inStock.isEmpty
+            ? 0
+            : inStock.map((d) => d.stockDays).reduce((a, b) => a > b ? a : b);
 
     return {
       'avgPurchaseCost': avgPurchase,
@@ -108,802 +143,937 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       'bestPurchaseCost': bestPurchase,
       'sales30d': sales30d,
       'inStockCount': inStock.length,
+      'stagnantCount': stagnant,
+      'oldestStockDays': oldestStockDays,
       'avgProfit': avgProfit,
+      'avgTurnoverDays': turnoverCount > 0 ? turnoverTotal ~/ turnoverCount : 0,
       'repairAvg': repairAvg,
       'feeAvg': feeAvg,
       'logisticsAvg': logisticsAvg,
+      'dataCount': sameModel.length,
     };
   }
 
-  /// 选型号时自动加载参考价 + 今日行情
   void _onModelChanged(String? v) {
-    setState(() {
-      _selectedModel = v;
-      _analysis = null;
-      _aiResult = null;
-      _refPrices = null;
-      _marketPrice = null;
-      _marketHistory = null;
-      if (v != null) {
-        _refPrices = _computeRefPrices(v);
-        _marketPrice = gStorage.getMarketPrice(v);
-        _marketHistory = gStorage.getMarketPriceHistory(v, days: 30);
-        // 自动填入历史采购均价作为建议采购成本
-        final rp = _refPrices!;
-        final suggestCost = (rp['avgPurchaseCost'] as int);
-        if (suggestCost > 0) {
-          _costCtrl.text = (suggestCost / 100).toStringAsFixed(0);
-        }
+    final ref = v == null ? null : _computeRefPrices(v);
+    final market = v == null ? null : gStorage.getMarketPrice(v);
+    final history =
+        v == null ? null : gStorage.getMarketPriceHistory(v, days: 30);
+    final analysis = v == null ? null : gStorage.getModelAnalysis(v);
+
+    _suppressInputNotify = true;
+    if (v == null) {
+      _costCtrl.clear();
+    } else {
+      final suggest = _initialCost(ref, market);
+      if (suggest > 0) {
+        _costCtrl.text = (suggest / 100).toStringAsFixed(0);
       } else {
         _costCtrl.clear();
       }
+    }
+    _suppressInputNotify = false;
+
+    setState(() {
+      _selectedModel = v;
+      _analysis = analysis;
+      _refPrices = ref;
+      _marketPrice = market;
+      _marketHistory = history;
+      _aiResult = null;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return appScaffold(
-      context,
-      '采购决策 · 该不该收',
-      ListView(
-        padding: const EdgeInsets.all(14),
-        children: [
-          // ===== 输入卡 =====
-          CardBox(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('型号', style: TextStyle(fontSize: 13, color: C.t2)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: C.bgDeep,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: C.border),
-                  ),
-                  child: DropdownButton<String>(
-                    value: _selectedModel,
-                    isExpanded: true,
-                    underline: const SizedBox(),
-                    dropdownColor: C.bgCard,
-                    hint: Text(
-                      '选择型号',
-                      style: TextStyle(color: C.t3, fontSize: 14),
-                    ),
-                    style: TextStyle(color: C.t1, fontSize: 14),
-                    items:
-                        _modelOptions
-                            .map(
-                              (m) => DropdownMenuItem(
-                                value: m,
-                                child: Text(
-                                  m,
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            )
-                            .toList(),
-                    onChanged: _onModelChanged,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // 参考价卡片（选型号后显示）
-                if (_refPrices != null) ...[
-                  _buildRefPriceCard(_refPrices!),
-                  const SizedBox(height: 12),
-                  // 风险评分（实时）
-                  _buildRiskScoreCard(_refPrices!),
-                  const SizedBox(height: 12),
-                ],
-                // 采购成本 + 数量并排
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _costCtrl,
-                        keyboardType: TextInputType.number,
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '采购成本(元/台)',
-                          labelStyle: TextStyle(color: C.t2, fontSize: 12),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 70,
-                      child: TextField(
-                        controller: _qtyCtrl,
-                        keyboardType: TextInputType.number,
-                        style: TextStyle(color: C.t1, fontSize: 14),
-                        decoration: InputDecoration(
-                          labelText: '数量',
-                          labelStyle: TextStyle(color: C.t2, fontSize: 12),
-                          filled: true,
-                          fillColor: C.bgDeep,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                            borderSide: BorderSide(color: C.border),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                // 利润拆解（有参考价时显示）
-                if (_refPrices != null) ...[
-                  const SizedBox(height: 12),
-                  _buildProfitBreakdown(_refPrices!),
-                ],
-                const SizedBox(height: 10),
-                ghostBtn(
-                  '批量补货建议',
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const RestockSuggestionPage(),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                primaryBtn('开始分析', _analyze),
-              ],
-            ),
-          ),
-          // 分析结果
-          if (_analysis != null) ...[
-            const SizedBox(height: 14),
-            _buildKpiCard(),
-            const SizedBox(height: 12),
-            _buildSupplierCard(),
-            const SizedBox(height: 12),
-            _buildAiCard(),
-          ],
-        ],
-      ),
-    );
+  int _initialCost(Map<String, dynamic>? ref, Map<String, dynamic>? market) {
+    final avgPurchase = (ref?['avgPurchaseCost'] as int?) ?? 0;
+    if (avgPurchase > 0) return avgPurchase;
+    final marketPrice = (market?['price'] as int?) ?? 0;
+    if (marketPrice > 0) return marketPrice;
+    return 0;
   }
 
-  /// 参考价卡片
-  Widget _buildRefPriceCard(Map<String, dynamic> rp) {
-    final avgPur = (rp['avgPurchaseCost'] as int) ~/ 100;
-    final avgSell = (rp['avgSellPrice'] as int) ~/ 100;
-    final bestPur = (rp['bestPurchaseCost'] as int) ~/ 100;
-    final sales30 = rp['sales30d'] as int;
-    final inStock = rp['inStockCount'] as int;
-    final avgProfit = (rp['avgProfit'] as int) ~/ 100;
-    final wholesalePrice =
-        _marketPrice != null ? ((_marketPrice!['price'] as int) ~/ 100) : null;
-
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '参考数据',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: C.t1,
-                ),
-              ),
-              const Spacer(),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: C.cyan.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '基于 ${sales30 + inStock} 条历史',
-                  style: TextStyle(fontSize: 9, color: C.cyan),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _refRow('📉 历史采购均价', '¥$avgPur', avgPur > 0 ? null : '暂无数据'),
-          _refRow('📈 历史售价均价', '¥$avgSell', avgSell > 0 ? null : '暂无数据'),
-          if (wholesalePrice != null)
-            _refRow(
-              '🏪 今日批发价',
-              '¥$wholesalePrice',
-              _marketPrice!['date'] as String?,
-            ),
-          Divider(color: C.border, height: 8),
-          _refRow(
-            '🏆 历史最佳采购价',
-            '¥$bestPur',
-            bestPur > 0 && bestPur < avgPur
-                ? '比均价低 ¥${avgPur - bestPur}'
-                : null,
-          ),
-          _refRow('💰 历史均利', '¥$avgProfit', avgProfit > 0 ? null : '暂无'),
-          _refRow('📦 近30天销量', '$sales30 台', null),
-          _refRow('🏪 当前在售', '$inStock 台', null),
-        ],
-      ),
-    );
+  int get _costFen {
+    final cost = double.tryParse(_costCtrl.text.trim()) ?? 0;
+    return (cost * 100).round();
   }
 
-  Widget _refRow(String label, String value, String? hint) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 110,
-            child: Text(label, style: TextStyle(fontSize: 11, color: C.t2)),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: C.t1,
-            ),
-          ),
-          if (hint != null)
-            Expanded(
-              child: Text(
-                ' · $hint',
-                style: TextStyle(fontSize: 9, color: C.t3),
-                textAlign: TextAlign.right,
-              ),
-            ),
-        ],
-      ),
-    );
+  int get _qty {
+    final q = int.tryParse(_qtyCtrl.text.trim()) ?? 1;
+    return q <= 0 ? 1 : q.clamp(1, 999).toInt();
   }
 
-  /// 利润拆解卡片
-  Widget _buildProfitBreakdown(Map<String, dynamic> rp) {
-    final costStr = _costCtrl.text.trim();
-    final cost = double.tryParse(costStr) ?? 0;
-    final costFen = (cost * 100).round();
-    final avgSell = (rp['avgSellPrice'] as int);
-    final repairAvg = rp['repairAvg'] as int;
-    final feeAvg = rp['feeAvg'] as int;
-    final logisticsAvg = rp['logisticsAvg'] as int;
-    final afterSaleAvg = 6000; // 售后预留 ¥60（固定的合理预留）
+  _PurchasePlan? _buildPlan(Map<String, dynamic>? ref) {
+    if (ref == null || _selectedModel == null || _costFen <= 0) return null;
 
-    if (costFen <= 0 || avgSell <= 0) return const SizedBox();
-
-    final totalCost =
-        costFen + repairAvg + feeAvg + logisticsAvg + afterSaleAvg;
-    final netProfit = avgSell - totalCost;
-    final margin = avgSell > 0 ? (netProfit / avgSell * 100) : 0.0;
-    final avgTurnover = rp['avgTurnoverDays'] as int? ?? 28;
-
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '预估单台利润',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: C.t1,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '净利 ¥${(netProfit / 100).toStringAsFixed(0)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: netProfit > 0 ? C.green : C.red,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '毛利率 ${margin.toStringAsFixed(1)}% · 预计周转 ${avgTurnover}天',
-            style: TextStyle(fontSize: 10, color: C.t3),
-          ),
-          Divider(color: C.border, height: 16),
-          _profitRow('预计售价', avgSell, null, bold: true),
-          _profitRow('拿货成本', costFen, C.red),
-          _profitRow('维修成本预估', repairAvg, C.orange),
-          _profitRow('平台佣金预估', feeAvg, C.orange),
-          _profitRow('物流+包装', logisticsAvg, C.orange),
-          _profitRow('售后预留', afterSaleAvg, C.orange),
-          Divider(color: C.border, height: 8),
-          _profitRow(
-            '预估净利',
-            netProfit,
-            netProfit > 0 ? C.green : C.red,
-            bold: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _profitRow(
-    String label,
-    int amountFen,
-    Color? amountColor, {
-    bool bold = false,
-  }) {
-    final isNegative = amountFen < 0;
-    final display =
-        isNegative
-            ? '-¥${((-amountFen) / 100).toStringAsFixed(0)}'
-            : '¥${(amountFen / 100).toStringAsFixed(0)}';
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Text(label, style: TextStyle(fontSize: 11, color: C.t2)),
-          const Spacer(),
-          Text(
-            display,
-            style: TextStyle(
-              fontSize: bold ? 14 : 12,
-              fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
-              color: amountColor ?? C.t1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 风险评分
-  Widget _buildRiskScoreCard(Map<String, dynamic> rp) {
-    final cost = double.tryParse(_costCtrl.text) ?? 0;
-    final costFen = (cost * 100).round();
-    final avgSell = rp['avgSellPrice'] as int;
-    final sales30 = rp['sales30d'] as int;
-    final inStock = rp['inStockCount'] as int;
-
-    // 利润空间评分：成本 vs 售价
-    int profitScore = 0;
-    if (avgSell > 0 && costFen > 0) {
-      final margin = (avgSell - costFen) / avgSell;
-      if (margin > 0.15)
-        profitScore = 90;
-      else if (margin > 0.10)
-        profitScore = 70;
-      else if (margin > 0.05)
-        profitScore = 50;
-      else if (margin > 0)
-        profitScore = 30;
-      else
-        profitScore = 10;
-    }
-
-    // 周转速度评分：销量越高分越高
-    int turnoverScore =
+    final avgSell = ref['avgSellPrice'] as int;
+    final repairAvg = ref['repairAvg'] as int;
+    final historicalFee = ref['feeAvg'] as int;
+    final logisticsAvg = ref['logisticsAvg'] as int;
+    final estimatedFee =
+        avgSell > 0
+            ? _maxInt(historicalFee, (avgSell * 0.016).round())
+            : historicalFee;
+    final logistics = logisticsAvg > 0 ? logisticsAvg : _defaultLogistics;
+    final fixedCosts = repairAvg + estimatedFee + logistics + _afterSaleReserve;
+    final marketCost = (_marketPrice?['price'] as int?) ?? 0;
+    final maxPurchase =
+        avgSell > 0
+            ? _maxInt(0, avgSell - fixedCosts - _targetProfit)
+            : marketCost > 0
+            ? _maxInt(0, marketCost - 5000)
+            : 0;
+    final quickSell = avgSell > 0 ? (avgSell * 0.94).round() : 0;
+    final netProfit = avgSell > 0 ? avgSell - _costFen - fixedCosts : 0;
+    final quickProfit =
+        quickSell > 0 ? quickSell - _costFen - fixedCosts : netProfit;
+    final breakEven = _costFen + fixedCosts;
+    final sales30 = ref['sales30d'] as int;
+    final inStock = ref['inStockCount'] as int;
+    final stagnant = ref['stagnantCount'] as int;
+    final avgTurnover = ref['avgTurnoverDays'] as int;
+    final trendScore = _trendScore();
+    final profitScore = _profitScore(avgSell, netProfit);
+    final salesScore =
         sales30 >= 8
-            ? 90
+            ? 92
             : sales30 >= 5
-            ? 70
+            ? 78
             : sales30 >= 3
-            ? 50
+            ? 64
             : sales30 >= 1
-            ? 30
-            : 10;
-
-    // 库存压力评分：在售越少越好
-    int stockScore =
-        inStock <= 2
+            ? 45
+            : 24;
+    final stockScore =
+        inStock == 0
             ? 90
-            : inStock <= 5
-            ? 70
-            : inStock <= 10
-            ? 50
-            : 30;
-
-    // 价格趋势评分：批发价趋势
-    int trendScore = 50; // 默认中等
-    if (_marketHistory != null && _marketHistory!.length >= 2) {
-      final first = (_marketHistory!.first['price'] as int);
-      final last = (_marketHistory!.last['price'] as int);
-      final change = last - first;
-      final pct = first > 0 ? change / first : 0.0;
-      if (pct > 0.03)
-        trendScore = 80;
-      else if (pct > 0)
-        trendScore = 65;
-      else if (pct > -0.03)
-        trendScore = 50;
-      else
-        trendScore = 30;
-    }
-
-    // 综合评分
-    final totalScore =
-        (profitScore * 0.30 +
-                turnoverScore * 0.25 +
-                stockScore * 0.25 +
-                trendScore * 0.20)
+            : sales30 > 0 && inStock <= sales30
+            ? 78
+            : sales30 > 0 && inStock <= sales30 * 2
+            ? 58
+            : inStock <= 2
+            ? 62
+            : 34;
+    final dataScore = (ref['dataCount'] as int) >= 3 ? 72 : 45;
+    var score =
+        (profitScore * 0.36 +
+                salesScore * 0.22 +
+                stockScore * 0.22 +
+                trendScore * 0.12 +
+                dataScore * 0.08)
             .round();
+    if (maxPurchase > 0 && _costFen > maxPurchase) {
+      final overRate = (_costFen - maxPurchase) / maxPurchase;
+      score -= (overRate * 70).clamp(8, 28).round();
+    }
+    score = score.clamp(0, 100).toInt();
 
-    String conclusion;
-    Color conclusionColor;
-    if (totalScore >= 75) {
-      conclusion = '建议收';
-      conclusionColor = C.green;
-    } else if (totalScore >= 55) {
-      conclusion = '谨慎收';
-      conclusionColor = C.orange;
+    final risks = _riskItems(
+      avgSell: avgSell,
+      maxPurchase: maxPurchase,
+      netProfit: netProfit,
+      quickProfit: quickProfit,
+      sales30: sales30,
+      inStock: inStock,
+      stagnant: stagnant,
+      avgTurnover: avgTurnover,
+    );
+
+    late String decision;
+    late String summary;
+    late Color color;
+    if (avgSell == 0 && marketCost == 0) {
+      decision = '先别重仓';
+      summary = '没有售价和行情锚点，只适合小批试单。';
+      color = C.orange;
+    } else if (maxPurchase > 0 && _costFen > maxPurchase) {
+      decision = '压价再收';
+      summary = '当前报价高于建议上限 ${yuan(_costFen - maxPurchase)}。';
+      color = C.orange;
+    } else if (score >= 75 && netProfit >= _targetProfit) {
+      decision = '建议收';
+      summary = '利润、周转和库存压力都在可控区间。';
+      color = C.mint;
+    } else if (score >= 55 && netProfit > 15000) {
+      decision = '谨慎收';
+      summary = '有利润，但需要控制数量或压一点价格。';
+      color = C.orange;
     } else {
-      conclusion = '不建议';
-      conclusionColor = C.red;
+      decision = '不建议';
+      summary = '当前利润或动销不足，容易变成压货。';
+      color = C.red;
     }
 
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                '综合评分',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: C.t1,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$totalScore 分 · $conclusion',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: conclusionColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          _scoreBar('利润空间', profitScore, 0.30, C.blue),
-          const SizedBox(height: 6),
-          _scoreBar('周转速度', turnoverScore, 0.25, C.teal),
-          const SizedBox(height: 6),
-          _scoreBar('库存压力', stockScore, 0.25, C.purple),
-          const SizedBox(height: 6),
-          _scoreBar('价格趋势', trendScore, 0.20, C.cyan),
-        ],
-      ),
+    return _PurchasePlan(
+      decision: decision,
+      summary: summary,
+      color: color,
+      score: score,
+      costFen: _costFen,
+      quantity: _qty,
+      avgSell: avgSell,
+      quickSell: quickSell,
+      netProfit: netProfit,
+      quickProfit: quickProfit,
+      maxPurchase: maxPurchase,
+      fixedCosts: fixedCosts,
+      breakEven: breakEven,
+      batchCapital: _costFen * _qty,
+      risks: risks,
     );
   }
 
-  Widget _scoreBar(String label, int score, double weight, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label, style: TextStyle(fontSize: 11, color: C.t2)),
-            const Spacer(),
-            Text(
-              '$score 分',
-              style: TextStyle(
-                fontSize: 11,
-                color: C.t1,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            SizedBox(width: 4),
-            Text(
-              '(${(weight * 100).toStringAsFixed(0)}%)',
-              style: TextStyle(fontSize: 9, color: C.t3),
-            ),
-          ],
-        ),
-        const SizedBox(height: 3),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(3),
-          child: LinearProgressIndicator(
-            value: score / 100,
-            backgroundColor: C.border,
-            valueColor: AlwaysStoppedAnimation<Color>(color.withOpacity(0.8)),
-            minHeight: 6,
-          ),
-        ),
-      ],
-    );
+  int _trendScore() {
+    final history = _marketHistory;
+    if (history == null || history.length < 2) return 52;
+    final first = history.first['price'] as int;
+    final last = history.last['price'] as int;
+    if (first <= 0) return 52;
+    final pct = (last - first) / first;
+    if (pct > 0.03) return 76;
+    if (pct > 0.0) return 64;
+    if (pct > -0.03) return 52;
+    return 30;
   }
 
-  /// KPI 卡片 —— 无框大数字风格
-  Widget _buildKpiCard() {
-    final a = _analysis!;
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '历史指标',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: C.t1,
-            ),
-          ),
-          const SizedBox(height: 14),
-          // 第一行：4 大核心指标（大数字）
-          Row(
-            children: [
-              Expanded(child: _bigKpi('${a['salesCount']}', '销量(台)', C.t3)),
-              Expanded(
-                child: _bigKpi(
-                  ((a['avgProfit'] as int) / 100).toStringAsFixed(0),
-                  '均利润(元)',
-                  C.green,
-                ),
-              ),
-              Expanded(
-                child: _bigKpi('${a['avgTurnoverDays']}', '均周转(天)', C.orange),
-              ),
-              Expanded(
-                child: _bigKpi(
-                  '${((a['stagnantRate'] as double) * 100).toStringAsFixed(0)}',
-                  '压货率(%)',
-                  C.pink,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // 第二行：辅助指标（小标签）
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _chip('在售 ${a['inStockCount']}', C.t2),
-              _chip(
-                '滞销 ${a['stagnantCount']}',
-                a['stagnantCount'] as int > 0 ? C.pink : C.t2,
-              ),
-              _chip(
-                '均价 ${((a['avgSellPrice'] as int) / 100).toStringAsFixed(0)}',
-                C.t2,
-              ),
-              _chip(
-                '均成本 ${((a['avgPurchaseCost'] as int) / 100).toStringAsFixed(0)}',
-                C.t2,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+  int _profitScore(int avgSell, int netProfit) {
+    if (avgSell <= 0) return 35;
+    final margin = netProfit / avgSell;
+    if (netProfit >= 50000 && margin >= 0.12) return 96;
+    if (netProfit >= _targetProfit) return 82;
+    if (netProfit >= 22000) return 62;
+    if (netProfit > 0) return 42;
+    return 12;
   }
 
-  /// 大数字 KPI（无框，纯色块）
-  Widget _bigKpi(String value, String label, Color color) => Column(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Text(
-        value,
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w800,
-          color: color,
-          height: 1.2,
-        ),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        label,
-        style: TextStyle(fontSize: 10, color: C.t3),
-        textAlign: TextAlign.center,
-      ),
-    ],
-  );
-
-  /// 小标签 chip（无框）
-  Widget _chip(String text, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.12),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      text,
-      style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600),
-    ),
-  );
-
-  Widget _buildSupplierCard() {
-    final a = _analysis!;
-    final suppliers = a['suppliers'] as List;
-    if (suppliers.isEmpty && a['hasHistory'] == false) {
-      return CardBox(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  '⚠️ 无历史数据',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: C.orange,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '该型号无销售历史，建议参考 AI 判断。',
-              style: TextStyle(fontSize: 12, color: C.t2),
-            ),
-          ],
+  List<_RiskItem> _riskItems({
+    required int avgSell,
+    required int maxPurchase,
+    required int netProfit,
+    required int quickProfit,
+    required int sales30,
+    required int inStock,
+    required int stagnant,
+    required int avgTurnover,
+  }) {
+    final list = <_RiskItem>[];
+    if (maxPurchase > 0 && _costFen > maxPurchase) {
+      list.add(
+        _RiskItem(
+          color: C.red,
+          title: '报价超上限',
+          text:
+              '建议最高 ${yuan(maxPurchase)}，当前高出 ${yuan(_costFen - maxPurchase)}。',
         ),
       );
     }
-    return CardBox(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (avgSell <= 0) {
+      list.add(
+        const _RiskItem(
+          color: C.orange,
+          title: '缺少售价历史',
+          text: '没有同型号成交价，建议先看今日批发价和同行售价。',
+        ),
+      );
+    }
+    if (sales30 == 0) {
+      list.add(
+        const _RiskItem(
+          color: C.orange,
+          title: '近30天无成交',
+          text: '动销不足时不要按常规利润模型重仓。',
+        ),
+      );
+    }
+    if (sales30 > 0 && inStock > sales30 * 2) {
+      list.add(
+        _RiskItem(
+          color: C.red,
+          title: '库存偏重',
+          text: '当前在售 $inStock 台，已经超过近30天销量的2倍。',
+        ),
+      );
+    }
+    if (stagnant > 0) {
+      list.add(
+        _RiskItem(
+          color: C.orange,
+          title: '已有滞销',
+          text: '同型号还有 $stagnant 台滞销，先处理旧库存再加仓。',
+        ),
+      );
+    }
+    if (avgTurnover >= 35) {
+      list.add(
+        _RiskItem(
+          color: C.orange,
+          title: '周转偏慢',
+          text: '历史平均周转 $avgTurnover 天，现金会被占用更久。',
+        ),
+      );
+    }
+    if (quickProfit < 0) {
+      list.add(
+        _RiskItem(
+          color: C.red,
+          title: '快速出货会亏',
+          text: '按快速出货价测算净利 ${yuan(quickProfit)}。',
+        ),
+      );
+    }
+    if (list.isEmpty) {
+      list.add(
+        const _RiskItem(
+          color: C.mint,
+          title: '没有明显硬伤',
+          text: '重点盯住成色、电池和是否有隐藏维修成本。',
+        ),
+      );
+    }
+    return list.take(4).toList();
+  }
+
+  int _maxInt(int a, int b) => a > b ? a : b;
+
+  @override
+  Widget build(BuildContext context) {
+    final plan = _buildPlan(_refPrices);
+    return appScaffold(
+      context,
+      '收货报价器',
+      ListView(
+        padding: const EdgeInsets.all(14),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
-          Text(
-            '供应商表现',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: C.t1,
-            ),
-          ),
-          const SizedBox(height: 10),
-          ...suppliers.map(
-            (s) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: C.cyan.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      s['channel'] as String,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: C.cyan,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${s['count']}台',
-                    style: TextStyle(fontSize: 12, color: C.t2),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '均利${((s['profit'] as int) / 100).toStringAsFixed(0)}元',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: C.green,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          _buildInputCard(plan),
+          if (_selectedModel == null)
+            _buildEmptyCard(
+              icon: Icons.inventory_2_outlined,
+              title: '先选一个型号',
+              text: '选择型号后会自动带入历史均价、今日行情和库存压力。',
+            )
+          else if (plan == null)
+            _buildEmptyCard(
+              icon: Icons.payments_outlined,
+              title: '输入收货成本',
+              text: '填入对方报价后，系统会马上给出建议上限和不收原因。',
+            )
+          else ...[
+            _buildDecisionCard(plan),
+            _buildScenarioCard(plan),
+            _buildRiskCard(plan),
+            _buildFactsCard(plan),
+            _buildSupplierCard(),
+            _buildAiCard(plan),
+          ],
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  Widget _buildAiCard() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [C.purple, C.t3]),
-        borderRadius: BorderRadius.circular(18),
-      ),
+  Widget _buildInputCard(_PurchasePlan? plan) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: 20,
+      color: const Color(0xEA0B0F16),
+      borderColor: Colors.white.withValues(alpha: 0.11),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'AI 综合判断',
+            '按报价实时判断',
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            '综合 历史数据 + 采购成本',
+          const Text(
+            '结论来自历史成交、库存、周转和今日批发价。',
+            style: TextStyle(color: C.t3, fontSize: 11.5, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          _buildModelDropdown(),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MoneyField(
+                  controller: _costCtrl,
+                  label: '对方报价(元/台)',
+                  icon: Icons.sell_outlined,
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 84,
+                child: _MoneyField(
+                  controller: _qtyCtrl,
+                  label: '数量',
+                  icon: Icons.tag_rounded,
+                ),
+              ),
+            ],
+          ),
+          if (plan != null && plan.maxPurchase > 0) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: plan.color.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: plan.color.withValues(alpha: 0.20)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '建议最高收货价 ${yuan(plan.maxPurchase)}',
+                      style: TextStyle(
+                        color: plan.color,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  smallBtn(
+                    '填入',
+                    () => _setCost(plan.maxPurchase),
+                    color: plan.color,
+                    icon: Icons.keyboard_return_rounded,
+                  ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _InlineButton(
+                  label: '批量补货建议',
+                  icon: Icons.playlist_add_check_rounded,
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const RestockSuggestionPage(),
+                        ),
+                      ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _InlineButton(
+                  label: '录入今日行情',
+                  icon: Icons.price_change_outlined,
+                  onTap:
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const MarketPricePage(),
+                        ),
+                      ).then((_) {
+                        if (_selectedModel != null)
+                          _onModelChanged(_selectedModel);
+                      }),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModelDropdown() => AppDropdownField<String>(
+    value: _selectedModel,
+    hint: '选择型号',
+    options: _modelOptions,
+    labelBuilder: (value) => value,
+    onChanged: _onModelChanged,
+  );
+
+  Widget _buildDecisionCard(_PurchasePlan plan) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: 20,
+      color: plan.color.withValues(alpha: 0.10),
+      borderColor: plan.color.withValues(alpha: 0.32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: plan.color.withValues(alpha: 0.17),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _decisionIcon(plan.decision),
+                  color: plan.color,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.decision,
+                      style: TextStyle(
+                        color: plan.color,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      plan.summary,
+                      style: const TextStyle(
+                        color: C.t2,
+                        fontSize: 12.5,
+                        height: 1.45,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  '${plan.score}分',
+                  style: TextStyle(
+                    color: plan.color,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _DecisionMetric(
+                  label: '预计单台净利',
+                  value: plan.avgSell > 0 ? yuan(plan.netProfit) : '暂无',
+                  color: plan.netProfit >= _targetProfit ? C.mint : C.orange,
+                ),
+              ),
+              _VerticalRule(),
+              Expanded(
+                child: _DecisionMetric(
+                  label: '本批占用',
+                  value: yuan(plan.batchCapital),
+                  color: C.cyan,
+                ),
+              ),
+              _VerticalRule(),
+              Expanded(
+                child: _DecisionMetric(
+                  label: '保本售价',
+                  value: yuan(plan.breakEven),
+                  color: C.purple,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _decisionIcon(String decision) {
+    if (decision.contains('建议')) return Icons.check_circle_outline_rounded;
+    if (decision.contains('不建议')) return Icons.block_rounded;
+    return Icons.tune_rounded;
+  }
+
+  Widget _buildScenarioCard(_PurchasePlan plan) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDE0B0F16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '三档报价',
             style: TextStyle(
-              fontSize: 11,
-              color: Colors.white.withOpacity(0.7),
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 12),
-          if (_loading)
-            const Center(child: CircularProgressIndicator(color: Colors.white))
-          else if (_aiResult != null)
-            Text(
-              _aiResult!,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.white,
-                height: 1.8,
-              ),
-            )
-          else
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _askAi,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.2),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  '获取 AI 采购建议',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
+          _ScenarioLine(
+            title: '按当前报价',
+            subtitle: '${yuan(plan.costFen)} × ${plan.quantity}台',
+            value: plan.avgSell > 0 ? '净利 ${yuan(plan.netProfit)}' : '缺售价',
+            color: plan.netProfit >= _targetProfit ? C.mint : C.orange,
+          ),
+          if (plan.maxPurchase > 0)
+            _ScenarioLine(
+              title: '压到建议上限',
+              subtitle: '最高 ${yuan(plan.maxPurchase)}',
+              value: '目标净利 ${yuan(_targetProfit)}',
+              color: C.cyan,
+              onTap: () => _setCost(plan.maxPurchase),
+            ),
+          if (plan.quickSell > 0)
+            _ScenarioLine(
+              title: '快速出货价',
+              subtitle: '按历史均价94%出',
+              value: '${yuan(plan.quickSell)} / 净利${yuan(plan.quickProfit)}',
+              color: plan.quickProfit >= 0 ? C.purple : C.red,
             ),
         ],
       ),
     );
   }
 
-  void _analyze() {
-    if (_selectedModel == null) {
-      toast(context, '请选择型号');
-      return;
-    }
-    final cost = double.tryParse(_costCtrl.text) ?? 0;
-    if (cost <= 0) {
-      toast(context, '请输入采购成本');
-      return;
-    }
-    setState(() {
-      _analysis = gStorage.getModelAnalysis(_selectedModel!);
-      _marketPrice = gStorage.getMarketPrice(_selectedModel!);
-      _marketHistory = gStorage.getMarketPriceHistory(
-        _selectedModel!,
-        days: 30,
-      );
-      _aiResult = null;
-    });
+  Widget _buildRiskCard(_PurchasePlan plan) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDE0B0F16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '不收原因 / 风险',
+            style: TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...plan.risks.map(
+            (risk) => Padding(
+              padding: const EdgeInsets.only(bottom: 9),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: risk.color.withValues(alpha: 0.13),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.priority_high_rounded,
+                      color: risk.color,
+                      size: 17,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          risk.title,
+                          style: TextStyle(
+                            color: risk.color,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          risk.text,
+                          style: const TextStyle(
+                            color: C.t2,
+                            fontSize: 11.5,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFactsCard(_PurchasePlan plan) {
+    final ref = _refPrices!;
+    final market = (_marketPrice?['price'] as int?) ?? 0;
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDE0B0F16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '模型事实',
+            style: TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: [
+              _FactTile(
+                '历史售价',
+                _amountText(ref['avgSellPrice'] as int),
+                C.cyan,
+              ),
+              _FactTile('历史均利', _amountText(ref['avgProfit'] as int), C.mint),
+              _FactTile('近30天销量', '${ref['sales30d']}台', C.purple),
+              _FactTile('当前在售', '${ref['inStockCount']}台', C.orange),
+              _FactTile(
+                '滞销',
+                '${ref['stagnantCount']}台',
+                (ref['stagnantCount'] as int) > 0 ? C.red : C.t3,
+              ),
+              _FactTile('均周转', '${ref['avgTurnoverDays']}天', C.blue),
+              _FactTile(
+                '今日批发',
+                market > 0 ? yuan(market) : '未录入',
+                market > 0 ? C.cyan : C.t3,
+              ),
+              _FactTile(
+                '历史最佳拿货',
+                _amountText(ref['bestPurchaseCost'] as int),
+                C.t2,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _amountText(int amount) => amount > 0 ? yuan(amount) : '暂无';
+
+  Widget _buildSupplierCard() {
+    final analysis = _analysis;
+    if (analysis == null) return const SizedBox.shrink();
+    final suppliers = analysis['suppliers'] as List;
+    if (suppliers.isEmpty) return const SizedBox.shrink();
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDE0B0F16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '历史采购渠道',
+            style: TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...suppliers
+              .take(4)
+              .map(
+                (s) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          s['channel'] as String,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: C.t1,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${s['count']}台',
+                        style: const TextStyle(color: C.t3, fontSize: 11),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        '均利 ${yuan((s['profit'] as int) ~/ (s['count'] as int))}',
+                        style: const TextStyle(
+                          color: C.mint,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiCard(_PurchasePlan plan) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(14),
+      radius: 18,
+      color: const Color(0xDA0D111A),
+      borderColor: C.purple.withValues(alpha: 0.22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: C.purple.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: C.purple,
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI复核',
+                      style: TextStyle(
+                        color: C.t1,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      '用于补充判断，不替代本地报价线',
+                      style: TextStyle(color: C.t3, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (_loading)
+            const LinearProgressIndicator(minHeight: 3, color: C.purple)
+          else if (_aiResult != null)
+            Text(
+              _aiResult!,
+              style: const TextStyle(
+                color: C.t2,
+                fontSize: 12.5,
+                height: 1.65,
+                fontWeight: FontWeight.w600,
+              ),
+            )
+          else
+            Text(
+              '本地结论是「${plan.decision}」。如果你要和供应商谈价，可以让AI把压价理由整理成一句话。',
+              style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+            ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _loading ? null : _askAi,
+              icon: const Icon(Icons.psychology_alt_outlined, size: 18),
+              label: Text(_aiResult == null ? '让AI复核本次报价' : '重新复核'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: C.purple,
+                side: BorderSide(color: C.purple.withValues(alpha: 0.45)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: const StadiumBorder(),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyCard({
+    required IconData icon,
+    required String title,
+    required String text,
+  }) {
+    return GlassPanel(
+      padding: const EdgeInsets.all(20),
+      radius: 20,
+      color: const Color(0xD80B0F16),
+      child: Column(
+        children: [
+          Icon(icon, color: C.t3, size: 34),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _setCost(int costFen) {
+    _costCtrl.text = (costFen / 100).toStringAsFixed(0);
   }
 
   void _askAi() async {
-    final costFen = ((double.tryParse(_costCtrl.text) ?? 0) * 100).round();
-    final qty = int.tryParse(_qtyCtrl.text) ?? 1;
+    if (_selectedModel == null || _refPrices == null) {
+      toast(context, '请先选择型号');
+      return;
+    }
+    if (_costFen <= 0) {
+      toast(context, '请输入采购成本');
+      return;
+    }
+    final analysis = _analysis ?? gStorage.getModelAnalysis(_selectedModel!);
     setState(() => _loading = true);
     final r = await AiService.purchaseDecision(
       model: _selectedModel!,
-      purchaseCost: costFen,
-      quantity: qty,
-      analysis: _analysis!,
+      purchaseCost: _costFen,
+      quantity: _qty,
+      analysis: analysis,
       marketPrice: _marketPrice,
       marketHistory: _marketHistory,
     );
@@ -913,4 +1083,283 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       _loading = false;
     });
   }
+}
+
+class _PurchasePlan {
+  final String decision;
+  final String summary;
+  final Color color;
+  final int score;
+  final int costFen;
+  final int quantity;
+  final int avgSell;
+  final int quickSell;
+  final int netProfit;
+  final int quickProfit;
+  final int maxPurchase;
+  final int fixedCosts;
+  final int breakEven;
+  final int batchCapital;
+  final List<_RiskItem> risks;
+
+  const _PurchasePlan({
+    required this.decision,
+    required this.summary,
+    required this.color,
+    required this.score,
+    required this.costFen,
+    required this.quantity,
+    required this.avgSell,
+    required this.quickSell,
+    required this.netProfit,
+    required this.quickProfit,
+    required this.maxPurchase,
+    required this.fixedCosts,
+    required this.breakEven,
+    required this.batchCapital,
+    required this.risks,
+  });
+}
+
+class _RiskItem {
+  final Color color;
+  final String title;
+  final String text;
+
+  const _RiskItem({
+    required this.color,
+    required this.title,
+    required this.text,
+  });
+}
+
+class _MoneyField extends StatelessWidget {
+  final TextEditingController controller;
+  final String label;
+  final IconData icon;
+
+  const _MoneyField({
+    required this.controller,
+    required this.label,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) => AppFormField(
+    controller: controller,
+    keyboardType: TextInputType.number,
+    label: label,
+    icon: icon,
+  );
+}
+
+class _InlineButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _InlineButton({
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 42,
+    child: OutlinedButton.icon(
+      onPressed: onTap,
+      icon: Icon(icon, size: 17),
+      label: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+        ),
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: C.t1,
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+        backgroundColor: Colors.white.withValues(alpha: 0.05),
+        shape: const StadiumBorder(),
+      ),
+    ),
+  );
+}
+
+class _DecisionMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DecisionMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: C.t3,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _VerticalRule extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1,
+    height: 38,
+    color: Colors.white.withValues(alpha: 0.08),
+  );
+}
+
+class _ScenarioLine extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String value;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ScenarioLine({
+    required this.title,
+    required this.subtitle,
+    required this.value,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final row = Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.stacked_line_chart_rounded,
+              color: color,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: C.t1,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: C.t3, fontSize: 10.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+    if (onTap == null) return row;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: row,
+      ),
+    );
+  }
+}
+
+class _FactTile extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _FactTile(this.label, this.value, this.color);
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 132,
+    padding: const EdgeInsets.all(11),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.045),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: C.t3,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

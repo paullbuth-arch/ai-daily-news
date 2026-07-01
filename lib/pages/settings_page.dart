@@ -1,19 +1,15 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../main.dart';
 import '../update_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
-import '../login_page.dart';
-import '../api_service.dart';
-import '../backup_service.dart';
 import 'webdav_config_page.dart';
 import 'ai_config_page.dart';
+import 'xianyu_copywriting_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -26,8 +22,6 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _updateChecking = false;
   String? _updateError;
   double? _updateProgress;
-  bool _cloudSyncing = false;
-  String? _cloudError;
 
   @override
   void initState() {
@@ -92,7 +86,7 @@ class _SettingsPageState extends State<SettingsPage> {
               children: [
                 const SectionTitle('关于'),
                 const SizedBox(height: 10),
-                _row('应用名称', '机掌柜'),
+                _row('应用名称', '货脉'),
                 _row('版本', 'v${UpdateService.currentVersion}'),
                 _row(
                   'AI引擎',
@@ -109,6 +103,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 ghostBtn(
+                  '闲鱼文案经验库',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const XianyuCopywritingPage(),
+                    ),
+                  ),
+                  icon: Icons.library_books_outlined,
+                ),
+                const SizedBox(height: 8),
+                ghostBtn(
                   'WebDAV 云同步',
                   () => Navigator.push(
                     context,
@@ -117,35 +122,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 8),
                 ghostBtn('检查更新', _checkUpdate),
-                const SizedBox(height: 8),
-                ghostBtn('云端同步', _cloudSync),
               ],
             ),
           ),
-          if (_cloudSyncing)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Center(
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: C.t3,
-                  ),
-                ),
-              ),
-            ),
-          if (_cloudError != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Text(
-                _cloudError!,
-                style: TextStyle(fontSize: 11, color: C.t3),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          // 登录状态
           CardBox(
             child: Row(
               children: [
@@ -153,7 +132,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: AuthService.isLoggedIn ? C.green : C.t3,
+                    color: C.green,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -162,49 +141,17 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        AuthService.isLoggedIn
-                            ? '已登录：${AuthService.email}'
-                            : '离线模式',
+                      const Text(
+                        '本地模式',
                         style: TextStyle(fontSize: 12, color: C.t1),
                       ),
-                      Text(
-                        AuthService.isLoggedIn ? '数据可同步到云端' : '登录后可同步数据到云端',
+                      const Text(
+                        '账号登录已临时屏蔽，数据保存在本机；需要云备份请使用 WebDAV。',
                         style: TextStyle(fontSize: 10, color: C.t3),
                       ),
                     ],
                   ),
                 ),
-                if (AuthService.isLoggedIn)
-                  TextButton(
-                    onPressed: _logout,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      '退出',
-                      style: TextStyle(fontSize: 11, color: C.red),
-                    ),
-                  )
-                else
-                  TextButton(
-                    onPressed:
-                        () => Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(builder: (_) => const LoginPage()),
-                        ),
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      '登录',
-                      style: TextStyle(fontSize: 11, color: C.t3),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -260,40 +207,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: ghostBtn('清空所有数据（重新初始化）', () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder:
-                    (ctx) => AlertDialog(
-                      backgroundColor: C.bgCard,
-                      title: const Text(
-                        '确认清空',
-                        style: TextStyle(color: C.red, fontSize: 16),
-                      ),
-                      content: Text(
-                        '将删除所有设备、订单、代理、维修记录，且不可恢复。确定继续吗？',
-                        style: TextStyle(color: C.t2, fontSize: 13),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: Text('取消', style: TextStyle(color: C.t2)),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(ctx, true),
-                          child: Text('清空', style: TextStyle(color: C.red)),
-                        ),
-                      ],
-                    ),
-              );
-              if (ok == true) {
-                await gStorage.clearAll();
-                await seedDemoData();
-                _calcSize();
-                setState(() {});
-                toast(context, '数据已清空并重新初始化');
-              }
-            }),
+            child: ghostBtn('清空所有数据（重新初始化）', _resetAllData),
           ),
         ],
       ),
@@ -373,6 +287,69 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _resetAllData() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: C.bgCard,
+            title: const Text(
+              '确认清空',
+              style: TextStyle(color: C.red, fontSize: 16),
+            ),
+            content: Text(
+              '将删除设备、订单、代理、维修记录、本地图片、登录状态和个性化设置，且不可恢复。确定继续吗？',
+              style: TextStyle(color: C.t2, fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('取消', style: TextStyle(color: C.t2)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text('彻底清空', style: TextStyle(color: C.red)),
+              ),
+            ],
+          ),
+    );
+    if (ok != true) return;
+
+    await _deleteLocalGeneratedFiles();
+    await gStorage.clearAll(markInitialized: true);
+    final settings = gStorage.getSettings();
+    settings['initialized'] = true;
+    settings['themeMode'] = 'dark';
+    settings['aiConfig'] = AiConfig.defaultConfig().toMap();
+    await gStorage.saveSettings(settings);
+    AiService.setConfig(AiConfig.defaultConfig());
+    await AuthService.logout(gStorage);
+    gThemeMode = ThemeMode.dark;
+    gOnThemeChange?.call();
+    _calcSize();
+    if (!mounted) return;
+    setState(() {});
+    toast(context, '数据已彻底清空，已恢复默认配置');
+  }
+
+  Future<void> _deleteLocalGeneratedFiles() async {
+    final dir = Directory(gDocDir);
+    if (!await dir.exists()) return;
+    await for (final entity in dir.list(followLinks: false)) {
+      if (entity is! File) continue;
+      final name = entity.uri.pathSegments.last;
+      final shouldDelete =
+          name.startsWith('about_') ||
+          name.startsWith('dev_') ||
+          name.startsWith('cover_') ||
+          name == 'ipad_boss_data.json.bak';
+      if (!shouldDelete) continue;
+      try {
+        await entity.delete();
+      } catch (_) {}
+    }
   }
 
   /// 检查更新
@@ -469,154 +446,6 @@ class _SettingsPageState extends State<SettingsPage> {
     if (!mounted) return;
     if (!installed) {
       setState(() => _updateError = '安装失败，请在设置中手动开启「安装未知应用」权限');
-    }
-  }
-
-  Future<void> _restoreLocalAuth(String token, String? email) async {
-    await AuthService.login(gStorage, token, email ?? '');
-  }
-
-  /// 云端同步（用户选择下载或上传，避免无提示覆盖）
-  Future<void> _cloudSync() async {
-    if (!AuthService.isLoggedIn) {
-      setState(() => _cloudError = '请先登录');
-      return;
-    }
-    setState(() {
-      _cloudSyncing = true;
-      _cloudError = null;
-    });
-    final token = AuthService.token!;
-    final email = AuthService.email;
-    final localSettings = snapshotLocalOnlySettings(gStorage);
-    final remoteResult = await ApiService.fetchDataResult(token);
-    if (!mounted) return;
-
-    final remoteError = remoteResult['error'] as String?;
-    final remoteStatus = remoteResult['statusCode'] as int?;
-    if (remoteError != null && remoteStatus != 404) {
-      setState(() {
-        _cloudSyncing = false;
-        _cloudError = remoteError;
-      });
-      return;
-    }
-
-    if (remoteError != null) {
-      final err = await ApiService.saveData(
-        token,
-        storagePayloadForSync(gStorage),
-      );
-      if (err != null) {
-        setState(() {
-          _cloudSyncing = false;
-          _cloudError = err;
-        });
-        return;
-      }
-    } else {
-      setState(() => _cloudSyncing = false);
-      final action = await showDialog<String>(
-        context: context,
-        builder:
-            (ctx) => AlertDialog(
-              backgroundColor: C.bgCard,
-              title: Text(
-                '云端已有数据',
-                style: TextStyle(color: C.t1, fontSize: 16),
-              ),
-              content: Text(
-                '请选择同步方向。下载会先自动备份当前本地数据；上传会用本机数据覆盖云端。',
-                style: TextStyle(color: C.t2, fontSize: 13),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text('取消', style: TextStyle(color: C.t2)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, 'download'),
-                  child: Text('下载覆盖本地', style: TextStyle(color: C.t3)),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx, 'upload'),
-                  child: Text('上传覆盖云端', style: TextStyle(color: C.orange)),
-                ),
-              ],
-            ),
-      );
-      if (action == null) return;
-      setState(() {
-        _cloudSyncing = true;
-        _cloudError = null;
-      });
-      if (action == 'download') {
-        await BackupService.backupCurrent(
-          docDir: gDocDir,
-          outDir: (await getTemporaryDirectory()).path,
-        );
-        gStorage.setFullData(remoteResult);
-        await gStorage.save();
-        await restoreLocalOnlySettings(gStorage, localSettings);
-        await _restoreLocalAuth(token, email);
-        AiService.setConfig(
-          AiConfig.fromMap(
-            gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?,
-          ),
-        );
-      } else {
-        final err = await ApiService.saveData(
-          token,
-          storagePayloadForSync(gStorage),
-        );
-        if (err != null) {
-          if (!mounted) return;
-          setState(() {
-            _cloudSyncing = false;
-            _cloudError = err;
-          });
-          return;
-        }
-      }
-    }
-    if (!mounted) return;
-    setState(() {
-      _cloudSyncing = false;
-    });
-    toast(context, '✅ 云端同步完成');
-  }
-
-  /// 退出登录
-  Future<void> _logout() async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.bgCard,
-            title: Text('退出登录', style: TextStyle(color: C.t1, fontSize: 16)),
-            content: Text(
-              '退出后数据将保留在本地，登录后可恢复同步。确定退出？',
-              style: TextStyle(color: C.t2, fontSize: 13),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text('取消', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text('退出', style: TextStyle(color: C.red)),
-              ),
-            ],
-          ),
-    );
-    if (ok == true) {
-      await AuthService.logout(gStorage);
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginPage()),
-      );
     }
   }
 }

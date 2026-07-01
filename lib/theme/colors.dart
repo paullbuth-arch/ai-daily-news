@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 /// 默认使用深色，因为店主常在店内、仓库和夜间快速扫状态。
 ThemeMode gThemeMode = ThemeMode.dark;
 
-/// 机掌柜视觉系统。
+/// 货脉视觉系统。
 ///
 /// 方向：深色石墨背景、磨砂玻璃面板、柔和青蓝/浅紫/薄荷功能色。
 class C {

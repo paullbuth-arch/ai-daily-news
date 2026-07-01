@@ -11,9 +11,9 @@ void main() {
         'https://open.bigmodel.cn/api/paas/v4/chat/completions',
       );
       expect(d.apiKey, isNotEmpty);
-      expect(d.model, 'glm-4.7-flash');
+      expect(d.model, 'GLM-4-Flash-250414');
       expect(d.protocol, 'openai');
-      expect(kDefaultAiVisionModel, 'glm-4.1v-thinking-flash');
+      expect(kDefaultAiVisionModel, 'GLM-4.1V-Thinking-Flash');
     });
 
     test('fromMap(null) 回退默认值', () {
@@ -99,7 +99,7 @@ void main() {
     test('setConfig(defaultConfig) 完整恢复', () {
       AiService.setConfig(AiConfig(model: 'temp'));
       AiService.setConfig(AiConfig.defaultConfig());
-      expect(AiService.effectiveConfig.model, 'glm-4.7-flash');
+      expect(AiService.effectiveConfig.model, 'GLM-4-Flash-250414');
       expect(
         AiService.effectiveConfig.baseUrl,
         'https://open.bigmodel.cn/api/paas/v4/chat/completions',

@@ -22,7 +22,7 @@ class Device {
   String? sellChannel; // 销售渠道
   String? sellDate; // 售出日期
   int? repairCost; // 翻新维修成本
-  int? platformFee; // 平台佣金
+  int? platformFee; // 平台手续费
   int? logisticsCost; // 物流成本
   int? afterSaleCost; // 售后成本
   String? buyerContact; // 买家联系方式
@@ -140,6 +140,56 @@ class Device {
     'buyerContact': buyerContact,
     'imagePath': imagePath,
     'description': description,
+    'createdAt': createdAt,
+  };
+}
+
+/// 闲鱼文案经验样本。
+class XianyuCopyExample {
+  final String id;
+  String title;
+  String model;
+  String condition;
+  String text;
+  String tags;
+  String resultNote;
+  int score;
+  String createdAt;
+
+  XianyuCopyExample({
+    required this.id,
+    required this.title,
+    this.model = '',
+    this.condition = '',
+    required this.text,
+    this.tags = '',
+    this.resultNote = '',
+    this.score = 4,
+    required this.createdAt,
+  });
+
+  factory XianyuCopyExample.fromJson(Map<String, dynamic> j) =>
+      XianyuCopyExample(
+        id: j['id'] as String,
+        title: j['title'] as String? ?? '未命名样本',
+        model: j['model'] as String? ?? '',
+        condition: j['condition'] as String? ?? '',
+        text: j['text'] as String? ?? '',
+        tags: j['tags'] as String? ?? '',
+        resultNote: j['resultNote'] as String? ?? '',
+        score: (j['score'] as num?)?.toInt() ?? 4,
+        createdAt: j['createdAt'] as String? ?? '',
+      );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'model': model,
+    'condition': condition,
+    'text': text,
+    'tags': tags,
+    'resultNote': resultNote,
+    'score': score,
     'createdAt': createdAt,
   };
 }

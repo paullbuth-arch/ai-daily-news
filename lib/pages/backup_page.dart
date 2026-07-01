@@ -3,15 +3,11 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
-import '../models.dart';
 import '../main.dart';
 import '../backup_service.dart';
 import '../ai_service.dart';
-import 'package:archive/archive.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class BackupPage extends StatefulWidget {
@@ -178,7 +174,7 @@ class _BackupPageState extends State<BackupPage> {
       await SharePlus.instance.share(
         ShareParams(
           files: [XFile(zipPath)],
-          text: '机掌柜数据备份',
+          text: '货脉数据备份',
           sharePositionOrigin: origin,
         ),
       );

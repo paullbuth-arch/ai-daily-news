@@ -28,6 +28,7 @@ class Storage {
     'repairParts': [],
     'purchaseOrders': [],
     'qcReports': [],
+    'xianyuCopyExamples': [],
     'settings': {},
   };
 
@@ -102,6 +103,91 @@ class Storage {
     final list = getDevices().where((e) => e.id != id).toList();
     _cache['devices'] = list.map((e) => e.toJson()).toList();
     await _flush();
+  }
+
+  // ====== 闲鱼文案经验库 ======
+  String getXianyuCopyRules() {
+    final settings = getSettings();
+    return settings['xianyuCopyRules'] as String? ?? '';
+  }
+
+  Future<void> saveXianyuCopyRules(String rules) async {
+    final settings = getSettings();
+    settings['xianyuCopyRules'] = rules;
+    await saveSettings(settings);
+  }
+
+  List<XianyuCopyExample> getXianyuCopyExamples() {
+    final list = _cache['xianyuCopyExamples'] as List? ?? [];
+    return list
+        .map((e) => XianyuCopyExample.fromJson(e as Map<String, dynamic>))
+        .where((e) => e.text.trim().isNotEmpty)
+        .toList();
+  }
+
+  Future<XianyuCopyExample> addXianyuCopyExample(
+    XianyuCopyExample example,
+  ) async {
+    final list = getXianyuCopyExamples();
+    list.insert(0, example);
+    _cache['xianyuCopyExamples'] = list.map((e) => e.toJson()).toList();
+    await _flush();
+    return example;
+  }
+
+  Future<void> updateXianyuCopyExample(XianyuCopyExample example) async {
+    final list = getXianyuCopyExamples();
+    final idx = list.indexWhere((e) => e.id == example.id);
+    if (idx >= 0) {
+      list[idx] = example;
+      _cache['xianyuCopyExamples'] = list.map((e) => e.toJson()).toList();
+      await _flush();
+    }
+  }
+
+  Future<void> deleteXianyuCopyExample(String id) async {
+    final list = getXianyuCopyExamples().where((e) => e.id != id).toList();
+    _cache['xianyuCopyExamples'] = list.map((e) => e.toJson()).toList();
+    await _flush();
+  }
+
+  Future<int> importSoldDescriptionsAsCopyExamples({int limit = 20}) async {
+    final existingTexts =
+        getXianyuCopyExamples().map((e) => e.text.trim()).toSet();
+    final sold =
+        getDevices()
+            .where(
+              (d) =>
+                  d.status == 'sold' && (d.description ?? '').trim().isNotEmpty,
+            )
+            .toList();
+    sold.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    var imported = 0;
+    for (final d in sold) {
+      if (imported >= limit) break;
+      final text = d.description!.trim();
+      if (existingTexts.contains(text)) continue;
+      existingTexts.add(text);
+      await addXianyuCopyExample(
+        XianyuCopyExample(
+          id: 'copy_${DateTime.now().microsecondsSinceEpoch}_$imported',
+          title: '${d.model} ${d.capacity}',
+          model: d.model,
+          condition: d.condition,
+          text: text,
+          tags: '已售导入',
+          resultNote:
+              d.sellPrice > 0
+                  ? '已售出，成交价 ${(d.sellPrice / 100).round()} 元'
+                  : '已售出',
+          score: 4,
+          createdAt: DateTime.now().toIso8601String(),
+        ),
+      );
+      imported++;
+    }
+    return imported;
   }
 
   Future<Order> addOrder(Order o) async {
@@ -249,8 +335,11 @@ class Storage {
   }
 
   /// 清空所有数据
-  Future<void> clearAll() async {
+  Future<void> clearAll({bool markInitialized = false}) async {
     _cache = _emptyData();
+    if (markInitialized) {
+      _cache['settings'] = {'initialized': true};
+    }
     await _flush();
   }
 
@@ -345,6 +434,38 @@ class Storage {
       result.add(DailyStat(date: ms, profit: profit));
     }
     return result;
+  }
+
+  /// 本月每周毛利（按自然月内第1/2/3...周聚合）
+  List<DailyStat> getCurrentMonthWeeklyStats({DateTime? month}) {
+    final orders = getOrders();
+    final base = month ?? DateTime.now();
+    final firstDay = DateTime(base.year, base.month, 1);
+    final nextMonth = DateTime(base.year, base.month + 1, 1);
+    final daysInMonth = nextMonth.difference(firstDay).inDays;
+    final weeks = ((daysInMonth + firstDay.weekday - 1) / 7).ceil();
+    final profits = List<int>.filled(weeks, 0);
+
+    for (final o in orders) {
+      if (o.status == 'cancelled') continue;
+      DateTime? created;
+      try {
+        created = DateTime.parse(o.createdAt.substring(0, 10));
+      } catch (_) {
+        continue;
+      }
+      if (created.isBefore(firstDay) || !created.isBefore(nextMonth)) {
+        continue;
+      }
+      final offset = created.difference(firstDay).inDays + firstDay.weekday - 1;
+      final index = (offset / 7).floor().clamp(0, weeks - 1).toInt();
+      profits[index] += o.netProfit;
+    }
+
+    return List.generate(
+      weeks,
+      (i) => DailyStat(date: '第${i + 1}周', profit: profits[i]),
+    );
   }
 
   /// 昨日毛利（用于首页趋势箭头对比）

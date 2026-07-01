@@ -5,7 +5,6 @@ import 'package:path_provider/path_provider.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../main.dart';
 import '../webdav_service.dart';
 import '../ai_service.dart';
@@ -58,62 +57,38 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
               children: [
                 Text('服务器地址', style: TextStyle(fontSize: 13, color: C.t2)),
                 const SizedBox(height: 8),
-                TextField(
+                AppFormField(
                   controller: _urlCtrl,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'https://dav.jianguoyun.com/dav/',
-                    hintStyle: TextStyle(color: C.t3, fontSize: 12),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
-                    ),
-                  ),
+                  label: '服务器地址',
+                  hint: 'https://dav.jianguoyun.com/dav/',
+                  icon: Icons.dns_outlined,
                 ),
                 const SizedBox(height: 12),
                 Text('账号', style: TextStyle(fontSize: 13, color: C.t2)),
                 const SizedBox(height: 8),
-                TextField(
+                AppFormField(
                   controller: _userCtrl,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: '坚果云账号或邮箱',
-                    hintStyle: TextStyle(color: C.t3, fontSize: 12),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
-                    ),
-                  ),
+                  label: '账号',
+                  hint: '坚果云账号或邮箱',
+                  icon: Icons.person_outline_rounded,
                 ),
                 const SizedBox(height: 12),
                 Text('密码（应用密码）', style: TextStyle(fontSize: 13, color: C.t2)),
                 const SizedBox(height: 8),
-                TextField(
+                AppFormField(
                   controller: _passCtrl,
+                  label: '应用密码',
+                  hint: '坚果云需用应用密码',
+                  icon: Icons.lock_outline_rounded,
                   obscureText: _obscurePass,
-                  style: TextStyle(color: C.t1, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: '坚果云需用应用密码',
-                    hintStyle: TextStyle(color: C.t3, fontSize: 12),
-                    filled: true,
-                    fillColor: C.bgDeep,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: BorderSide(color: C.border),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePass ? Icons.visibility_off : Icons.visibility,
+                      color: C.t3,
+                      size: 18,
                     ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePass ? Icons.visibility_off : Icons.visibility,
-                        color: C.t3,
-                        size: 18,
-                      ),
-                      onPressed:
-                          () => setState(() => _obscurePass = !_obscurePass),
-                    ),
+                    onPressed:
+                        () => setState(() => _obscurePass = !_obscurePass),
                   ),
                 ),
               ],

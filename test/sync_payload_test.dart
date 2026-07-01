@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:ipad_boss_app/main.dart' as app;
 import 'package:ipad_boss_app/storage.dart';
 import 'package:ipad_boss_app/utils/utils.dart';
 
@@ -27,7 +26,7 @@ void main() {
       'username': 'boss',
       'password': 'secret',
     };
-    settings['aiConfig'] = {'model': 'glm-4.7-flash'};
+    settings['aiConfig'] = {'model': 'GLM-4-Flash-250414'};
     await storage.saveSettings(settings);
 
     final payload = storagePayloadForSync(storage);
@@ -36,7 +35,7 @@ void main() {
     expect(syncSettings.containsKey('auth_token'), false);
     expect(syncSettings.containsKey('auth_email'), false);
     expect(syncSettings.containsKey('webdavConfig'), false);
-    expect(syncSettings['aiConfig'], {'model': 'glm-4.7-flash'});
+    expect(syncSettings['aiConfig'], {'model': 'GLM-4-Flash-250414'});
   });
 
   test('local-only settings survive full data replacement', () async {
