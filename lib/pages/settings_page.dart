@@ -10,6 +10,7 @@ import '../auth_service.dart';
 import '../backup_service.dart';
 import 'webdav_config_page.dart';
 import 'ai_config_page.dart';
+import 'ai_prompt_rules_page.dart';
 import 'xianyu_copywriting_page.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -101,6 +102,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     context,
                     MaterialPageRoute(builder: (_) => const AiConfigPage()),
                   ),
+                ),
+                const SizedBox(height: 8),
+                ghostBtn(
+                  'AI 提示词/规则',
+                  () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AiPromptRulesPage(),
+                    ),
+                  ),
+                  icon: Icons.tune_rounded,
                 ),
                 const SizedBox(height: 8),
                 ghostBtn(
@@ -342,6 +354,7 @@ class _SettingsPageState extends State<SettingsPage> {
     settings['aiConfig'] = AiConfig.defaultConfig().toMap();
     await gStorage.saveSettings(settings);
     AiService.setConfig(AiConfig.defaultConfig());
+    AiService.setPromptRules({});
     await AuthService.logout(gStorage);
     gThemeMode = ThemeMode.dark;
     gOnThemeChange?.call();

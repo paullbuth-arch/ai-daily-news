@@ -232,6 +232,7 @@ class _BackupPageState extends State<BackupPage> {
           gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?,
         ),
       );
+      AiService.setPromptRules(gStorage.getAiPromptRules());
       if (!mounted) return;
       setState(() {
         _busy = false;
@@ -284,6 +285,7 @@ class _BackupPageState extends State<BackupPage> {
           gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?,
         ),
       );
+      AiService.setPromptRules(gStorage.getAiPromptRules());
       if (!mounted) return;
       setState(() => _busy = false);
       toast(context, success ? '已恢复到导入前状态' : '没有找到备份文件');

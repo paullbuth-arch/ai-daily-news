@@ -362,6 +362,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
           gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?,
         ),
       );
+      AiService.setPromptRules(gStorage.getAiPromptRules());
       await WebDavService.markSynced(gStorage);
     }
     if (!mounted) return;

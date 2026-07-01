@@ -688,7 +688,7 @@ class StockPageState extends State<StockPage> {
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                           childAspectRatio:
-                              columns == 1 ? (phoneTile ? 1.08 : 1.12) : 0.96,
+                              columns == 1 ? (phoneTile ? 1.78 : 1.92) : 1.85,
                         ),
                         delegate: SliverChildBuilderDelegate((context, i) {
                           final device = devices[i];
@@ -1046,9 +1046,8 @@ class _DeviceProjectCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         child: Ink(
           decoration: BoxDecoration(
-            color: const Color(0xF00D1017),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withOpacity(0.10)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
             boxShadow: C.cardShadow,
           ),
           child: ClipRRect(
@@ -1060,34 +1059,54 @@ class _DeviceProjectCard extends StatelessWidget {
                     (box.maxWidth * dpr).round().clamp(480, 1400).toInt();
                 final cacheHeight =
                     (box.maxHeight * dpr).round().clamp(360, 1200).toInt();
+                final imageBandHeight = box.maxHeight * 0.72;
                 return Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (image != null)
-                      Image.file(
-                        image,
-                        fit: BoxFit.cover,
-                        cacheWidth: cacheWidth,
-                        cacheHeight: cacheHeight,
-                        filterQuality: FilterQuality.low,
-                        errorBuilder:
-                            (_, __, ___) => CustomPaint(
-                              painter: _DeviceBackdropPainter(device.model),
-                            ),
-                      )
-                    else
-                      CustomPaint(
-                        painter: _DeviceBackdropPainter(device.model),
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: const Color(0xF00D1017),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
                       ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: imageBandHeight,
+                      child:
+                          image != null
+                              ? Image.file(
+                                image,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.bottomCenter,
+                                cacheWidth: cacheWidth,
+                                cacheHeight: cacheHeight,
+                                filterQuality: FilterQuality.low,
+                                errorBuilder:
+                                    (_, __, ___) => CustomPaint(
+                                      painter: _DeviceBackdropPainter(
+                                        device.model,
+                                      ),
+                                    ),
+                              )
+                              : CustomPaint(
+                                painter: _DeviceBackdropPainter(device.model),
+                              ),
+                    ),
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              Colors.transparent,
-                              Colors.black.withOpacity(0.18),
-                              Colors.black.withOpacity(0.78),
+                              const Color(0xF00D1017),
+                              Colors.black.withValues(alpha: 0.72),
+                              Colors.black.withValues(alpha: 0.22),
+                              Colors.black.withValues(alpha: 0.82),
                             ],
+                            stops: const [0.0, 0.42, 0.68, 1.0],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
@@ -1141,22 +1160,11 @@ class _DeviceProjectCard extends StatelessWidget {
                                 ),
                               ),
                     ),
-                    Positioned(
-                      left: 14,
-                      right: 14,
-                      bottom: 14,
-                      child: Container(
+                    Positioned.fill(
+                      child: Padding(
                         padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.36),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.08),
-                          ),
-                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
                               children: [
@@ -1205,7 +1213,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 11),
+                            const SizedBox(height: 10),
                             Row(
                               children: [
                                 Expanded(
@@ -1233,7 +1241,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 11),
+                            const Spacer(),
                             if (selectionMode)
                               _SelectionHint(selected: selected)
                             else

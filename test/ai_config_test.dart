@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ipad_boss_app/ai_prompts.dart';
 import 'package:ipad_boss_app/ai_service.dart';
 
 void main() {
@@ -104,6 +105,22 @@ void main() {
         AiService.effectiveConfig.baseUrl,
         'https://open.bigmodel.cn/api/paas/v4/chat/completions',
       );
+    });
+  });
+
+  group('AiService 提示词规则', () {
+    test('无自定义规则时使用默认提示词', () {
+      AiService.setPromptRules({});
+      expect(
+        AiService.prompt(AiPromptKeys.priceAdvice),
+        contains('二手iPad定价专家'),
+      );
+    });
+
+    test('自定义规则优先于默认提示词', () {
+      AiService.setPromptRules({AiPromptKeys.priceAdvice: '自定义定价规则'});
+      expect(AiService.prompt(AiPromptKeys.priceAdvice), '自定义定价规则');
+      AiService.setPromptRules({});
     });
   });
 }

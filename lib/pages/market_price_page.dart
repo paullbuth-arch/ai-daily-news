@@ -8,6 +8,7 @@ import '../components/index.dart';
 import '../utils/utils.dart';
 import '../main.dart';
 import '../ai_service.dart';
+import '../ai_prompts.dart';
 import '../services/market_price_import_service.dart';
 
 class MarketPricePage extends StatefulWidget {
@@ -138,9 +139,9 @@ class _MarketPricePageState extends State<MarketPricePage> {
       final bytes = await file.readAsBytes();
       final b64 = base64Encode(bytes);
       final result = await AiService.chatWithImage(
-        MarketPriceImportService.imageSystemPrompt,
+        AiService.prompt(AiPromptKeys.marketPriceImageSystem),
         b64,
-        MarketPriceImportService.imageUserPrompt,
+        AiService.prompt(AiPromptKeys.marketPriceImageUser),
         maxTokens: 8192,
       );
       if (result.startsWith('AI调用') || result.startsWith('AI返回')) {

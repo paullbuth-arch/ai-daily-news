@@ -662,4 +662,71 @@ void main() {
       expect(st.getCapitalTurnoverRate(), 0.5);
     });
   });
+
+  group('Startup data guard', () {
+    late Directory tmp;
+    setUp(
+      () async => tmp = await Directory.systemTemp.createTemp('boss_startup_'),
+    );
+    tearDown(() async => tmp.delete(recursive: true));
+
+    Device makeDevice(String id) => Device(
+      id: id,
+      serial: 'FTEST',
+      model: 'iPad',
+      capacity: '64G',
+      color: 'Silver',
+      network: 'WiFi',
+      condition: '95',
+      purchaseCost: 100000,
+      purchaseDate: '2026-06-01',
+      createdAt: '2026-06-01',
+    );
+
+    test('empty storage stays empty and is marked initialized', () async {
+      final st = Storage('${tmp.path}/empty.json');
+      await st.load();
+      await st.prepareForUserDataStartup();
+
+      expect(st.getDevices(), isEmpty);
+      expect(st.getOrders(), isEmpty);
+      expect(st.getSettings()['initialized'], true);
+    });
+
+    test('old bundled demo data is cleared on startup', () async {
+      final st = Storage('${tmp.path}/demo.json');
+      await st.load();
+      await st.addDevice(makeDevice('demo1'));
+      await st.addOrder(
+        Order(
+          id: 'o1',
+          deviceId: 'demo1',
+          deviceName: 'iPad',
+          buyer: 'demo',
+          channel: 'demo',
+          amount: 100000,
+          profit: 10000,
+          status: 'pending',
+          createdAt: '2026-06-01',
+        ),
+      );
+
+      await st.prepareForUserDataStartup();
+
+      expect(st.getDevices(), isEmpty);
+      expect(st.getOrders(), isEmpty);
+      expect(st.getSettings()['initialized'], true);
+    });
+
+    test('real user data is preserved on startup', () async {
+      final st = Storage('${tmp.path}/real.json');
+      await st.load();
+      await st.addDevice(makeDevice('real-device-1'));
+
+      await st.prepareForUserDataStartup();
+
+      expect(st.getDevices().map((d) => d.id), ['real-device-1']);
+      expect(st.getSettings()['initialized'], true);
+    });
+  });
 }

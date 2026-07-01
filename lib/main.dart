@@ -42,13 +42,11 @@ void main() async {
   gDocDir = dir.path;
   gStorage = Storage('$gDocDir/ipad_boss_data.json');
   await gStorage.load();
+  await gStorage.prepareForUserDataStartup();
   await AuthService.init(gStorage);
   final aiMap = gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?;
   AiService.setConfig(AiConfig.fromMap(aiMap));
-  final initialized = gStorage.getSettings()['initialized'] == true;
-  if (gStorage.getDevices().isEmpty && !initialized) {
-    await seedDemoData();
-  }
+  AiService.setPromptRules(gStorage.getAiPromptRules());
   gStorageReady = true;
   runApp(const IpadBossApp());
 }

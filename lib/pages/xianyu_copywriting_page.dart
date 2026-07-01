@@ -62,6 +62,14 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                 children: [
                   Expanded(
                     child: _StatPill(
+                      label: '内置素材',
+                      value: '${XianyuCopyService.builtInMaterialCount}',
+                      color: C.purple,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _StatPill(
                       label: '样本',
                       value: '${_examples.length}',
                       color: C.cyan,
@@ -79,7 +87,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                '生成闲鱼描述时会自动参考这些规则和样本，只学习表达方式，设备参数仍以当前商品为准。',
+                '生成闲鱼描述时会自动参考内置 50 条素材提炼规则、手工样本和已售文案，只学习表达方式，设备参数仍以当前商品为准。',
                 style: TextStyle(
                   color: C.t2,
                   fontSize: 12,

@@ -184,6 +184,74 @@ class Storage {
     await _flush();
   }
 
+  Future<void> prepareForUserDataStartup() async {
+    final settings = getSettings();
+    if (settings['initialized'] == true) return;
+
+    if (_hasNoBusinessData() || _hasOnlyBundledDemoData()) {
+      await clearAll(markInitialized: true);
+      return;
+    }
+
+    settings['initialized'] = true;
+    await saveSettings(settings);
+  }
+
+  bool _hasNoBusinessData() =>
+      _isCollectionEmpty('devices') &&
+      _isCollectionEmpty('orders') &&
+      _isCollectionEmpty('agents') &&
+      _isCollectionEmpty('repairOrders') &&
+      _isCollectionEmpty('repairParts') &&
+      _isCollectionEmpty('purchaseOrders') &&
+      _isCollectionEmpty('qcReports') &&
+      _isCollectionEmpty('xianyuCopyExamples');
+
+  bool _isCollectionEmpty(String key) {
+    final value = _cache[key];
+    return value is! List || value.isEmpty;
+  }
+
+  bool _hasOnlyBundledDemoData() {
+    final hasAnyDemoData =
+        _hasAnyCollectionItem('devices') ||
+        _hasAnyCollectionItem('orders') ||
+        _hasAnyCollectionItem('agents') ||
+        _hasAnyCollectionItem('repairOrders');
+    if (!hasAnyDemoData) return false;
+
+    return _collectionIdsAllowed('devices', {
+          'demo1',
+          'demo2',
+          'demo3',
+          'demo4',
+          'demo5',
+        }) &&
+        _collectionIdsAllowed('orders', {'o1', 'o2'}) &&
+        _collectionIdsAllowed('agents', {'a1'}) &&
+        _collectionIdsAllowed('repairOrders', {'r1'}) &&
+        _isCollectionEmpty('repairParts') &&
+        _isCollectionEmpty('purchaseOrders') &&
+        _isCollectionEmpty('qcReports') &&
+        _isCollectionEmpty('xianyuCopyExamples');
+  }
+
+  bool _hasAnyCollectionItem(String key) {
+    final value = _cache[key];
+    return value is List && value.isNotEmpty;
+  }
+
+  bool _collectionIdsAllowed(String key, Set<String> allowedIds) {
+    final value = _cache[key];
+    if (value is! List) return true;
+    for (final item in value) {
+      if (item is! Map) return false;
+      final id = item['id'];
+      if (id is! String || !allowedIds.contains(id)) return false;
+    }
+    return true;
+  }
+
   Future<Device> addDevice(Device d) async {
     final list = getDevices();
     list.add(d);
@@ -217,6 +285,22 @@ class Storage {
   Future<void> saveXianyuCopyRules(String rules) async {
     final settings = getSettings();
     settings['xianyuCopyRules'] = rules;
+    await saveSettings(settings);
+  }
+
+  Map<String, String> getAiPromptRules() {
+    final raw = getSettings()['aiPromptRules'];
+    if (raw is! Map) return {};
+    return raw.map((key, value) => MapEntry(key.toString(), value.toString()));
+  }
+
+  Future<void> saveAiPromptRules(Map<String, String> rules) async {
+    final settings = getSettings();
+    if (rules.isEmpty) {
+      settings.remove('aiPromptRules');
+    } else {
+      settings['aiPromptRules'] = Map<String, String>.from(rules);
+    }
     await saveSettings(settings);
   }
 

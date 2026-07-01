@@ -3,6 +3,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'ai_prompts.dart';
+
 // ==================== 模型提供商定义 ====================
 
 class ModelInfo {
@@ -233,9 +235,13 @@ String? providerModelsUrl(String providerName) {
 
 class AiService {
   static AiConfig _config = AiConfig.defaultConfig();
+  static Map<String, String> _promptRules = {};
   static AiConfig get config => _config;
   static void setConfig(AiConfig c) => _config = c;
   static AiConfig get effectiveConfig => _config.effective;
+  static void setPromptRules(Map<String, String> rules) =>
+      _promptRules = Map<String, String>.from(rules);
+  static String prompt(String key) => AiPrompts.resolve(key, _promptRules);
 
   static Future<Map<String, dynamic>> _callOpenAI({
     required String systemPrompt,
@@ -362,11 +368,7 @@ class AiService {
   static Future<Map<String, String>> recognizeAboutThisDevice(
     String imageBase64,
   ) async {
-    final sys =
-        '你是苹果设备信息识别专家。用户会上传一张iPad"关于本机"页面的截图。'
-        '请从截图中识别出以下信息并严格以JSON格式返回：\n'
-        '{"serial":"序列号","model":"型号名称","capacity":"容量","color":"颜色","network":"网络制式","batteryHealth":"电池健康度百分比数字","cycleCount":"循环次数数字"}\n'
-        '如果某项信息无法识别，对应字段填"未知"。只返回JSON，不要返回其他文字。';
+    final sys = prompt(AiPromptKeys.recognizeAboutDevice);
     final result = await chatWithImage(
       sys,
       imageBase64,
@@ -404,9 +406,7 @@ class AiService {
     required int purchaseCost,
     required int stockDays,
   }) async {
-    final sys =
-        '你是二手iPad定价专家。根据设备型号、容量、成色、电池健康、采购成本、库存周转天数，给出定价建议。'
-        '输出格式：建议售价¥X，可接受最低价¥Y，建议采购上限价¥Z，定价理由（一句话）。金额单位元。';
+    final sys = prompt(AiPromptKeys.priceAdvice);
     return chat(
       sys,
       '设备：$model $capacity $color $network，成色$condition，电池健康度$batteryHealth%，'
@@ -424,13 +424,7 @@ class AiService {
     required int capital,
     required List<String> stagnantModels,
   }) async {
-    final sys =
-        '你是二手iPad门店经营参谋。不要写空泛日报，只输出能让老板今天行动的复盘。'
-        '严格用以下格式，每条必须包含具体对象或数字，每条不超过28字：\n'
-        '【今天先处理】\n• xxx（最高优先级动作，1-3条）\n\n'
-        '【风险信号】\n• xxx（资金、滞销、毛利、订单风险，1-3条）\n\n'
-        '【明天保留动作】\n• xxx（可以延后但要跟进的动作，1-2条）\n\n'
-        '如果数据不足，直接指出要补齐哪些记录。不要多余的开场白。';
+    final sys = prompt(AiPromptKeys.dailyReport);
     return chat(
       sys,
       '今日GMV ${(gmv / 100).toStringAsFixed(0)}元，毛利${(grossProfit / 100).toStringAsFixed(0)}元'
@@ -443,7 +437,7 @@ class AiService {
 
   static Future<String> customerService(String question) async {
     return chat(
-      '你是二手iPad客服助手，回答买家关于成色、电池、价格、保修等问题。态度热情专业，回答简洁。',
+      prompt(AiPromptKeys.customerService),
       question,
       maxTokens: 1024,
     );
@@ -451,7 +445,7 @@ class AiService {
 
   static Future<String> purchaseAdvice(String recentSalesSummary) async {
     return chat(
-      '你是二手iPad采购顾问。根据近期销售情况，给出补货建议：该补哪些型号、补多少、采购上限价多少。',
+      prompt(AiPromptKeys.purchaseAdvice),
       '近期销售：$recentSalesSummary\n请给出本周采购建议。',
       maxTokens: 2048,
     );
@@ -471,10 +465,7 @@ class AiService {
   }) async {
     final reference = copywritingReference.trim();
     final sys =
-        '你是闲鱼二手iPad商品文案专家。根据给定的设备准确信息，写一段真实、专业、有吸引力的商品描述。'
-        '要求：①突出成色、电池健康、ID锁状态等买家最关心的点；②语言自然不浮夸，不夸大；③包含配置亮点和适用场景；'
-        '④100-180字，纯文本不带emoji和特殊符号、不带价格；⑤不要分点编号，写成流畅的一段话。'
-        '${reference.isEmpty ? "" : "\n\n$reference"}';
+        '${prompt(AiPromptKeys.xianyuDescription)}${reference.isEmpty ? "" : "\n\n$reference"}';
     final r = await chat(
       sys,
       '请为以下设备写商品描述：\n型号：$model\n容量：$capacity\n颜色：$color\n网络：$network\n成色：$condition\n'
@@ -503,13 +494,7 @@ class AiService {
     Map<String, dynamic>? marketPrice,
     List<Map<String, dynamic>>? marketHistory,
   }) async {
-    final sys =
-        '你是二手iPad采购风控参谋。综合今日市场行情、历史销售数据、拟采购成本，判断这批货是否值得收。'
-        '不要写泛泛建议，必须围绕“压价线、净利、周转、库存压力”。'
-        '输出格式：\n【结论】建议收 / 压价再收 / 谨慎试收 / 不建议\n'
-        '【报价】给出一句最高可接受收货价或压价理由\n'
-        '【原因】不超过3条，每条带数字\n'
-        '【下一步】一句可执行动作\n中文，简洁，总字数≤260。';
+    final sys = prompt(AiPromptKeys.purchaseDecision);
     final a = analysis;
     final suppliersStr = (a['suppliers'] as List)
         .map(
