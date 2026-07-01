@@ -206,6 +206,8 @@ class Order {
   String status; // shipped/done/aftersale/cancelled（cancelled=重新上架作废）
   int? afterSaleCost; // 售后费用（分），影响净利
   String? afterSaleReason; // 售后原因：质量问题/买家反悔/描述不符/物流损坏/其他
+  String? afterSaleProgress; // 售后进度：待处理/处理中/已解决
+  String? afterSaleResult; // 售后处理结果
   String createdAt;
 
   Order({
@@ -219,6 +221,8 @@ class Order {
     required this.status,
     this.afterSaleCost,
     this.afterSaleReason,
+    this.afterSaleProgress,
+    this.afterSaleResult,
     required this.createdAt,
   });
 
@@ -236,6 +240,8 @@ class Order {
     status: j['status'] as String? ?? 'shipped',
     afterSaleCost: (j['afterSaleCost'] as num?)?.toInt(),
     afterSaleReason: j['afterSaleReason'] as String?,
+    afterSaleProgress: j['afterSaleProgress'] as String?,
+    afterSaleResult: j['afterSaleResult'] as String?,
     createdAt: j['createdAt'] as String,
   );
 
@@ -250,6 +256,8 @@ class Order {
     'status': status,
     'afterSaleCost': afterSaleCost,
     'afterSaleReason': afterSaleReason,
+    'afterSaleProgress': afterSaleProgress,
+    'afterSaleResult': afterSaleResult,
     'createdAt': createdAt,
   };
 }

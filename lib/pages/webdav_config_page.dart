@@ -7,6 +7,7 @@ import '../components/index.dart';
 import '../utils/utils.dart';
 import '../main.dart';
 import '../webdav_service.dart';
+import '../storage.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
 import '../backup_service.dart';
@@ -260,13 +261,27 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
       return;
     }
     setState(() => _syncing = true);
+    await WebDavService.ensureSyncDeviceId(gStorage);
+    final remote = await WebDavService.download(config: cfg);
+    if (remote.data != null) {
+      final ok = await _confirmSyncConflict(
+        action: '上传',
+        remoteMeta: WebDavService.extractSyncMeta(remote.data!),
+      );
+      if (!ok) {
+        if (mounted) setState(() => _syncing = false);
+        return;
+      }
+    }
     final tmp = File(
       '${(await getTemporaryDirectory()).path}/ipad_boss_data_sync.json',
     );
     await tmp.writeAsString(json.encode(storagePayloadForSync(gStorage)));
     final err = await WebDavService.upload(config: cfg, dataPath: tmp.path);
-    if (err == null) await WebDavService.uploadTimestamp(config: cfg);
-    await WebDavService.markSynced(gStorage);
+    if (err == null) {
+      await WebDavService.uploadTimestamp(config: cfg);
+      await WebDavService.markSynced(gStorage);
+    }
     if (!mounted) return;
     setState(() => _syncing = false);
     toast(context, err == null ? '⬆️ 已上传到云端' : '❌ $err');
@@ -306,15 +321,35 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
     final token = AuthService.token;
     final email = AuthService.email;
     final localSettings = snapshotLocalOnlySettings(gStorage);
-    // 先备份当前数据
-    await BackupService.backupCurrent(
-      docDir: gDocDir,
-      outDir: (await getTemporaryDirectory()).path,
-    );
     final dlResult = await WebDavService.download(config: cfg);
     final bytes = dlResult.data;
     final err = dlResult.errMsg;
     if (bytes != null) {
+      try {
+        final decoded = json.decode(utf8.decode(bytes));
+        if (decoded is! Map) {
+          throw const FormatException('云端数据格式错误');
+        }
+        Storage.validateDataMap(decoded);
+      } catch (e) {
+        if (!mounted) return;
+        setState(() => _syncing = false);
+        toast(context, '云端数据校验失败，已取消下载：$e');
+        return;
+      }
+      final ok = await _confirmSyncConflict(
+        action: '下载',
+        remoteMeta: WebDavService.extractSyncMeta(bytes),
+      );
+      if (!ok) {
+        if (mounted) setState(() => _syncing = false);
+        return;
+      }
+      // 先备份当前数据
+      await BackupService.backupCurrent(
+        docDir: gDocDir,
+        outDir: (await getTemporaryDirectory()).path,
+      );
       await File('$gDocDir/ipad_boss_data.json').writeAsBytes(bytes);
       await gStorage.load();
       await restoreLocalOnlySettings(gStorage, localSettings);
@@ -337,5 +372,73 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
       toast(context, '⬇️ 已从云端恢复');
       setState(() {});
     }
+  }
+
+  Future<bool> _confirmSyncConflict({
+    required String action,
+    required Map<String, dynamic>? remoteMeta,
+  }) async {
+    final remoteUpdated = DateTime.tryParse(
+      '${remoteMeta?['updatedAt'] ?? ''}',
+    );
+    if (remoteUpdated == null) return true;
+
+    final localDeviceId = await WebDavService.ensureSyncDeviceId(gStorage);
+    final remoteDeviceId = '${remoteMeta?['deviceId'] ?? ''}';
+    final lastSync = WebDavService.lastSyncTime(gStorage);
+    final dataFile = File('$gDocDir/ipad_boss_data.json');
+    final localModified =
+        await dataFile.exists() ? await dataFile.lastModified() : null;
+    final remoteChangedAfterSync =
+        lastSync == null || remoteUpdated.isAfter(lastSync);
+    final localChangedAfterSync =
+        lastSync == null ||
+        (localModified != null && localModified.isAfter(lastSync));
+    final deviceDiffers =
+        remoteDeviceId.isNotEmpty && remoteDeviceId != localDeviceId;
+    if (!(remoteChangedAfterSync && localChangedAfterSync && deviceDiffers)) {
+      return true;
+    }
+
+    if (!mounted) return false;
+    final ok = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: C.bgCard,
+            title: const Text(
+              '发现同步冲突',
+              style: TextStyle(
+                color: C.orange,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            content: Text(
+              '云端和本机都在上次同步后更新过。\n\n云端：${_fmtSyncTime(remoteUpdated)}\n本机：${_fmtSyncTime(localModified)}\n\n继续$action会覆盖另一端数据，建议先确认哪一端更新。',
+              style: const TextStyle(color: C.t2, fontSize: 13, height: 1.45),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('取消', style: TextStyle(color: C.t2)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(
+                  '继续$action',
+                  style: const TextStyle(color: C.orange),
+                ),
+              ),
+            ],
+          ),
+    );
+    return ok == true;
+  }
+
+  String _fmtSyncTime(DateTime? time) {
+    if (time == null) return '未知';
+    return '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 }

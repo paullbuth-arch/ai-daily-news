@@ -120,6 +120,7 @@ const Set<String> localOnlySettingKeys = {
   'auth_token',
   'auth_email',
   'webdavConfig',
+  'syncDeviceId',
 };
 
 dynamic cloneJsonValue(dynamic value) {
@@ -163,9 +164,15 @@ Future<void> restoreLocalOnlySettings(
 Map<String, dynamic> storagePayloadForSync(dynamic storage) {
   final data = Map<String, dynamic>.from(storage.toFullMap());
   final settings = Map<String, dynamic>.from((data['settings'] as Map?) ?? {});
+  final syncDeviceId = settings['syncDeviceId'] as String?;
   for (final key in localOnlySettingKeys) {
     settings.remove(key);
   }
+  settings['syncMeta'] = {
+    'updatedAt': DateTime.now().toIso8601String(),
+    'deviceId': syncDeviceId ?? 'unknown',
+    'schemaVersion': data['schemaVersion'] ?? 1,
+  };
   data['settings'] = settings;
   return data;
 }

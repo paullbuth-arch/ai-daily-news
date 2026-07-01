@@ -16,18 +16,53 @@ class OrderPage extends StatefulWidget {
 
 class OrderPageState extends State<OrderPage> {
   int tab = 0;
+  String searchKw = '';
+  final searchCtrl = TextEditingController();
   final tabs = ['全部', '待发货', '已发货', '已完成', '售后'];
   final statusMap = ['all', 'pending', 'shipped', 'done', 'aftersale'];
 
   void refresh() => setState(() {});
 
   @override
+  void dispose() {
+    searchCtrl.dispose();
+    super.dispose();
+  }
+
+  bool _matchesSearch(Order order, Device? device) {
+    final kw = searchKw.trim().toLowerCase();
+    if (kw.isEmpty) return true;
+    final fields = [
+      order.buyer,
+      order.deviceName,
+      order.channel,
+      order.createdAt,
+      order.id,
+      order.deviceId,
+      device?.serial ?? '',
+      device?.model ?? '',
+      device?.capacity ?? '',
+      device?.color ?? '',
+      device?.network ?? '',
+    ];
+    return fields.any((value) => value.toLowerCase().contains(kw));
+  }
+
+  @override
   Widget build(BuildContext context) {
-    var orders = gStorage.getOrders();
-    final total = orders.length;
+    final devicesById = {
+      for (final device in gStorage.getDevices()) device.id: device,
+    };
+    final allOrders = gStorage.getOrders();
+    var orders = allOrders;
+    final total = allOrders.length;
     if (statusMap[tab] != 'all') {
       orders = orders.where((o) => o.status == statusMap[tab]).toList();
     }
+    orders =
+        orders
+            .where((o) => _matchesSearch(o, devicesById[o.deviceId]))
+            .toList();
     final revenue = orders.fold<int>(0, (s, o) => s + o.amount);
     final profit = orders.fold<int>(0, (s, o) => s + o.netProfit);
     final horizontal = AppLayout.pageHorizontal(context);
@@ -96,6 +131,17 @@ class OrderPageState extends State<OrderPage> {
                         count: orders.length,
                       ),
                       const SizedBox(height: 14),
+                      _OrderSearchField(
+                        controller: searchCtrl,
+                        value: searchKw,
+                        onChanged: (v) => setState(() => searchKw = v),
+                        onClear:
+                            () => setState(() {
+                              searchCtrl.clear();
+                              searchKw = '';
+                            }),
+                      ),
+                      const SizedBox(height: 14),
                       _SegmentedTabs(
                         tabs: tabs,
                         current: tab,
@@ -146,6 +192,7 @@ class OrderPageState extends State<OrderPage> {
                         child: RepaintBoundary(
                           child: _OrderTimelineCard(
                             order: order,
+                            device: devicesById[order.deviceId],
                             onTap:
                                 () => Navigator.push(
                                   context,
@@ -284,15 +331,85 @@ class _SegmentedTabs extends StatelessWidget {
   );
 }
 
+class _OrderSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final String value;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _OrderSearchField({
+    required this.controller,
+    required this.value,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.fromLTRB(14, 4, 8, 4),
+    radius: 10,
+    color: C.bgDeep,
+    borderColor: C.border,
+    child: Row(
+      children: [
+        const Icon(Icons.search_rounded, color: C.t2, size: 24),
+        const SizedBox(width: 12),
+        Expanded(
+          child: TextField(
+            controller: controller,
+            onChanged: onChanged,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+            decoration: const InputDecoration(
+              isCollapsed: true,
+              border: InputBorder.none,
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              disabledBorder: InputBorder.none,
+              filled: false,
+              contentPadding: EdgeInsets.symmetric(vertical: 14),
+              hintText: '搜索买家、设备、序列号、平台、日期',
+              hintStyle: TextStyle(color: C.t3, fontSize: 13),
+            ),
+          ),
+        ),
+        if (value.isNotEmpty)
+          IconButton(
+            onPressed: onClear,
+            icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
+          ),
+      ],
+    ),
+  );
+}
+
 class _OrderTimelineCard extends StatelessWidget {
   final Order order;
+  final Device? device;
   final VoidCallback onTap;
 
-  const _OrderTimelineCard({required this.order, required this.onTap});
+  const _OrderTimelineCard({
+    required this.order,
+    required this.device,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final profitColor = order.netProfit >= 0 ? C.mint : C.red;
+    final pendingDays = _pendingDays(order);
+    final deviceMeta =
+        device == null
+            ? ''
+            : [
+              device!.capacity,
+              device!.color,
+              device!.network,
+              device!.serial,
+            ].where((value) => value.trim().isNotEmpty).join(' · ');
     return GlassPanel(
       padding: const EdgeInsets.all(14),
       radius: 22,
@@ -343,12 +460,27 @@ class _OrderTimelineCard extends StatelessWidget {
                       ),
                     ),
                     StatusChip(
-                      _statusText(order.status),
-                      _statusColor(order.status),
+                      pendingDays >= 2
+                          ? '待发${pendingDays}天'
+                          : _statusText(order.status),
+                      pendingDays >= 2 ? C.orange : _statusColor(order.status),
                     ),
                   ],
                 ),
                 const SizedBox(height: 7),
+                if (deviceMeta.isNotEmpty) ...[
+                  Text(
+                    deviceMeta,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: C.t3,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                ],
                 Text(
                   '${order.buyer} · ${order.channel} · ${order.createdAt}',
                   maxLines: 1,
@@ -382,6 +514,16 @@ class _OrderTimelineCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  int _pendingDays(Order order) {
+    if (order.status != 'pending') return 0;
+    try {
+      final created = DateTime.parse(order.createdAt.substring(0, 10));
+      return DateTime.now().difference(created).inDays;
+    } catch (_) {
+      return 0;
+    }
   }
 
   String _statusText(String status) =>

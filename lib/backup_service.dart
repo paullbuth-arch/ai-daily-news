@@ -18,10 +18,11 @@ class BackupService {
     final archive = Archive();
     // 1) manifest
     final manifest = {
-      'appVersion': '1.4.0',
+      'appVersion': '2.7.0',
       'exportTime': DateTime.now().toIso8601String(),
       'deviceCount': storage.getDevices().length,
       'orderCount': storage.getOrders().length,
+      'schemaVersion': Storage.schemaVersion,
     };
     final manifestBytes = utf8.encode(json.encode(manifest));
     archive.addFile(
@@ -78,16 +79,22 @@ class BackupService {
   }) async {
     final bytes = await File(zipPath).readAsBytes();
     final archive = ZipDecoder().decodeBytes(bytes);
+    final dataArc = archive.findFile('data/$kDataFile');
+    if (dataArc == null) {
+      throw const FormatException('备份缺少数据文件');
+    }
+    final dataBytes = List<int>.from(dataArc.content as List);
+    final decoded = json.decode(utf8.decode(dataBytes));
+    if (decoded is! Map) {
+      throw const FormatException('备份数据格式错误');
+    }
+    Storage.validateDataMap(decoded);
+
     // 1) 备份当前数据
     final cur = File('$docDir/$kDataFile');
     if (await cur.exists()) await cur.copy('$docDir/$kDataFile.bak');
     // 2) 覆盖 data.json
-    final dataArc = archive.findFile('data/$kDataFile');
-    if (dataArc != null) {
-      await File(
-        '$docDir/$kDataFile',
-      ).writeAsBytes(dataArc.content as List<int>);
-    }
+    await File('$docDir/$kDataFile').writeAsBytes(dataBytes);
     // 3) 还原图片（按 basename 写回 docDir）
     int imgCount = 0;
     for (final f in archive) {
@@ -144,6 +151,11 @@ class BackupService {
   }) async {
     final bak = File('$docDir/$kDataFile.bak');
     if (!await bak.exists()) return false;
+    final decoded = json.decode(await bak.readAsString());
+    if (decoded is! Map) {
+      throw const FormatException('备份数据格式错误');
+    }
+    Storage.validateDataMap(decoded);
     await bak.copy('$docDir/$kDataFile');
     await storage.load();
     await _remapImagePaths(storage: storage, docDir: docDir);

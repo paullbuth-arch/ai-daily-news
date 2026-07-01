@@ -7,6 +7,7 @@ import '../main.dart';
 import '../update_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
+import '../backup_service.dart';
 import 'webdav_config_page.dart';
 import 'ai_config_page.dart';
 import 'xianyu_copywriting_page.dart';
@@ -290,6 +291,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _resetAllData() async {
+    final devices = gStorage.getDevices();
+    final orders = gStorage.getOrders();
+    final imageCount = await _countLocalGeneratedFiles();
     final ok = await showDialog<bool>(
       context: context,
       builder:
@@ -300,7 +304,7 @@ class _SettingsPageState extends State<SettingsPage> {
               style: TextStyle(color: C.red, fontSize: 16),
             ),
             content: Text(
-              '将删除设备、订单、代理、维修记录、本地图片、登录状态和个性化设置，且不可恢复。确定继续吗？',
+              '将清空 ${devices.length} 台设备、${orders.length} 单订单和 $imageCount 个本地素材文件，并恢复默认设置。\n\n执行前会先在本机生成一份 zip 自动备份；如果备份失败，将不会清空。',
               style: TextStyle(color: C.t2, fontSize: 13),
             ),
             actions: [
@@ -317,6 +321,19 @@ class _SettingsPageState extends State<SettingsPage> {
     );
     if (ok != true) return;
 
+    String backupPath;
+    try {
+      backupPath = await BackupService.export(
+        docDir: gDocDir,
+        storage: gStorage,
+        outDir: gDocDir,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, '自动备份失败，已取消清空：$e');
+      return;
+    }
+
     await _deleteLocalGeneratedFiles();
     await gStorage.clearAll(markInitialized: true);
     final settings = gStorage.getSettings();
@@ -331,7 +348,20 @@ class _SettingsPageState extends State<SettingsPage> {
     _calcSize();
     if (!mounted) return;
     setState(() {});
-    toast(context, '数据已彻底清空，已恢复默认配置');
+    final backupName = backupPath.split(Platform.pathSeparator).last;
+    toast(context, '数据已清空。清空前备份已保存：$backupName');
+  }
+
+  Future<int> _countLocalGeneratedFiles() async {
+    final dir = Directory(gDocDir);
+    if (!await dir.exists()) return 0;
+    var count = 0;
+    await for (final entity in dir.list(followLinks: false)) {
+      if (entity is! File) continue;
+      final name = entity.uri.pathSegments.last;
+      if (_shouldDeleteLocalFile(name)) count++;
+    }
+    return count;
   }
 
   Future<void> _deleteLocalGeneratedFiles() async {
@@ -340,17 +370,18 @@ class _SettingsPageState extends State<SettingsPage> {
     await for (final entity in dir.list(followLinks: false)) {
       if (entity is! File) continue;
       final name = entity.uri.pathSegments.last;
-      final shouldDelete =
-          name.startsWith('about_') ||
-          name.startsWith('dev_') ||
-          name.startsWith('cover_') ||
-          name == 'ipad_boss_data.json.bak';
-      if (!shouldDelete) continue;
+      if (!_shouldDeleteLocalFile(name)) continue;
       try {
         await entity.delete();
       } catch (_) {}
     }
   }
+
+  bool _shouldDeleteLocalFile(String name) =>
+      name.startsWith('about_') ||
+      name.startsWith('dev_') ||
+      name.startsWith('cover_') ||
+      name == 'ipad_boss_data.json.bak';
 
   /// 检查更新
   Future<void> _checkUpdate() async {

@@ -258,4 +258,29 @@ class WebDavService {
     st['lastWebDavSync'] = DateTime.now().toIso8601String();
     await s.saveSettings(st);
   }
+
+  static Future<String> ensureSyncDeviceId(Storage s) async {
+    final st = s.getSettings();
+    final existing = st['syncDeviceId'] as String?;
+    if (existing != null && existing.isNotEmpty) return existing;
+    final id = 'device_${DateTime.now().microsecondsSinceEpoch}';
+    st['syncDeviceId'] = id;
+    await s.saveSettings(st);
+    return id;
+  }
+
+  static Map<String, dynamic>? extractSyncMeta(Uint8List bytes) {
+    try {
+      final decoded = json.decode(utf8.decode(bytes));
+      if (decoded is! Map) return null;
+      final settings = decoded['settings'];
+      if (settings is! Map) return null;
+      final meta = settings['syncMeta'];
+      if (meta is Map<String, dynamic>) return meta;
+      if (meta is Map) return Map<String, dynamic>.from(meta);
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
 }

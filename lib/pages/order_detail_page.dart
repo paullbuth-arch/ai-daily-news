@@ -67,13 +67,16 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ? (order.afterSaleCost! / 100).toStringAsFixed(0)
               : '',
     );
+    final resultCtrl = TextEditingController(text: order.afterSaleResult ?? '');
     String? selectedReason = order.afterSaleReason;
+    String selectedProgress = order.afterSaleProgress ?? '处理中';
     final reasons = ['质量问题', '买家反悔', '描述不符', '物流损坏', '其他'];
+    final progresses = ['待处理', '处理中', '已解决'];
     final result = await showAppFormDialog<Map<String, dynamic>>(
       context: context,
       title: '售后录入',
-      subtitle: '费用会从当前订单净利和利润统计中扣除',
-      maxHeightFactor: 0.66,
+      subtitle: '记录原因、进度、费用和处理结果，费用会扣减净利',
+      maxHeightFactor: 0.78,
       child: StatefulBuilder(
         builder:
             (sheetContext, setS) => Column(
@@ -103,12 +106,45 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           .toList(),
                 ),
                 const SizedBox(height: 14),
+                const Text(
+                  '处理进度',
+                  style: TextStyle(
+                    color: C.t2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children:
+                      progresses
+                          .map(
+                            (p) => AppChoicePill(
+                              label: p,
+                              selected: selectedProgress == p,
+                              color: p == '已解决' ? C.mint : C.cyan,
+                              onTap: () => setS(() => selectedProgress = p),
+                            ),
+                          )
+                          .toList(),
+                ),
+                const SizedBox(height: 14),
                 AppFormField(
                   controller: ctrl,
                   label: '售后费用(元)',
                   icon: Icons.receipt_long_outlined,
                   keyboardType: TextInputType.number,
                   autofocus: true,
+                ),
+                const SizedBox(height: 12),
+                AppFormField(
+                  controller: resultCtrl,
+                  label: '处理结果',
+                  hint: '例如：已补偿运费、换机完成、买家取消申请',
+                  icon: Icons.task_alt_rounded,
+                  maxLines: 2,
                 ),
                 const SizedBox(height: 18),
                 AppSheetActions(
@@ -118,6 +154,8 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     Navigator.pop(sheetContext, {
                       'cost': v.toInt(),
                       'reason': selectedReason,
+                      'progress': selectedProgress,
+                      'result': resultCtrl.text.trim(),
                     });
                   },
                 ),
@@ -126,6 +164,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       ),
     );
     ctrl.dispose();
+    resultCtrl.dispose();
     if (result == null) return;
     final cost = result['cost'] as int;
     if (cost < 0) {
@@ -133,10 +172,19 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       return;
     }
     final reason = result['reason'] as String?;
+    final progress = result['progress'] as String?;
+    final afterSaleResult = result['result'] as String?;
     order.afterSaleCost = cost > 0 ? cost : null;
     order.afterSaleReason = cost > 0 ? reason : null;
-    if (cost > 0) {
+    order.afterSaleProgress = cost > 0 ? progress : null;
+    order.afterSaleResult =
+        cost > 0 && afterSaleResult != null && afterSaleResult.isNotEmpty
+            ? afterSaleResult
+            : null;
+    if (cost > 0 && progress != '已解决') {
       order.status = 'aftersale';
+    } else if (cost > 0 && progress == '已解决') {
+      order.status = 'done';
     } else if (order.status == 'aftersale') {
       order.status = 'done';
     }
@@ -208,6 +256,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   _row('售后费用', yuan(order.afterSaleCost!), vc: C.red),
                   if (order.afterSaleReason != null)
                     _row('售后原因', order.afterSaleReason!, vc: C.orange),
+                  if (order.afterSaleProgress != null)
+                    _row('售后进度', order.afterSaleProgress!, vc: C.cyan),
+                  if (order.afterSaleResult != null)
+                    _row('处理结果', order.afterSaleResult!, vc: C.t1),
                 ],
                 _row('净利', yuan(order.netProfit), vc: C.green, bold: true),
                 _row('下单时间', order.createdAt),

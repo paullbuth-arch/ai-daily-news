@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:ipad_boss_app/storage.dart';
 import 'package:ipad_boss_app/utils/utils.dart';
+import 'package:ipad_boss_app/webdav_service.dart';
 
 void main() {
   late Directory tmp;
@@ -26,6 +29,7 @@ void main() {
       'username': 'boss',
       'password': 'secret',
     };
+    settings['syncDeviceId'] = 'local-device';
     settings['aiConfig'] = {'model': 'GLM-4-Flash-250414'};
     await storage.saveSettings(settings);
 
@@ -35,7 +39,10 @@ void main() {
     expect(syncSettings.containsKey('auth_token'), false);
     expect(syncSettings.containsKey('auth_email'), false);
     expect(syncSettings.containsKey('webdavConfig'), false);
+    expect(syncSettings.containsKey('syncDeviceId'), false);
     expect(syncSettings['aiConfig'], {'model': 'GLM-4-Flash-250414'});
+    expect(syncSettings['syncMeta']['deviceId'], 'local-device');
+    expect(syncSettings['syncMeta']['schemaVersion'], 1);
   });
 
   test('local-only settings survive full data replacement', () async {
@@ -146,4 +153,29 @@ void main() {
       }
     },
   );
+
+  test('webdav sync metadata can be extracted from remote payload', () async {
+    final bytes = utf8.encode(
+      json.encode({
+        'devices': [],
+        'orders': [],
+        'agents': [],
+        'repairOrders': [],
+        'repairParts': [],
+        'purchaseOrders': [],
+        'qcReports': [],
+        'xianyuCopyExamples': [],
+        'settings': {
+          'syncMeta': {
+            'updatedAt': '2026-07-01T10:00:00.000',
+            'deviceId': 'device-a',
+          },
+        },
+      }),
+    );
+
+    final meta = WebDavService.extractSyncMeta(Uint8List.fromList(bytes));
+    expect(meta?['deviceId'], 'device-a');
+    expect(meta?['updatedAt'], '2026-07-01T10:00:00.000');
+  });
 }

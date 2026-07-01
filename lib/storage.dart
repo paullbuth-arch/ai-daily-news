@@ -1,4 +1,5 @@
 // 文件存储层 —— 零依赖，用dart:io + JSON持久化
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'models.dart';
@@ -6,8 +7,24 @@ import 'models.dart';
 class Storage {
   final String _path;
   Map<String, dynamic> _cache = {};
+  final StreamController<void> _changes = StreamController<void>.broadcast();
 
   Storage(this._path);
+
+  Stream<void> get changes => _changes.stream;
+
+  static const int schemaVersion = 1;
+
+  static const Set<String> _requiredCollections = {
+    'devices',
+    'orders',
+    'agents',
+    'repairOrders',
+    'repairParts',
+    'purchaseOrders',
+    'qcReports',
+    'xianyuCopyExamples',
+  };
 
   static const Set<String> _retiredCollections = {
     'allocations',
@@ -21,6 +38,7 @@ class Storage {
   };
 
   Map<String, dynamic> _emptyData() => {
+    'schemaVersion': schemaVersion,
     'devices': [],
     'orders': [],
     'agents': [],
@@ -32,10 +50,56 @@ class Storage {
     'settings': {},
   };
 
+  static Map<String, dynamic> normalizeDataMap(Map data) {
+    final normalized = <String, dynamic>{};
+    for (final entry in data.entries) {
+      normalized[entry.key.toString()] = entry.value;
+    }
+    normalized['schemaVersion'] ??= schemaVersion;
+
+    for (final key in _requiredCollections) {
+      final value = normalized[key];
+      if (value == null) {
+        normalized[key] = [];
+      } else if (value is! List) {
+        throw FormatException('数据结构错误：$key 不是列表');
+      }
+    }
+
+    final settings = normalized['settings'];
+    if (settings == null) {
+      normalized['settings'] = <String, dynamic>{};
+    } else if (settings is Map<String, dynamic>) {
+      normalized['settings'] = settings;
+    } else if (settings is Map) {
+      normalized['settings'] = Map<String, dynamic>.from(settings);
+    } else {
+      throw const FormatException('数据结构错误：settings 不是对象');
+    }
+    return normalized;
+  }
+
+  static void validateDataMap(Map data) {
+    normalizeDataMap(data);
+  }
+
   void _dropRetiredCollections() {
     for (final key in _retiredCollections) {
       _cache.remove(key);
     }
+  }
+
+  void _ensureSchema() {
+    _cache = normalizeDataMap(_cache);
+  }
+
+  Future<Map<String, dynamic>> _readDataFile(File file) async {
+    final raw = await file.readAsString();
+    final decoded = json.decode(raw);
+    if (decoded is! Map) {
+      throw const FormatException('数据文件根节点不是对象');
+    }
+    return normalizeDataMap(decoded);
   }
 
   /// 数据文件结构：{ devices: [...], orders: [...], agents: [...], repairOrders: [...], settings: {...} }
@@ -43,20 +107,59 @@ class Storage {
     try {
       final file = File(_path);
       if (await file.exists()) {
-        final raw = await file.readAsString();
-        _cache = json.decode(raw) as Map<String, dynamic>;
+        _cache = await _readDataFile(file);
         _dropRetiredCollections();
       } else {
         _cache = _emptyData();
       }
     } catch (e) {
-      _cache = _emptyData();
+      final bak = File('$_path.bak');
+      try {
+        if (await bak.exists()) {
+          _cache = await _readDataFile(bak);
+          _dropRetiredCollections();
+        } else {
+          _cache = _emptyData();
+        }
+      } catch (_) {
+        _cache = _emptyData();
+      }
     }
   }
 
   Future<void> _flush() async {
     final file = File(_path);
-    await file.writeAsString(json.encode(_cache));
+    final parent = file.parent;
+    if (!await parent.exists()) await parent.create(recursive: true);
+    _ensureSchema();
+    _dropRetiredCollections();
+
+    final raw = json.encode(_cache);
+    final decoded = json.decode(raw);
+    if (decoded is! Map) {
+      throw const FormatException('数据文件根节点不是对象');
+    }
+    validateDataMap(decoded);
+
+    final tmp = File('$_path.tmp');
+    final bak = File('$_path.bak');
+    await tmp.writeAsString(raw);
+    await _readDataFile(tmp);
+
+    if (await file.exists()) {
+      await file.copy(bak.path);
+    }
+
+    try {
+      await tmp.copy(file.path);
+      if (await tmp.exists()) await tmp.delete();
+      if (!_changes.isClosed) _changes.add(null);
+    } catch (_) {
+      if (await bak.exists()) {
+        await bak.copy(file.path);
+      }
+      rethrow;
+    }
   }
 
   List<Device> getDevices() {
@@ -929,7 +1032,7 @@ class Storage {
 
   /// 用云端数据覆盖本地（用于云端同步下载）
   void setFullData(Map<String, dynamic> data) {
-    _cache = Map<String, dynamic>.from(data);
+    _cache = normalizeDataMap(data);
     _dropRetiredCollections();
   }
 

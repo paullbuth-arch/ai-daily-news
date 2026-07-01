@@ -40,4 +40,23 @@ Apple Pencil 二代,430
     expect(csv, contains('iPad Air 5 M1 64G WiFi,2700'));
     expect(csv, contains('"iPad Pro 11, M2 128G 99新",4700'));
   });
+
+  test('识别结果校验能提示异常价格和缺失字段', () {
+    final warnings = MarketPriceImportService.validateRows([
+      const MarketPriceImportRow(model: 'iPad Air 5 M1 低置信', priceYuan: 99),
+      const MarketPriceImportRow(
+        model: 'iPad Pro 11 2022 M2 128G WiFi 99新',
+        priceYuan: 4700,
+      ),
+      const MarketPriceImportRow(
+        model: 'iPad Pro 11 2022 M2 128G WiFi 99新 档位2',
+        priceYuan: 4650,
+      ),
+    ]);
+
+    expect(warnings.any((w) => w.contains('低置信')), true);
+    expect(warnings.any((w) => w.contains('异常价格')), true);
+    expect(warnings.any((w) => w.contains('缺少容量')), true);
+    expect(warnings.any((w) => w.contains('档位')), true);
+  });
 }

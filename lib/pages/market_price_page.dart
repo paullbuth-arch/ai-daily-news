@@ -21,6 +21,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
   final _priceCtrl = TextEditingController();
   Map<String, Map<String, dynamic>> _allPrices = {};
   List<MarketPriceImportRow> _lastImportedRows = [];
+  List<String> _lastImportWarnings = [];
   String _lastImportSource = '';
   bool _importing = false;
 
@@ -118,6 +119,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
       }
       setState(() {
         _lastImportedRows = rows;
+        _lastImportWarnings = MarketPriceImportService.validateRows(rows);
         _lastImportSource = 'CSV导入结果';
       });
       _reload();
@@ -151,10 +153,16 @@ class _MarketPricePageState extends State<MarketPricePage> {
       }
       setState(() {
         _lastImportedRows = rows;
+        _lastImportWarnings = MarketPriceImportService.validateRows(rows);
         _lastImportSource = 'AI图片识别结果';
       });
       _reload();
-      toast(context, '✅ AI识别导入完成，共导入 ${rows.length} 条行情');
+      toast(
+        context,
+        _lastImportWarnings.isEmpty
+            ? '✅ AI识别导入完成，共导入 ${rows.length} 条行情'
+            : 'AI识别导入 ${rows.length} 条，其中 ${_lastImportWarnings.length} 项需复核',
+      );
     } catch (e) {
       toast(context, '图片识别失败：$e');
     } finally {
@@ -463,6 +471,10 @@ class _MarketPricePageState extends State<MarketPricePage> {
           ],
         ),
         const SizedBox(height: 12),
+        if (_lastImportWarnings.isNotEmpty) ...[
+          _RecognitionWarnings(warnings: _lastImportWarnings),
+          const SizedBox(height: 12),
+        ],
         Container(
           decoration: BoxDecoration(
             color: C.bgDeep,
@@ -482,6 +494,52 @@ class _MarketPricePageState extends State<MarketPricePage> {
                   ),
                 ),
             ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RecognitionWarnings extends StatelessWidget {
+  final List<String> warnings;
+
+  const _RecognitionWarnings({required this.warnings});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(
+      color: C.orange.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: C.orange.withValues(alpha: 0.28)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: C.orange, size: 17),
+            SizedBox(width: 6),
+            Text(
+              '需要复核',
+              style: TextStyle(
+                color: C.orange,
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        ...warnings.map(
+          (warning) => Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Text(
+              warning,
+              style: const TextStyle(color: C.t2, fontSize: 11, height: 1.35),
+            ),
           ),
         ),
       ],

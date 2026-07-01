@@ -41,6 +41,7 @@ class _DetailPageState extends State<DetailPage> {
   final _descCtrl = TextEditingController();
   bool _idClean = true;
   String _status = 'in_stock';
+  String _cleanSnapshot = '';
   static const _capacityOptions = ['64G', '128G', '256G', '512G', '1TB', '2TB'];
   static const _colorOptions = ['深空灰', '银色', '星光色', '粉色', '紫色', '蓝色'];
   static const _accessoryOptions = [
@@ -99,6 +100,83 @@ class _DetailPageState extends State<DetailPage> {
     _descCtrl.text = device.description ?? '';
     _idClean = device.idLockClean;
     _status = device.status;
+    _markEditorsClean();
+  }
+
+  String _snapshotEditors() {
+    const sep = '\u001f';
+    return [
+      _modelCtrl.text.trim(),
+      _serialCtrl.text.trim(),
+      _capacityCtrl.text.trim(),
+      _colorCtrl.text.trim(),
+      _networkCtrl.text.trim(),
+      _conditionCtrl.text.trim(),
+      _batteryCtrl.text.trim(),
+      _cycleCtrl.text.trim(),
+      _accessoriesCtrl.text.trim(),
+      _costCtrl.text.trim(),
+      _channelCtrl.text.trim(),
+      _dateCtrl.text.trim(),
+      _priceCtrl.text.trim(),
+      _descCtrl.text.trim(),
+      _idClean.toString(),
+      _status,
+    ].join(sep);
+  }
+
+  void _markEditorsClean() {
+    _cleanSnapshot = _snapshotEditors();
+  }
+
+  bool get _hasUnsavedChanges =>
+      _cleanSnapshot.isNotEmpty && _snapshotEditors() != _cleanSnapshot;
+
+  Future<bool> _confirmLeaveIfDirty() async {
+    if (!_hasUnsavedChanges) return true;
+    final action = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: C.bgCard,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(18),
+              side: const BorderSide(color: C.border),
+            ),
+            title: const Text(
+              '保存修改？',
+              style: TextStyle(
+                color: C.t1,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            content: const Text(
+              '这台设备有未保存的修改，离开前可以先保存，或放弃本次修改。',
+              style: TextStyle(color: C.t2, fontSize: 13, height: 1.45),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'discard'),
+                child: const Text('放弃修改', style: TextStyle(color: C.red)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'cancel'),
+                child: const Text('继续编辑', style: TextStyle(color: C.t2)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'save'),
+                child: const Text('保存后离开', style: TextStyle(color: C.cyan)),
+              ),
+            ],
+          ),
+    );
+    if (action == 'discard') return true;
+    if (action == 'save') {
+      return _saveInlineInfo(showToast: false);
+    }
+    return false;
   }
 
   Future<void> _askAi() async {
@@ -211,6 +289,7 @@ class _DetailPageState extends State<DetailPage> {
         _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim();
 
     await gStorage.updateDevice(device);
+    _markEditorsClean();
     if (!mounted) return true;
     setState(() => savingInfo = false);
     if (showToast) toast(context, '设备信息已保存');
@@ -307,200 +386,247 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
   Widget build(BuildContext context) {
     final hasImg = device.imagePath != null && device.imagePath!.isNotEmpty;
     final images = hasImg ? device.imagePath!.split(';') : <String>[];
-    return Scaffold(
-      backgroundColor: C.bgDeep,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            ListView(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      height: 230,
-                      color: C.bgCardMuted,
-                      child:
-                          images.isNotEmpty
-                              ? Image.file(
-                                File(images.first),
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: 230,
-                              )
-                              : Center(
-                                child: Icon(
-                                  Icons.tablet_mac_rounded,
-                                  color: C.t3,
-                                  size: 64,
-                                ),
-                              ),
-                    ),
-                    Positioned(
-                      top: 10,
-                      left: 10,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.32),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.chevron_left_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 12,
-                      left: 14,
-                      child: StatusChip(
-                        device.idLockClean ? 'ID无锁' : 'ID异常',
-                        device.idLockClean ? C.green : C.red,
-                      ),
-                    ),
-                    if (device.isStagnant)
-                      const Positioned(
-                        bottom: 12,
-                        right: 14,
-                        child: StatusChip('滞销', C.red),
-                      ),
-                  ],
-                ),
-                // 多图横向展示
-                if (images.length > 1)
-                  SizedBox(
-                    height: 80,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      itemCount: images.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 6),
-                      itemBuilder:
-                          (_, i) => ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(images[i]),
-                              width: 70,
-                              height: 70,
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                    ),
-                  ),
-                CardBox(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return PopScope<void>(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final canLeave = await _confirmLeaveIfDirty();
+        if (!canLeave || !mounted) return;
+        Navigator.pop(context);
+      },
+      child: Scaffold(
+        backgroundColor: C.bgDeep,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              ListView(
+                children: [
+                  Stack(
                     children: [
-                      Text(
-                        '${device.model} ${device.capacity} ${device.color}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: C.t1,
+                      Container(
+                        height: 230,
+                        color: C.bgCardMuted,
+                        child:
+                            images.isNotEmpty
+                                ? Image.file(
+                                  File(images.first),
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: 230,
+                                )
+                                : Center(
+                                  child: Icon(
+                                    Icons.tablet_mac_rounded,
+                                    color: C.t3,
+                                    size: 64,
+                                  ),
+                                ),
+                      ),
+                      Positioned(
+                        top: 10,
+                        left: 10,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.32),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.chevron_left_rounded,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                            onPressed: () async {
+                              final canLeave = await _confirmLeaveIfDirty();
+                              if (!canLeave || !mounted) return;
+                              Navigator.pop(context);
+                            },
+                          ),
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Text(
-                            device.sellPrice > 0
-                                ? yuan(device.sellPrice)
-                                : '未定价',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: device.sellPrice > 0 ? C.cyan : C.orange,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            '采购${yuan(device.purchaseCost)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: C.t2,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const Spacer(),
-                          if (device.status == 'sold')
-                            StatusChip(
-                              '毛利${yuan(device.netProfit)}',
-                              device.netProfit >= 0 ? C.green : C.red,
-                            ),
-                        ],
+                      Positioned(
+                        bottom: 12,
+                        left: 14,
+                        child: StatusChip(
+                          device.idLockClean ? 'ID无锁' : 'ID异常',
+                          device.idLockClean ? C.green : C.red,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${device.purchaseChannel} · 库龄${device.stockDays}天 · ${device.serial.isEmpty ? "暂无序列号" : device.serial}',
-                        style: TextStyle(fontSize: 11.5, color: C.t2),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      if (device.isStagnant)
+                        const Positioned(
+                          bottom: 12,
+                          right: 14,
+                          child: StatusChip('滞销', C.red),
+                        ),
                     ],
                   ),
-                ),
-                _buildInlineInfoCard(),
-                _buildDescriptionCard(),
-                CardBox(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SectionTitle(
-                        'AI定价建议',
-                        trailing: AiService.effectiveConfig.model,
-                      ),
-                      const SizedBox(height: 8),
-                      if (aiPrice != null)
-                        Text(
-                          aiPrice!,
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: C.t2,
-                            height: 1.8,
-                          ),
-                        )
-                      else
-                        Text(
-                          '点击下方按钮，调用AI根据型号/成色/电池/采购成本/库存天数给出定价建议',
-                          style: TextStyle(
-                            fontSize: 12.5,
-                            color: C.t3,
-                            height: 1.8,
-                          ),
+                  // 多图横向展示
+                  if (images.length > 1)
+                    SizedBox(
+                      height: 80,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                      const SizedBox(height: 12),
-                      if (loading)
-                        const Center(
-                          child: CircularProgressIndicator(color: C.t3),
-                        )
-                      else
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _askAi,
-                            icon: const Icon(
-                              Icons.auto_awesome_rounded,
-                              size: 18,
+                        itemCount: images.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder:
+                            (_, i) => ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                File(images[i]),
+                                width: 70,
+                                height: 70,
+                                fit: BoxFit.cover,
+                              ),
                             ),
+                      ),
+                    ),
+                  CardBox(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${device.model} ${device.capacity} ${device.color}',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900,
+                            color: C.t1,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Text(
+                              device.sellPrice > 0
+                                  ? yuan(device.sellPrice)
+                                  : '未定价',
+                              style: TextStyle(
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                color: device.sellPrice > 0 ? C.cyan : C.orange,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              '采购${yuan(device.purchaseCost)}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: C.t2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            if (device.status == 'sold')
+                              StatusChip(
+                                '毛利${yuan(device.netProfit)}',
+                                device.netProfit >= 0 ? C.green : C.red,
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${device.purchaseChannel} · 库龄${device.stockDays}天 · ${device.serial.isEmpty ? "暂无序列号" : device.serial}',
+                          style: TextStyle(fontSize: 11.5, color: C.t2),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildInlineInfoCard(),
+                  _buildDescriptionCard(),
+                  CardBox(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionTitle(
+                          'AI定价建议',
+                          trailing: AiService.effectiveConfig.model,
+                        ),
+                        const SizedBox(height: 8),
+                        if (aiPrice != null)
+                          Text(
+                            aiPrice!,
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: C.t2,
+                              height: 1.8,
+                            ),
+                          )
+                        else
+                          Text(
+                            '点击下方按钮，调用AI根据型号/成色/电池/采购成本/库存天数给出定价建议',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              color: C.t3,
+                              height: 1.8,
+                            ),
+                          ),
+                        const SizedBox(height: 12),
+                        if (loading)
+                          const Center(
+                            child: CircularProgressIndicator(color: C.t3),
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _askAi,
+                              icon: const Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 18,
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: C.purple,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(11),
+                                ),
+                                elevation: 0,
+                              ),
+                              label: const Text(
+                                '调用 AI 定价',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // 一键下载：两个并排按钮（纯下载 / 下载并去闲鱼）
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                                downloading
+                                    ? null
+                                    : () => _downloadAll(openXianyu: false),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: C.purple,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              backgroundColor: C.bgCard,
+                              foregroundColor: C.t1,
+                              padding: EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(11),
+                                borderRadius: BorderRadius.circular(13),
                               ),
                               elevation: 0,
+                              side: BorderSide(color: C.border),
                             ),
-                            label: const Text(
-                              '调用 AI 定价',
+                            child: const Text(
+                              '仅下载',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -508,136 +634,104 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                // 一键下载：两个并排按钮（纯下载 / 下载并去闲鱼）
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed:
-                              downloading
-                                  ? null
-                                  : () => _downloadAll(openXianyu: false),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: C.bgCard,
-                            foregroundColor: C.t1,
-                            padding: EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(13),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed:
+                                downloading
+                                    ? null
+                                    : () => _downloadAll(openXianyu: true),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: C.green,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(13),
+                              ),
+                              elevation: 0,
                             ),
-                            elevation: 0,
-                            side: BorderSide(color: C.border),
-                          ),
-                          child: const Text(
-                            '仅下载',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
+                            child:
+                                downloading
+                                    ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                    : const Text(
+                                      '下载并去闲鱼',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed:
-                              downloading
-                                  ? null
-                                  : () => _downloadAll(openXianyu: true),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: C.green,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(13),
-                            ),
-                            elevation: 0,
-                          ),
-                          child:
-                              downloading
-                                  ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                  : const Text(
-                                    '下载并去闲鱼',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (device.status == 'in_stock' || device.status == 'listed')
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-                    child: primaryBtn(
-                      '售出此设备',
-                      () => Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SellPage()),
-                      ),
+                      ],
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-                  child: ghostBtn('生成验机报告', _genReport),
-                ),
-                CardBox(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SectionTitle('全链路追溯'),
-                      const SizedBox(height: 12),
-                      _tl(
-                        '收购入库',
-                        '${device.purchaseDate} · 采购${yuan(device.purchaseCost)} · ${device.purchaseChannel}',
-                        true,
+                  if (device.status == 'in_stock' || device.status == 'listed')
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                      child: primaryBtn(
+                        '售出此设备',
+                        () => Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (_) => const SellPage()),
+                        ),
                       ),
-                      _tl(
-                        '质检完成',
-                        '${device.condition} · 电池${device.batteryHealth}% · ID锁${device.idLockClean ? "无锁 ✓" : "有锁 ✗"}',
-                        true,
-                      ),
-                      if (device.status == 'listed')
-                        _tl(
-                          '上架待售',
-                          '标价${device.sellPrice > 0 ? yuan(device.sellPrice) : "未定"} · 在库${device.stockDays}天${device.isStagnant ? " · 滞销" : ""}',
-                          false,
-                          last: true,
-                        ),
-                      if (device.status == 'sold' &&
-                          device.repairCost != null &&
-                          device.repairCost! > 0)
-                        _tl(
-                          '翻新维修',
-                          '${device.sellDate ?? ""} · 成本${yuan(device.repairCost!)}',
-                          false,
-                        ),
-                      if (device.status == 'sold')
-                        _tl(
-                          '已售出',
-                          '${device.sellDate ?? ""} · ${device.sellChannel ?? ""} · 售价${yuan(device.sellPrice)} · 毛利${yuan(device.netProfit)}',
-                          true,
-                          last: true,
-                        ),
-                    ],
+                    ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+                    child: ghostBtn('生成验机报告', _genReport),
                   ),
-                ),
-              ],
-            ),
-          ],
+                  CardBox(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SectionTitle('全链路追溯'),
+                        const SizedBox(height: 12),
+                        _tl(
+                          '收购入库',
+                          '${device.purchaseDate} · 采购${yuan(device.purchaseCost)} · ${device.purchaseChannel}',
+                          true,
+                        ),
+                        _tl(
+                          '质检完成',
+                          '${device.condition} · 电池${device.batteryHealth}% · ID锁${device.idLockClean ? "无锁 ✓" : "有锁 ✗"}',
+                          true,
+                        ),
+                        if (device.status == 'listed')
+                          _tl(
+                            '上架待售',
+                            '标价${device.sellPrice > 0 ? yuan(device.sellPrice) : "未定"} · 在库${device.stockDays}天${device.isStagnant ? " · 滞销" : ""}',
+                            false,
+                            last: true,
+                          ),
+                        if (device.status == 'sold' &&
+                            device.repairCost != null &&
+                            device.repairCost! > 0)
+                          _tl(
+                            '翻新维修',
+                            '${device.sellDate ?? ""} · 成本${yuan(device.repairCost!)}',
+                            false,
+                          ),
+                        if (device.status == 'sold')
+                          _tl(
+                            '已售出',
+                            '${device.sellDate ?? ""} · ${device.sellChannel ?? ""} · 售价${yuan(device.sellPrice)} · 毛利${yuan(device.netProfit)}',
+                            true,
+                            last: true,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

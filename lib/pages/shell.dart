@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../components/page_scaffold.dart';
 import '../theme/colors.dart';
+import '../main.dart';
 import 'home_page.dart';
 import 'stock_page.dart';
 import 'scan_page.dart';
@@ -19,17 +22,32 @@ class _MainShellState extends State<MainShell> {
   final _homeKey = GlobalKey<HomePageState>();
   final _stockKey = GlobalKey<StockPageState>();
   final _orderKey = GlobalKey<OrderPageState>();
+  StreamSubscription<void>? _dataSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _dataSub = gStorage.changes.listen((_) => _refreshDataPages());
+  }
+
+  @override
+  void dispose() {
+    _dataSub?.cancel();
+    super.dispose();
+  }
+
+  void _refreshDataPages() {
+    _homeKey.currentState?.refresh();
+    _stockKey.currentState?.refresh();
+    _orderKey.currentState?.refresh();
+  }
 
   void _onTap(int i) {
     if (i == 2) {
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const ScanPage()),
-      ).then((_) {
-        _homeKey.currentState?.refresh();
-        _stockKey.currentState?.refresh();
-        _orderKey.currentState?.refresh();
-      });
+      ).then((_) => _refreshDataPages());
       return;
     }
     setState(() => _index = i);
