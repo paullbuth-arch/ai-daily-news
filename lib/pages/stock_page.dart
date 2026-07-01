@@ -1081,7 +1081,7 @@ class _DeviceProjectCard extends StatelessWidget {
                               ? Image.file(
                                 image,
                                 fit: BoxFit.cover,
-                                alignment: Alignment.bottomCenter,
+                                alignment: Alignment.center,
                                 cacheWidth: cacheWidth,
                                 cacheHeight: cacheHeight,
                                 filterQuality: FilterQuality.low,

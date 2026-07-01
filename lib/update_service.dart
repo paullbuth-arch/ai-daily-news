@@ -32,8 +32,8 @@ class UpdateService {
   static const String defaultCheckUrl = 'https://deepsell.wiki/api/version';
 
   /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.9.0';
-  static int get currentBuild => 19;
+  static String get currentVersion => '2.9.1';
+  static int get currentBuild => 20;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
