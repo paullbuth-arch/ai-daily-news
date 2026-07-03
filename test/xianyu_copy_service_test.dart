@@ -106,9 +106,61 @@ void main() {
       condition: '95新',
     );
 
+    expect(XianyuCopyService.builtInMaterialCount, 100);
+    expect(XianyuCopyService.builtInExampleCount, 100);
     expect(context, contains('本店规则'));
+    expect(context, contains('内置 100 条素材提炼规则'));
     expect(context, contains('高转化样本'));
     expect(context, contains('已售设备历史文案'));
     expect(context, contains('不要照抄'));
+  });
+
+  test('入库基础素材模式只参考内置100条，不带历史文案', () async {
+    await storage.addXianyuCopyExample(
+      XianyuCopyExample(
+        id: 'copy-history',
+        title: '不应进入入库自动文案',
+        model: 'iPad Air 5',
+        condition: '95新',
+        text: '这是旧的手工样本文案，入库自动生成不应复用。',
+        tags: '历史样本',
+        resultNote: '历史成交',
+        score: 5,
+        createdAt: '2026-06-30T10:00:00',
+      ),
+    );
+    await storage.addDevice(
+      Device(
+        id: 'sold-copy',
+        serial: 'F2',
+        model: 'iPad Air 5',
+        capacity: '64G',
+        color: '星光色',
+        network: 'WiFi',
+        condition: '95新',
+        purchaseCost: 260000,
+        purchaseDate: '2026-06-01',
+        sellPrice: 318000,
+        status: 'sold',
+        description: '这是上一台同型号的已售文案，入库时不应直接参考。',
+        createdAt: '2026-06-25T12:00:00',
+      ),
+    );
+
+    final context = XianyuCopyService.buildReferenceContext(
+      storage,
+      model: 'iPad Air 5',
+      condition: '95新',
+      includeCuratedExamples: false,
+      includeSoldDescriptions: false,
+      randomizeBuiltIns: false,
+    );
+
+    expect(context, contains('内置 100 条素材提炼规则'));
+    expect(context, contains('内置安全改写样本'));
+    expect(context, isNot(contains('高转化参考样本')));
+    expect(context, isNot(contains('已售设备历史文案')));
+    expect(context, isNot(contains('这是旧的手工样本文案')));
+    expect(context, isNot(contains('这是上一台同型号的已售文案')));
   });
 }

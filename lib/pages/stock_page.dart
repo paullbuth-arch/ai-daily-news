@@ -512,7 +512,7 @@ class StockPageState extends State<StockPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  '库存项目',
+                                  '库存管理',
                                   style: TextStyle(
                                     fontSize: AppLayout.titleSize(context),
                                     fontWeight: FontWeight.w900,
@@ -688,7 +688,7 @@ class StockPageState extends State<StockPage> {
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
                           childAspectRatio:
-                              columns == 1 ? (phoneTile ? 1.78 : 1.92) : 1.85,
+                              columns == 1 ? (phoneTile ? 1.68 : 1.78) : 1.78,
                         ),
                         delegate: SliverChildBuilderDelegate((context, i) {
                           final device = devices[i];
@@ -849,9 +849,9 @@ class _FilterPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? C.cyan : Colors.white.withOpacity(0.07),
+          color: selected ? C.cyan : Colors.white.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Text(
           label,
@@ -1036,6 +1036,7 @@ class _DeviceProjectCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final image = _firstImage(device);
+    final imageCount = _imageCount(device);
     final expectedProfit =
         device.sellPrice > 0 ? device.sellPrice - device.purchaseCost : null;
     return Material(
@@ -1059,7 +1060,6 @@ class _DeviceProjectCard extends StatelessWidget {
                     (box.maxWidth * dpr).round().clamp(480, 1400).toInt();
                 final cacheHeight =
                     (box.maxHeight * dpr).round().clamp(360, 1200).toInt();
-                final imageBandHeight = box.maxHeight * 0.72;
                 return Stack(
                   fit: StackFit.expand,
                   children: [
@@ -1071,17 +1071,13 @@ class _DeviceProjectCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: imageBandHeight,
+                    Positioned.fill(
                       child:
                           image != null
                               ? Image.file(
                                 image,
                                 fit: BoxFit.cover,
-                                alignment: Alignment.center,
+                                alignment: const Alignment(0, -0.22),
                                 cacheWidth: cacheWidth,
                                 cacheHeight: cacheHeight,
                                 filterQuality: FilterQuality.low,
@@ -1102,64 +1098,46 @@ class _DeviceProjectCard extends StatelessWidget {
                           gradient: LinearGradient(
                             colors: [
                               const Color(0xF00D1017),
-                              Colors.black.withValues(alpha: 0.72),
-                              Colors.black.withValues(alpha: 0.22),
-                              Colors.black.withValues(alpha: 0.82),
+                              Colors.black.withValues(alpha: 0.64),
+                              Colors.black.withValues(alpha: 0.18),
+                              Colors.black.withValues(alpha: 0.86),
                             ],
-                            stops: const [0.0, 0.42, 0.68, 1.0],
+                            stops: const [0.0, 0.34, 0.62, 1.0],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 13,
-                      right: 13,
-                      child:
-                          selectionMode
-                              ? Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color:
-                                      selected
-                                          ? C.cyan
-                                          : Colors.black.withValues(
-                                            alpha: 0.42,
-                                          ),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color:
-                                        selected
-                                            ? C.cyan
-                                            : Colors.white.withValues(
-                                              alpha: 0.18,
-                                            ),
-                                  ),
-                                ),
-                                child: Icon(
+                    if (selectionMode)
+                      Positioned(
+                        top: 13,
+                        right: 13,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color:
+                                selected
+                                    ? C.cyan
+                                    : Colors.black.withValues(alpha: 0.42),
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
                                   selected
-                                      ? Icons.check_rounded
-                                      : Icons.circle_outlined,
-                                  color: selected ? Colors.black : Colors.white,
-                                  size: 20,
-                                ),
-                              )
-                              : Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.42),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.more_horiz_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-                    ),
+                                      ? C.cyan
+                                      : Colors.white.withValues(alpha: 0.18),
+                            ),
+                          ),
+                          child: Icon(
+                            selected
+                                ? Icons.check_rounded
+                                : Icons.circle_outlined,
+                            color: selected ? Colors.black : Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
                     Positioned.fill(
                       child: Padding(
                         padding: const EdgeInsets.all(14),
@@ -1241,6 +1219,11 @@ class _DeviceProjectCard extends StatelessWidget {
                                 ),
                               ],
                             ),
+                            const SizedBox(height: 8),
+                            _DeviceInfoStrip(
+                              device: device,
+                              imageCount: imageCount,
+                            ),
                             const Spacer(),
                             if (selectionMode)
                               _SelectionHint(selected: selected)
@@ -1287,8 +1270,23 @@ class _DeviceProjectCard extends StatelessWidget {
     if (raw == null || raw.isEmpty) return null;
     final paths = raw.split(';').where((p) => p.trim().isNotEmpty).toList();
     if (paths.isEmpty) return null;
-    final path = paths.first;
+    final preferred = paths.firstWhere(
+      (path) => !_isReportImage(path),
+      orElse: () => paths.first,
+    );
+    final path = preferred;
     return File(path);
+  }
+
+  int _imageCount(Device d) {
+    final raw = d.imagePath;
+    if (raw == null || raw.isEmpty) return 0;
+    return raw.split(';').where((p) => p.trim().isNotEmpty).length;
+  }
+
+  bool _isReportImage(String path) {
+    final name = path.replaceAll('\\', '/').split('/').last.toLowerCase();
+    return name.startsWith('qc_report_') || name.contains('report');
   }
 
   String _statusText(Device d) {
@@ -1302,6 +1300,83 @@ class _DeviceProjectCard extends StatelessWidget {
     if (d.sellPrice <= 0) return C.orange;
     return d.status == 'listed' ? C.cyan : C.mint;
   }
+}
+
+class _DeviceInfoStrip extends StatelessWidget {
+  final Device device;
+  final int imageCount;
+
+  const _DeviceInfoStrip({required this.device, required this.imageCount});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: _InfoPill(
+          icon: Icons.confirmation_number_outlined,
+          text: _serialTail(device.serial),
+        ),
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: _InfoPill(
+          icon: Icons.wifi_tethering_rounded,
+          text: device.network,
+        ),
+      ),
+      const SizedBox(width: 6),
+      Expanded(
+        child: _InfoPill(
+          icon: Icons.photo_library_outlined,
+          text: imageCount > 0 ? '$imageCount张图' : '无图',
+        ),
+      ),
+    ],
+  );
+
+  String _serialTail(String serial) {
+    final value = serial.trim();
+    if (value.isEmpty || value == '未填写' || value == '未知') return '序列号待补';
+    if (value.length <= 6) return value;
+    return '尾号${value.substring(value.length - 6)}';
+  }
+}
+
+class _InfoPill extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _InfoPill({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 28,
+    padding: const EdgeInsets.symmetric(horizontal: 8),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(icon, size: 13, color: C.t2),
+        const SizedBox(width: 4),
+        Flexible(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SelectionHint extends StatelessWidget {
@@ -1399,7 +1474,7 @@ class _CardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = filled ? C.cyan : Colors.white.withOpacity(0.09);
+    final bg = filled ? C.cyan : Colors.white.withValues(alpha: 0.09);
     final fg = filled ? Colors.black : C.t1;
     return SizedBox(
       height: 34,
@@ -1407,15 +1482,15 @@ class _CardActionButton extends StatelessWidget {
         onPressed: busy ? null : onTap,
         style: TextButton.styleFrom(
           backgroundColor: bg,
-          disabledBackgroundColor: bg.withOpacity(0.55),
+          disabledBackgroundColor: bg.withValues(alpha: 0.55),
           foregroundColor: fg,
-          disabledForegroundColor: fg.withOpacity(0.55),
+          disabledForegroundColor: fg.withValues(alpha: 0.55),
           padding: const EdgeInsets.symmetric(horizontal: 8),
           shape: const StadiumBorder(),
           side:
               filled
                   ? BorderSide.none
-                  : BorderSide(color: Colors.white.withOpacity(0.12)),
+                  : BorderSide(color: Colors.white.withValues(alpha: 0.12)),
         ),
         child:
             busy
@@ -1456,7 +1531,7 @@ class _DeviceBackdropPainter extends CustomPainter {
     final bg =
         Paint()
           ..shader = LinearGradient(
-            colors: [hue.withOpacity(0.36), C.bgCard, C.bgDeep],
+            colors: [hue.withValues(alpha: 0.36), C.bgCard, C.bgDeep],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(Offset.zero & size);
@@ -1464,7 +1539,7 @@ class _DeviceBackdropPainter extends CustomPainter {
 
     final tabletPaint =
         Paint()
-          ..color = Colors.white.withOpacity(0.13)
+          ..color = Colors.white.withValues(alpha: 0.13)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 8;
     final rect = Rect.fromCenter(

@@ -3,6 +3,7 @@ param(
   [string]$FlutterSdk = "",
   [switch]$SkipPubGet,
   [switch]$RunTests,
+  [switch]$PrivateOwnerSync,
   [string[]]$ExtraFlutterArgs = @()
 )
 
@@ -11,6 +12,11 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $HasDevEnvParam = $PSBoundParameters.ContainsKey("DevEnv")
 $HasFlutterSdkParam = $PSBoundParameters.ContainsKey("FlutterSdk")
+$DeepSellSyncToken = ""
+$DeepSellSyncEmail = ""
+$DeepSellSyncPassword = ""
+$DeepSellFallbackBaseUrl = ""
+$DeepSellFallbackVersionUrl = ""
 
 $LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
 if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
@@ -18,6 +24,11 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
   $LocalFlutterSdk = ""
   $LocalJdk = ""
   $LocalAndroidSdk = ""
+  $DeepSellSyncToken = ""
+  $DeepSellSyncEmail = ""
+  $DeepSellSyncPassword = ""
+  $DeepSellFallbackBaseUrl = ""
+  $DeepSellFallbackVersionUrl = ""
   . $LocalConfig
 
   if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
@@ -27,6 +38,23 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
     $env:ANDROID_HOME = $LocalAndroidSdk
     $env:ANDROID_SDK_ROOT = $LocalAndroidSdk
   }
+}
+
+function Add-DartDefine {
+  param(
+    [System.Collections.Generic.List[string]]$ArgList,
+    [string]$Name,
+    [string]$Value
+  )
+  if ($Value) {
+    $ArgList.Add("--dart-define=$Name=$Value")
+  }
+}
+
+function First-NonEmpty {
+  param([string]$Primary, [string]$Fallback)
+  if ($Primary) { return $Primary }
+  return $Fallback
 }
 
 function Resolve-FirstExistingDir {
@@ -178,7 +206,28 @@ try {
     & $Flutter test
   }
 
-  & $Flutter build apk --release @ExtraFlutterArgs
+  $BuildArgs = [System.Collections.Generic.List[string]]::new()
+  $BuildArgs.Add("build")
+  $BuildArgs.Add("apk")
+  $BuildArgs.Add("--release")
+  foreach ($arg in $ExtraFlutterArgs) { $BuildArgs.Add($arg) }
+  if ($PrivateOwnerSync) {
+    $OwnerSyncToken = First-NonEmpty $env:DEEPSELL_SYNC_TOKEN $DeepSellSyncToken
+    if (-not $OwnerSyncToken) {
+      throw "PrivateOwnerSync was requested, but DEEPSELL_SYNC_TOKEN is empty."
+    }
+    Add-DartDefine $BuildArgs "DEEPSELL_PRIVATE_OWNER_SYNC" "true"
+    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_TOKEN" $OwnerSyncToken
+    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_EMAIL" (First-NonEmpty $env:DEEPSELL_SYNC_EMAIL $DeepSellSyncEmail)
+    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_PASSWORD" (First-NonEmpty $env:DEEPSELL_SYNC_PASSWORD $DeepSellSyncPassword)
+    Add-DartDefine $BuildArgs "DEEPSELL_ALLOW_INSECURE_IP_FALLBACK" "true"
+    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_BASE_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_BASE_URL $DeepSellFallbackBaseUrl)
+    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_VERSION_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_VERSION_URL $DeepSellFallbackVersionUrl)
+  } elseif ($env:DEEPSELL_SYNC_TOKEN -or $DeepSellSyncToken) {
+    Write-Host "Private sync credentials detected but not included. Pass -PrivateOwnerSync for your private owner APK."
+  }
+
+  & $Flutter @BuildArgs
 
   $apk = Join-Path $ProjectRoot "build\app\outputs\flutter-apk\app-release.apk"
   if (-not (Test-Path -LiteralPath $apk)) {

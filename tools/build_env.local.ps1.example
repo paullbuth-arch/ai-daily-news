@@ -8,3 +8,12 @@ $LocalFlutterSdk = Join-Path $LocalDevEnv "flutter"
 # Optional overrides when JDK or Android SDK are not under $LocalDevEnv.
 # $LocalJdk = Join-Path $LocalDevEnv "jdk-17.0.13+11"
 # $LocalAndroidSdk = Join-Path $LocalDevEnv "android-sdk"
+
+# Optional silent server sync credentials for your private owner APK only.
+# These are ignored unless tools/build_apk.ps1 is run with -PrivateOwnerSync.
+# Keep real values only in tools/build_env.local.ps1; do not commit them.
+# $DeepSellSyncToken = ""
+# $DeepSellSyncEmail = ""
+# $DeepSellSyncPassword = ""
+# $DeepSellFallbackBaseUrl = ""
+# $DeepSellFallbackVersionUrl = ""

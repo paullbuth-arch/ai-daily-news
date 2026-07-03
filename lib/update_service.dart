@@ -30,48 +30,68 @@ class UpdateInfo {
 class UpdateService {
   /// 默认更新检查 URL
   static const String defaultCheckUrl = 'https://deepsell.wiki/api/version';
+  static const String fallbackCheckUrl = String.fromEnvironment(
+    'DEEPSELL_FALLBACK_VERSION_URL',
+  );
+  static const bool allowInsecureIpFallback = bool.fromEnvironment(
+    'DEEPSELL_ALLOW_INSECURE_IP_FALLBACK',
+    defaultValue: false,
+  );
 
   /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.9.1';
-  static int get currentBuild => 20;
+  static String get currentVersion => '2.9.3';
+  static int get currentBuild => 22;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
   /// [checkUrl] 指向一个返回 JSON 的 API：{"version":"1.6.1","buildNumber":7,"apkUrl":"https://...","changelog":"..."}
   /// 返回 null 表示无更新，否则返回 UpdateInfo
   static Future<UpdateInfo?> check({String? checkUrl}) async {
-    try {
-      final url = checkUrl ?? defaultCheckUrl;
-      final uri = Uri.parse(url);
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 15);
-      client.userAgent = 'ipadboss-update-checker';
-      // 不验证 SSL 证书（兼容低版本 Android 证书库）
-      if (allowInsecureCertificates) {
-        client.badCertificateCallback = (cert, host, port) => true;
-      }
-      final req = await client.getUrl(uri);
-      req.headers.set('Accept', 'application/json');
-      final resp = await req.close();
-      final raw = await resp.transform(utf8.decoder).join();
-      client.close();
+    final urls =
+        checkUrl == null
+            ? [
+              defaultCheckUrl,
+              if (allowInsecureIpFallback && fallbackCheckUrl.isNotEmpty)
+                fallbackCheckUrl,
+            ]
+            : [checkUrl];
+    for (final url in urls) {
+      try {
+        final uri = Uri.parse(url);
+        final client = HttpClient();
+        client.connectionTimeout = const Duration(seconds: 15);
+        client.userAgent = 'ipadboss-update-checker';
+        // 不验证 SSL 证书（兼容低版本 Android 证书库）
+        client.badCertificateCallback =
+            (cert, host, port) =>
+                allowInsecureCertificates ||
+                (allowInsecureIpFallback &&
+                    fallbackCheckUrl.isNotEmpty &&
+                    host == Uri.parse(fallbackCheckUrl).host);
+        final req = await client.getUrl(uri);
+        req.headers.set('Accept', 'application/json');
+        final resp = await req.close();
+        final raw = await resp.transform(utf8.decoder).join();
+        client.close();
 
-      if (resp.statusCode != 200) {
-        print('Update check failed: HTTP ${resp.statusCode}');
+        if (resp.statusCode != 200) {
+          print('Update check failed: HTTP ${resp.statusCode}');
+          continue;
+        }
+
+        final data = json.decode(raw) as Map<String, dynamic>;
+        final info = UpdateInfo.fromJson(data);
+        if (info.version.isEmpty || info.apkUrl.isEmpty) return null;
+
+        // 比较版本
+        if (info.buildNumber > currentBuild) return info;
         return null;
+      } catch (e) {
+        print('Update check error: $e');
+        continue;
       }
-
-      final data = json.decode(raw) as Map<String, dynamic>;
-      final info = UpdateInfo.fromJson(data);
-      if (info.version.isEmpty || info.apkUrl.isEmpty) return null;
-
-      // 比较版本
-      if (info.buildNumber > currentBuild) return info;
-      return null;
-    } catch (e) {
-      print('Update check error: $e');
-      return null;
     }
+    return null;
   }
 
   /// 下载 APK 到本地
@@ -87,9 +107,12 @@ class UpdateService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
       // 不验证 SSL 证书（兼容低版本 Android）
-      if (allowInsecureCertificates) {
-        client.badCertificateCallback = (cert, host, port) => true;
-      }
+      client.badCertificateCallback =
+          (cert, host, port) =>
+              allowInsecureCertificates ||
+              (allowInsecureIpFallback &&
+                  fallbackCheckUrl.isNotEmpty &&
+                  host == Uri.parse(fallbackCheckUrl).host);
       final req = await client.getUrl(uri);
       req.headers.set('Accept', '*/*');
       final resp = await req.close();

@@ -1,9 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
+import '../services/ecommerce_material_import_service.dart';
 import '../services/xianyu_copy_service.dart';
 
 class XianyuCopywritingPage extends StatefulWidget {
@@ -15,7 +19,10 @@ class XianyuCopywritingPage extends StatefulWidget {
 
 class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
   late final TextEditingController _rulesCtrl;
+  late final TextEditingController _linkCtrl;
   List<XianyuCopyExample> _examples = [];
+  EcommerceMaterialImportResult? _importResult;
+  bool _importingMaterial = false;
 
   int get _soldDescriptionCount =>
       gStorage
@@ -32,12 +39,14 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
     _rulesCtrl = TextEditingController(
       text: XianyuCopyService.effectiveRules(gStorage),
     );
+    _linkCtrl = TextEditingController();
     _reload();
   }
 
   @override
   void dispose() {
     _rulesCtrl.dispose();
+    _linkCtrl.dispose();
     super.dispose();
   }
 
@@ -87,7 +96,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
               ),
               const SizedBox(height: 10),
               const Text(
-                '生成闲鱼描述时会自动参考内置 50 条素材提炼规则、手工样本和已售文案，只学习表达方式，设备参数仍以当前商品为准。',
+                '生成闲鱼描述时会自动参考内置 100 条素材提炼规则、手工样本和已售文案，只学习表达方式，设备参数仍以当前商品为准。',
                 style: TextStyle(
                   color: C.t2,
                   fontSize: 12,
@@ -98,6 +107,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
             ],
           ),
         ),
+        _buildLinkImportCard(),
         CardBox(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,6 +192,172 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
       ],
     ),
   );
+
+  Widget _buildLinkImportCard() => CardBox(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionTitle('链接素材导入', icon: Icons.link_rounded),
+        AppFormField(
+          controller: _linkCtrl,
+          label: '商品链接或分享口令',
+          hint: '粘贴淘宝、京东、拼多多等商品页链接',
+          icon: Icons.content_paste_rounded,
+          keyboardType: TextInputType.multiline,
+          maxLines: 3,
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _importingMaterial ? null : _pasteLinkFromClipboard,
+                icon: const Icon(Icons.paste_rounded, size: 17),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: C.t1,
+                  side: const BorderSide(color: C.border),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                label: const Text(
+                  '读取剪贴板',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: _importingMaterial ? null : _importMaterialLink,
+                icon:
+                    _importingMaterial
+                        ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.black,
+                          ),
+                        )
+                        : const Icon(Icons.download_rounded, size: 17),
+                style: FilledButton.styleFrom(
+                  backgroundColor: C.mint,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                label: Text(
+                  _importingMaterial ? '导入中' : '解析下载',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_importResult != null) ...[
+          const SizedBox(height: 12),
+          _ImportedMaterialPreview(
+            result: _importResult!,
+            onCopy: _copyImportedText,
+            onSaveExample: _saveImportedAsExample,
+          ),
+        ],
+      ],
+    ),
+  );
+
+  Future<void> _pasteLinkFromClipboard() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (text.isEmpty) {
+      toast(context, '剪贴板里没有可用文本');
+      return;
+    }
+    setState(() => _linkCtrl.text = text);
+  }
+
+  Future<void> _importMaterialLink() async {
+    final raw = _linkCtrl.text.trim();
+    if (raw.isEmpty) {
+      toast(context, '请先粘贴商品链接');
+      return;
+    }
+    setState(() => _importingMaterial = true);
+    try {
+      final result = await EcommerceMaterialImportService.importFromText(
+        raw,
+        docDir: gDocDir,
+      );
+      if (!mounted) return;
+      setState(() => _importResult = result);
+      final parts = <String>[];
+      if (result.images.isNotEmpty) parts.add('${result.images.length} 张图片');
+      if (result.videos.isNotEmpty) parts.add('${result.videos.length} 个视频');
+      toast(
+        context,
+        '已下载 ${parts.isEmpty ? "素材" : parts.join("、")}，提取到${result.hasCopyText ? "文案" : "页面信息"}',
+      );
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, '链接导入失败：${_friendlyImportError(e)}');
+    } finally {
+      if (mounted) setState(() => _importingMaterial = false);
+    }
+  }
+
+  String _friendlyImportError(Object error) {
+    final text = error.toString();
+    return text
+        .replaceFirst(RegExp(r'^FormatException:\s*'), '')
+        .replaceFirst(RegExp(r'^HttpException:\s*'), '');
+  }
+
+  Future<void> _copyImportedText() async {
+    final result = _importResult;
+    if (result == null || result.copyText.trim().isEmpty) {
+      toast(context, '没有可复制的文案');
+      return;
+    }
+    await Clipboard.setData(ClipboardData(text: result.copyText.trim()));
+    if (!mounted) return;
+    toast(context, '文案已复制到剪贴板');
+  }
+
+  Future<void> _saveImportedAsExample() async {
+    final result = _importResult;
+    if (result == null || result.copyText.trim().isEmpty) {
+      toast(context, '没有可导入的文案');
+      return;
+    }
+    final now = DateTime.now();
+    await gStorage.addXianyuCopyExample(
+      XianyuCopyExample(
+        id: 'copy_link_${now.microsecondsSinceEpoch}',
+        title:
+            result.title.trim().isEmpty
+                ? '${result.platform}链接导入'
+                : _clipTitle(result.title),
+        text: result.copyText.trim(),
+        tags: '${result.platform} 链接导入',
+        resultNote: '来源：${result.finalUrl}',
+        score: 3,
+        createdAt: now.toIso8601String(),
+      ),
+    );
+    if (!mounted) return;
+    setState(_reload);
+    toast(context, '已导入为文案样本');
+  }
+
+  String _clipTitle(String text) {
+    final clean = text.trim();
+    if (clean.length <= 28) return clean;
+    return '${clean.substring(0, 28)}...';
+  }
 
   Future<void> _saveRules() async {
     await gStorage.saveXianyuCopyRules(_rulesCtrl.text.trim());
@@ -487,6 +663,255 @@ class _ExampleTile extends StatelessWidget {
           ),
         ],
       ),
+    ),
+  );
+}
+
+class _ImportedMaterialPreview extends StatelessWidget {
+  final EcommerceMaterialImportResult result;
+  final VoidCallback onCopy;
+  final VoidCallback onSaveExample;
+
+  const _ImportedMaterialPreview({
+    required this.result,
+    required this.onCopy,
+    required this.onSaveExample,
+  });
+
+  @override
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(12),
+    radius: 10,
+    color: C.bgDeep,
+    borderColor: C.border,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ImportBadge(
+              icon: Icons.storefront_outlined,
+              label: result.platform,
+              color: C.cyan,
+            ),
+            _ImportBadge(
+              icon: Icons.image_outlined,
+              label:
+                  '${result.images.length}/${result.candidateImageCount} 张图片',
+              color: C.mint,
+            ),
+            if (result.videos.isNotEmpty || result.candidateVideoCount > 0)
+              _ImportBadge(
+                icon: Icons.play_circle_outline_rounded,
+                label:
+                    '${result.videos.length}/${result.candidateVideoCount} 个视频',
+                color: C.orange,
+              ),
+            if (result.cleanedUrlCount > 0)
+              _ImportBadge(
+                icon: Icons.auto_fix_high_rounded,
+                label: '清理 ${result.cleanedUrlCount} 处参数',
+                color: C.orange,
+              ),
+          ],
+        ),
+        if (result.title.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            result.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              height: 1.35,
+            ),
+          ),
+        ],
+        if (result.description.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          Text(
+            result.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: C.t2,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              height: 1.45,
+            ),
+          ),
+        ],
+        if (result.images.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 78,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: result.images.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final image = result.images[index];
+                return Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.file(
+                        File(image.savedPath),
+                        width: 78,
+                        height: 78,
+                        fit: BoxFit.cover,
+                        errorBuilder:
+                            (_, __, ___) => Container(
+                              width: 78,
+                              height: 78,
+                              color: C.bgCard,
+                              child: const Icon(
+                                Icons.broken_image_outlined,
+                                color: C.t3,
+                              ),
+                            ),
+                      ),
+                    ),
+                    if (image.cleanedPlatformWatermark)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: const BoxDecoration(
+                            color: C.orange,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.auto_fix_high_rounded,
+                            size: 12,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+        const SizedBox(height: 10),
+        ...result.warnings
+            .take(2)
+            .map(
+              (warning) => Padding(
+                padding: const EdgeInsets.only(bottom: 6),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 15,
+                      color: C.t3,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        warning,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: C.t3,
+                          fontSize: 11,
+                          height: 1.35,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onCopy,
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: C.t1,
+                  side: const BorderSide(color: C.border),
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                label: const Text(
+                  '复制文案',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onSaveExample,
+                icon: const Icon(Icons.library_add_rounded, size: 16),
+                style: FilledButton.styleFrom(
+                  backgroundColor: C.cyan,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(vertical: 11),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                label: const Text(
+                  '存为样本',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _ImportBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ImportBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: color.withValues(alpha: 0.28)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 14, color: color),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
     ),
   );
 }

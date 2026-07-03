@@ -30,6 +30,8 @@ void main() {
       'password': 'secret',
     };
     settings['syncDeviceId'] = 'local-device';
+    settings['lastWebDavSync'] = '2026-07-01T10:00:00';
+    settings['lastCloudSync'] = '2026-07-02T10:00:00';
     settings['aiConfig'] = {'model': 'GLM-4-Flash-250414'};
     await storage.saveSettings(settings);
 
@@ -40,6 +42,8 @@ void main() {
     expect(syncSettings.containsKey('auth_email'), false);
     expect(syncSettings.containsKey('webdavConfig'), false);
     expect(syncSettings.containsKey('syncDeviceId'), false);
+    expect(syncSettings.containsKey('lastWebDavSync'), false);
+    expect(syncSettings.containsKey('lastCloudSync'), false);
     expect(syncSettings['aiConfig'], {'model': 'GLM-4-Flash-250414'});
     expect(syncSettings['syncMeta']['deviceId'], 'local-device');
     expect(syncSettings['syncMeta']['schemaVersion'], 1);

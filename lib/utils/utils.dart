@@ -121,6 +121,8 @@ const Set<String> localOnlySettingKeys = {
   'auth_email',
   'webdavConfig',
   'syncDeviceId',
+  'lastWebDavSync',
+  'lastCloudSync',
 };
 
 dynamic cloneJsonValue(dynamic value) {

@@ -4,8 +4,17 @@ import 'dart:io';
 
 class ApiService {
   static const String baseUrl = 'https://deepsell.wiki';
-  static const String fallbackBaseUrl = 'https://42.193.131.66';
-  static const List<String> _baseUrls = [baseUrl, fallbackBaseUrl];
+  static const String fallbackBaseUrl = String.fromEnvironment(
+    'DEEPSELL_FALLBACK_BASE_URL',
+  );
+  static const bool allowInsecureIpFallback = bool.fromEnvironment(
+    'DEEPSELL_ALLOW_INSECURE_IP_FALLBACK',
+    defaultValue: false,
+  );
+  static const List<String> _baseUrls =
+      allowInsecureIpFallback && fallbackBaseUrl != ''
+          ? [baseUrl, fallbackBaseUrl]
+          : [baseUrl];
 
   static Map<String, dynamic> _decodeJsonObject(String raw) {
     if (raw.trim().isEmpty) return {};
@@ -44,7 +53,10 @@ class ApiService {
       final client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
       client.badCertificateCallback =
-          (cert, host, port) => host == Uri.parse(fallbackBaseUrl).host;
+          (cert, host, port) =>
+              allowInsecureIpFallback &&
+              fallbackBaseUrl.isNotEmpty &&
+              host == Uri.parse(fallbackBaseUrl).host;
 
       Map<String, dynamic>? lastError;
       for (final origin in _baseUrls) {

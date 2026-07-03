@@ -1,13 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../components/index.dart';
 import '../theme/colors.dart';
 import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
+import '../services/device_export_service.dart';
+import '../services/ecommerce_material_import_service.dart';
 import 'ai_report_page.dart';
-import 'detail_page.dart';
 import 'market_price_page.dart';
-import 'scan_page.dart';
 import 'sell_page.dart';
 import 'stagnant_list_page.dart';
 
@@ -24,10 +27,6 @@ class HomePageState extends State<HomePage> {
   List<DailyStat> daily = [];
   List<DailyStat> weekly = [];
   Map<String, int> channelGmv = {};
-  final _homeSearchCtrl = TextEditingController();
-  final _homeSearchFocus = FocusNode();
-  bool _searchOpen = false;
-  String _searchQuery = '';
 
   @override
   void initState() {
@@ -43,13 +42,6 @@ class HomePageState extends State<HomePage> {
       weekly = gStorage.getCurrentMonthWeeklyStats();
       channelGmv = gStorage.getChannelGmv();
     });
-  }
-
-  @override
-  void dispose() {
-    _homeSearchCtrl.dispose();
-    _homeSearchFocus.dispose();
-    super.dispose();
   }
 
   @override
@@ -78,42 +70,11 @@ class HomePageState extends State<HomePage> {
           _HeroPhoneCard(
             stats: stats,
             margin: margin,
-            onSearch: _toggleHomeSearch,
-            onTune: _openQuickPanel,
-            onScan: () => _push(const ScanPage()),
+            onSearch: null,
+            onTune: null,
+            onScan: _openLinkMaterialImport,
             onPrice: () => _push(const MarketPricePage()),
             onSell: () => _push(const SellPage()),
-          ),
-          AnimatedSwitcher(
-            duration: C.fast,
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child:
-                _searchOpen
-                    ? Padding(
-                      key: const ValueKey('home-search'),
-                      padding: const EdgeInsets.only(top: 14),
-                      child: _InlineSearchPanel(
-                        controller: _homeSearchCtrl,
-                        focusNode: _homeSearchFocus,
-                        query: _searchQuery,
-                        devices: _searchResults,
-                        onChanged: (value) {
-                          setState(() => _searchQuery = value);
-                        },
-                        onClear: () {
-                          _homeSearchCtrl.clear();
-                          setState(() => _searchQuery = '');
-                          _homeSearchFocus.requestFocus();
-                        },
-                        onClose: _closeHomeSearch,
-                        onSelect: (device) {
-                          _closeHomeSearch();
-                          _push(DetailPage(device: device));
-                        },
-                      ),
-                    )
-                    : const SizedBox.shrink(key: ValueKey('home-search-empty')),
           ),
           const SizedBox(height: 14),
           _AttentionStrip(
@@ -139,81 +100,10 @@ class HomePageState extends State<HomePage> {
     ).then((_) => refresh());
   }
 
-  List<Device> get _searchResults {
-    final devices = gStorage.getDevices();
-    final kw = _searchQuery.trim().toLowerCase();
-    return (kw.isEmpty
-            ? devices
-            : devices.where(
-              (d) =>
-                  d.model.toLowerCase().contains(kw) ||
-                  d.serial.toLowerCase().contains(kw) ||
-                  d.capacity.toLowerCase().contains(kw) ||
-                  d.color.toLowerCase().contains(kw),
-            ))
-        .take(8)
-        .toList();
-  }
-
-  void _toggleHomeSearch() {
-    setState(() => _searchOpen = !_searchOpen);
-    if (_searchOpen) {
-      Future.delayed(const Duration(milliseconds: 80), () {
-        if (mounted) _homeSearchFocus.requestFocus();
-      });
-    }
-  }
-
-  void _closeHomeSearch() {
-    _homeSearchFocus.unfocus();
-    _homeSearchCtrl.clear();
-    setState(() {
-      _searchOpen = false;
-      _searchQuery = '';
-    });
-  }
-
-  Future<void> _openQuickPanel() async {
-    await showAppFormSheet<void>(
-      context: context,
-      title: '经营快捷入口',
-      subtitle: '把常用判断集中到这里',
-      initialChildSize: 0.5,
-      maxChildSize: 0.72,
-      child: Column(
-        children: [
-          _QuickPanelAction(
-            icon: Icons.auto_awesome_rounded,
-            title: 'AI 经营日报',
-            subtitle: '汇总库存、订单和利润',
-            color: C.purple,
-            onTap: () {
-              Navigator.pop(context);
-              _push(const AiReportPage());
-            },
-          ),
-          _QuickPanelAction(
-            icon: Icons.warning_amber_rounded,
-            title: '滞销库存',
-            subtitle: '查看超过周转阈值的设备',
-            color: C.red,
-            onTap: () {
-              Navigator.pop(context);
-              _push(const StagnantListPage());
-            },
-          ),
-          _QuickPanelAction(
-            icon: Icons.query_stats_rounded,
-            title: '今日批发价',
-            subtitle: '查行情和采购参考价',
-            color: C.mint,
-            onTap: () {
-              Navigator.pop(context);
-              _push(const MarketPricePage());
-            },
-          ),
-        ],
-      ),
+  void _openLinkMaterialImport() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _LinkMaterialImportPage()),
     );
   }
 }
@@ -221,8 +111,8 @@ class HomePageState extends State<HomePage> {
 class _HeroPhoneCard extends StatelessWidget {
   final Stats stats;
   final double margin;
-  final VoidCallback onSearch;
-  final VoidCallback onTune;
+  final VoidCallback? onSearch;
+  final VoidCallback? onTune;
   final VoidCallback onScan;
   final VoidCallback onPrice;
   final VoidCallback onSell;
@@ -241,7 +131,7 @@ class _HeroPhoneCard extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: EdgeInsets.zero,
     radius: 30,
-    borderColor: Colors.white.withOpacity(0.16),
+    borderColor: Colors.white.withValues(alpha: 0.16),
     color: const Color(0xEE080A10),
     child: Stack(
       children: [
@@ -344,9 +234,9 @@ class _HeroPhoneCard extends StatelessWidget {
                       SizedBox(
                         width: half,
                         child: _PastelPill(
-                          label: '扫码收货',
-                          sub: '快速录入',
-                          icon: Icons.qr_code_scanner_rounded,
+                          label: '链接下载',
+                          sub: '图片入相册 · 文案进剪贴板',
+                          icon: Icons.link_rounded,
                           color: C.cyan,
                           onTap: onScan,
                         ),
@@ -389,7 +279,7 @@ class _HeroTexturePainter extends CustomPainter {
     final topGlow =
         Paint()
           ..shader = RadialGradient(
-            colors: [C.cyan.withOpacity(0.28), Colors.transparent],
+            colors: [C.cyan.withValues(alpha: 0.28), Colors.transparent],
           ).createShader(
             Rect.fromCircle(
               center: Offset(size.width * 0.18, 0),
@@ -401,7 +291,7 @@ class _HeroTexturePainter extends CustomPainter {
     final band =
         Paint()
           ..shader = LinearGradient(
-            colors: [Colors.white.withOpacity(0.08), Colors.transparent],
+            colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(Offset.zero & size);
@@ -420,7 +310,7 @@ class _HeroTexturePainter extends CustomPainter {
 
     final linePaint =
         Paint()
-          ..color = Colors.white.withOpacity(0.055)
+          ..color = Colors.white.withValues(alpha: 0.055)
           ..strokeWidth = 1;
     for (double y = size.height * 0.68; y < size.height - 16; y += 16) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
@@ -433,7 +323,7 @@ class _HeroTexturePainter extends CustomPainter {
 
 class _CircleTool extends StatelessWidget {
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   const _CircleTool({required this.icon, required this.onTap});
 
   @override
@@ -446,9 +336,9 @@ class _CircleTool extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.10),
+          color: Colors.white.withValues(alpha: 0.10),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.10)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
         ),
         child: Icon(icon, color: C.t1, size: 21),
       ),
@@ -456,241 +346,506 @@ class _CircleTool extends StatelessWidget {
   );
 }
 
-class _InlineSearchPanel extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final String query;
-  final List<Device> devices;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-  final VoidCallback onClose;
-  final ValueChanged<Device> onSelect;
+class _LinkMaterialImportPage extends StatelessWidget {
+  const _LinkMaterialImportPage();
 
-  const _InlineSearchPanel({
-    required this.controller,
-    required this.focusNode,
-    required this.query,
-    required this.devices,
-    required this.onChanged,
-    required this.onClear,
-    required this.onClose,
-    required this.onSelect,
-  });
+  @override
+  Widget build(BuildContext context) => appScaffold(
+    context,
+    '链接素材下载',
+    ListView(
+      padding: EdgeInsets.fromLTRB(
+        AppLayout.pageHorizontal(context),
+        4,
+        AppLayout.pageHorizontal(context),
+        AppLayout.scrollBottomPadding(context),
+      ),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      children: const [
+        _LinkMaterialIntro(),
+        SizedBox(height: 14),
+        _LinkMaterialImportSheet(),
+      ],
+    ),
+  );
+}
+
+class _LinkMaterialIntro extends StatelessWidget {
+  const _LinkMaterialIntro();
 
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(14),
-    radius: 22,
-    color: const Color(0xF00B1018),
-    borderColor: C.cyan.withOpacity(0.18),
-    child: Column(
+    radius: 14,
+    color: C.bgCardMuted,
+    borderColor: C.border,
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Container(
-                height: 46,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: C.bgDeep,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: C.border),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.search_rounded, color: C.cyan, size: 20),
-                    const SizedBox(width: 9),
-                    Expanded(
-                      child: TextField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        onChanged: onChanged,
-                        style: const TextStyle(
-                          color: C.t1,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        decoration: const InputDecoration(
-                          isCollapsed: true,
-                          border: InputBorder.none,
-                          hintText: '搜索型号、序列号、容量、颜色',
-                          hintStyle: TextStyle(color: C.t3, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    if (query.isNotEmpty)
-                      IconButton(
-                        onPressed: onClear,
-                        icon: const Icon(
-                          Icons.close_rounded,
-                          color: C.t3,
-                          size: 18,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            RoundIconButton(
-              icon: Icons.keyboard_arrow_up_rounded,
-              onTap: onClose,
-              size: 42,
+      children: const [
+        Icon(Icons.download_for_offline_rounded, color: C.cyan, size: 22),
+        SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            '复制商品链接或分享口令后解析，图片保存到相册，文案复制到剪贴板。',
+            style: TextStyle(
               color: C.t2,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        if (devices.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 18),
-            child: Center(
-              child: Text(
-                '没有匹配的库存设备',
-                style: TextStyle(
-                  color: C.t2,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          )
-        else
-          ...devices.map(
-            (d) => Padding(
-              padding: const EdgeInsets.only(bottom: 9),
-              child: _SearchResultTile(device: d, onTap: () => onSelect(d)),
+              fontSize: 12,
+              height: 1.45,
+              fontWeight: FontWeight.w700,
             ),
           ),
+        ),
       ],
     ),
   );
 }
 
-class _SearchResultTile extends StatelessWidget {
-  final Device device;
-  final VoidCallback onTap;
-
-  const _SearchResultTile({required this.device, required this.onTap});
+class _LinkMaterialImportSheet extends StatefulWidget {
+  const _LinkMaterialImportSheet();
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    padding: const EdgeInsets.all(13),
-    radius: 20,
-    color: const Color(0xE60C0F16),
-    onTap: onTap,
-    child: Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: const BoxDecoration(
-            color: C.cyan,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.tablet_mac_rounded,
-            color: Colors.black,
-            size: 21,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '${device.model} ${device.capacity}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: C.t1,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w900,
+  State<_LinkMaterialImportSheet> createState() =>
+      _LinkMaterialImportSheetState();
+}
+
+class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
+  static const int _maxImages = 80;
+
+  final _linkCtrl = TextEditingController();
+  bool _busy = false;
+  EcommerceMaterialImportResult? _result;
+  int? _savedImageCount;
+  int? _savedVideoCount;
+  bool _copiedText = false;
+  String? _saveError;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _pasteFromClipboard(silent: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _linkCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pasteFromClipboard({bool silent = false}) async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim() ?? '';
+    if (!mounted) return;
+    if (text.isEmpty) {
+      if (!silent) toast(context, '剪贴板里没有可用文本');
+      return;
+    }
+    setState(() => _linkCtrl.text = text);
+    if (!silent) toast(context, '已读取剪贴板');
+  }
+
+  void _clearInput() {
+    setState(() {
+      _linkCtrl.clear();
+      _result = null;
+      _savedImageCount = null;
+      _savedVideoCount = null;
+      _copiedText = false;
+      _saveError = null;
+    });
+    toast(context, '已清空输入内容');
+  }
+
+  Future<void> _importMaterial() async {
+    final raw = _linkCtrl.text.trim();
+    if (raw.isEmpty) {
+      toast(context, '请先复制或粘贴商品链接');
+      return;
+    }
+
+    setState(() {
+      _busy = true;
+      _saveError = null;
+    });
+
+    try {
+      final result = await EcommerceMaterialImportService.importFromText(
+        raw,
+        docDir: gDocDir,
+        maxImages: _maxImages,
+      );
+
+      final copyText = result.copyText.trim();
+      final copiedText = copyText.isNotEmpty;
+      if (copiedText) {
+        await Clipboard.setData(ClipboardData(text: copyText));
+      }
+
+      var savedImages = 0;
+      var savedVideos = 0;
+      String? saveError;
+      final imagePaths = result.images.map((image) => image.savedPath).toList();
+      if (imagePaths.isNotEmpty) {
+        try {
+          savedImages = await DeviceExportService.saveImagesToGallery(
+            paths: imagePaths,
+            albumName: '货脉链接素材',
+          );
+        } catch (e) {
+          saveError = _friendlyError(e);
+        }
+      }
+      final videoPaths = result.videos.map((video) => video.savedPath).toList();
+      if (videoPaths.isNotEmpty) {
+        try {
+          savedVideos = await DeviceExportService.saveVideosToGallery(
+            paths: videoPaths,
+            albumName: '货脉链接素材',
+          );
+        } catch (e) {
+          final message = _friendlyError(e);
+          saveError = saveError == null ? message : '$saveError；$message';
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _result = result;
+        _savedImageCount = savedImages;
+        _savedVideoCount = savedVideos;
+        _copiedText = copiedText;
+        _saveError = saveError;
+      });
+
+      final parts = <String>[];
+      if (savedImages > 0) parts.add('已保存$savedImages张图到相册');
+      if (savedVideos > 0) parts.add('已保存$savedVideos个视频到相册');
+      if (copiedText) parts.add('文案已复制');
+      if (parts.isEmpty) parts.add('已解析链接，但没有拿到可保存素材');
+      if (saveError != null) {
+        toast(context, '解析成功，相册保存失败：$saveError');
+      } else {
+        toast(context, parts.join('，'));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      toast(context, '解析下载失败：${_friendlyError(e)}');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  String _friendlyError(Object error) => error
+      .toString()
+      .replaceFirst(RegExp(r'^FormatException:\s*'), '')
+      .replaceFirst(RegExp(r'^HttpException:\s*'), '')
+      .replaceFirst(RegExp(r'^PlatformException\([^,]+,\s*'), '')
+      .replaceFirst(RegExp(r',\s*null,\s*null\)$'), '');
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      AppFormField(
+        controller: _linkCtrl,
+        label: '商品链接或分享口令',
+        hint: '支持闲鱼、小红书，以及可公开访问的商品页',
+        icon: Icons.link_rounded,
+        keyboardType: TextInputType.multiline,
+        maxLines: 4,
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _busy ? null : _clearInput,
+              icon: const Icon(Icons.clear_rounded, size: 17),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                '${device.condition} · ${device.color} · ${device.serial.isEmpty ? "无序列号" : device.serial}',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: C.t2,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
+              label: const Text('清空内容'),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: FilledButton.icon(
+              onPressed: _busy ? null : _importMaterial,
+              icon:
+                  _busy
+                      ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.black,
+                        ),
+                      )
+                      : const Icon(Icons.download_rounded, size: 17),
+              style: FilledButton.styleFrom(
+                backgroundColor: C.cyan,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
-            ],
+              label: Text(_busy ? '解析中' : '解析下载'),
+            ),
           ),
+        ],
+      ),
+      if (_result != null) ...[
+        const SizedBox(height: 14),
+        _LinkImportResultCard(
+          result: _result!,
+          savedImageCount: _savedImageCount ?? 0,
+          savedVideoCount: _savedVideoCount ?? 0,
+          copiedText: _copiedText,
+          saveError: _saveError,
         ),
-        const Icon(Icons.chevron_right_rounded, color: C.t3),
       ],
-    ),
+    ],
   );
 }
 
-class _QuickPanelAction extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
+class _LinkImportResultCard extends StatelessWidget {
+  final EcommerceMaterialImportResult result;
+  final int savedImageCount;
+  final int savedVideoCount;
+  final bool copiedText;
+  final String? saveError;
 
-  const _QuickPanelAction({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
+  const _LinkImportResultCard({
+    required this.result,
+    required this.savedImageCount,
+    required this.savedVideoCount,
+    required this.copiedText,
+    this.saveError,
   });
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: 10),
-    child: GlassPanel(
-      padding: const EdgeInsets.all(13),
-      radius: 20,
-      color: color.withOpacity(0.12),
-      borderColor: color.withOpacity(0.22),
-      onTap: onTap,
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: Colors.black, size: 21),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: C.t1,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: C.t2,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(12),
+    radius: 14,
+    color: const Color(0xEA0B1018),
+    borderColor: C.border,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ImportBadge(
+              icon: Icons.storefront_outlined,
+              label: result.platform,
+              color: C.cyan,
+            ),
+            _ImportBadge(
+              icon: Icons.photo_library_outlined,
+              label: '图片 $savedImageCount/${result.images.length}',
+              color: C.mint,
+            ),
+            if (result.videos.isNotEmpty || result.candidateVideoCount > 0)
+              _ImportBadge(
+                icon: Icons.play_circle_outline_rounded,
+                label:
+                    '视频 $savedVideoCount/${result.videos.isNotEmpty ? result.videos.length : result.candidateVideoCount}',
+                color: C.orange,
+              ),
+            _ImportBadge(
+              icon:
+                  copiedText
+                      ? Icons.content_copy_rounded
+                      : Icons.text_snippet_outlined,
+              label: copiedText ? '文案已复制' : '未提取到文案',
+              color: copiedText ? C.purple : C.orange,
+            ),
+          ],
+        ),
+        if (result.title.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          Text(
+            result.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: C.t1,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              height: 1.35,
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: C.t2),
+        ],
+        if (result.images.isNotEmpty || result.videos.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 72,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount:
+                  (result.images.length + result.videos.length) > 12
+                      ? 12
+                      : result.images.length + result.videos.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                if (index >= result.images.length) {
+                  final video = result.videos[index - result.images.length];
+                  return _VideoPreviewTile(path: video.savedPath);
+                }
+                final image = result.images[index];
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(
+                    File(image.savedPath),
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    alignment: Alignment.center,
+                    errorBuilder:
+                        (_, __, ___) => Container(
+                          width: 72,
+                          height: 72,
+                          color: C.bgCard,
+                          child: const Icon(
+                            Icons.broken_image_outlined,
+                            color: C.t3,
+                          ),
+                        ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+        if (saveError != null) ...[
+          const SizedBox(height: 9),
+          _ImportNote(icon: Icons.error_outline_rounded, text: saveError!),
+        ],
+        ...result.warnings
+            .take(2)
+            .map(
+              (warning) => Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _ImportNote(
+                  icon: Icons.info_outline_rounded,
+                  text: warning,
+                ),
+              ),
+            ),
+      ],
+    ),
+  );
+}
+
+class _VideoPreviewTile extends StatelessWidget {
+  final String path;
+
+  const _VideoPreviewTile({required this.path});
+
+  @override
+  Widget build(BuildContext context) {
+    final name = path.split(Platform.pathSeparator).last;
+    return Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        color: C.bgCard,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: C.border),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.play_circle_fill_rounded, color: C.orange, size: 26),
+          const SizedBox(height: 4),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Text(
+              name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: C.t3,
+                fontSize: 9,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+class _ImportBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _ImportBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(99),
+      border: Border.all(color: color.withValues(alpha: 0.28)),
     ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _ImportNote extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _ImportNote({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, size: 15, color: C.t3),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          text,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: C.t3,
+            fontSize: 11,
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    ],
   );
 }
 
@@ -709,9 +864,9 @@ class _MiniMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.07),
+      color: Colors.white.withValues(alpha: 0.07),
       borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Colors.white.withOpacity(0.08)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,7 +938,7 @@ class _PastelPill extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.black.withOpacity(0.50),
+                        color: Colors.black.withValues(alpha: 0.50),
                         fontWeight: FontWeight.w900,
                       ),
                     ),
@@ -829,43 +984,68 @@ class _AttentionStrip extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Row(
-    children: [
-      Expanded(
-        child: _AlertTile(
-          icon: Icons.inventory_2_outlined,
-          title: '待质检',
-          value: '${stats.pendingQcCount}',
-          color: C.cyan,
+  Widget build(BuildContext context) {
+    final devices =
+        gStorage
+            .getDevices()
+            .where((d) => d.status == 'in_stock' || d.status == 'listed')
+            .toList();
+    final priced = devices.where((d) => d.sellPrice > 0).toList();
+    final estimatedProfit = priced.fold<int>(0, (sum, d) {
+      final cost = d.purchaseCost + (d.repairCost ?? 0);
+      final profit = d.sellPrice - cost;
+      return profit > 0 ? sum + profit : sum;
+    });
+    final avgStockDays =
+        devices.isEmpty
+            ? 0
+            : (devices.fold<int>(0, (sum, d) => sum + d.stockDays) /
+                    devices.length)
+                .round();
+    final agingCount = stagnant.length;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _AlertTile(
+            icon: Icons.account_balance_wallet_outlined,
+            title: '库存资金',
+            value: yuan(stats.capitalOccupied),
+            subtitle: '${devices.length} 台在库/在售',
+            color: C.cyan,
+          ),
         ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _AlertTile(
-          icon: Icons.local_shipping_outlined,
-          title: '待发货',
-          value: '${stats.pendingCount}',
-          color: C.mint,
+        const SizedBox(width: 10),
+        Expanded(
+          child: _AlertTile(
+            icon: Icons.trending_up_rounded,
+            title: '预估毛利',
+            value: yuan(estimatedProfit),
+            subtitle: '${priced.length} 台已定价',
+            color: C.mint,
+          ),
         ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: _AlertTile(
-          icon: Icons.warning_amber_rounded,
-          title: '滞销',
-          value: '${stagnant.length}',
-          color: C.red,
-          onTap: onStagnantTap,
+        const SizedBox(width: 10),
+        Expanded(
+          child: _AlertTile(
+            icon: Icons.schedule_rounded,
+            title: '平均库龄',
+            value: '${avgStockDays}天',
+            subtitle: agingCount > 0 ? '$agingCount 台超过15天' : '周转正常',
+            color: agingCount > 0 ? C.orange : C.blue,
+            onTap: onStagnantTap,
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+  }
 }
 
 class _AlertTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String value;
+  final String? subtitle;
   final Color color;
   final VoidCallback? onTap;
 
@@ -873,6 +1053,7 @@ class _AlertTile extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.value,
+    this.subtitle,
     required this.color,
     this.onTap,
   });
@@ -887,12 +1068,16 @@ class _AlertTile extends StatelessWidget {
       children: [
         Icon(icon, color: color, size: 19),
         const SizedBox(height: 10),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 21,
-            color: C.t1,
-            fontWeight: FontWeight.w900,
+        FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 21,
+              color: C.t1,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
         Text(
@@ -903,6 +1088,19 @@ class _AlertTile extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 10,
+              color: C.t3,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ],
     ),
   );
@@ -942,7 +1140,7 @@ class _TrendPanelState extends State<_TrendPanel> {
                 width: 30,
                 height: 30,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.07),
+                  color: Colors.white.withValues(alpha: 0.07),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -1015,9 +1213,9 @@ class _TrendToggle extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.07),
+      color: Colors.white.withValues(alpha: 0.07),
       borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: Colors.white.withOpacity(0.08)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -1080,7 +1278,7 @@ class _ChannelPanel extends StatelessWidget {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: color.withOpacity(0.16),
+                      color: color.withValues(alpha: 0.16),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -1124,7 +1322,9 @@ class _ChannelPanel extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: pct,
                             minHeight: 7,
-                            backgroundColor: Colors.white.withOpacity(0.07),
+                            backgroundColor: Colors.white.withValues(
+                              alpha: 0.07,
+                            ),
                             valueColor: AlwaysStoppedAnimation(color),
                           ),
                         ),
@@ -1150,8 +1350,8 @@ class _AiPanel extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(16),
     radius: 22,
-    color: C.purple.withOpacity(0.16),
-    borderColor: C.purple.withOpacity(0.24),
+    color: C.purple.withValues(alpha: 0.16),
+    borderColor: C.purple.withValues(alpha: 0.24),
     onTap: onTap,
     child: Row(
       children: [

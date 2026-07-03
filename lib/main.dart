@@ -19,6 +19,7 @@ import 'storage.dart';
 import 'models.dart';
 import 'ai_service.dart';
 import 'auth_service.dart';
+import 'cloud_sync_service.dart';
 import 'pages/shell.dart';
 
 // ═══════════════════════════════════════════════
@@ -44,6 +45,7 @@ void main() async {
   await gStorage.load();
   await gStorage.prepareForUserDataStartup();
   await AuthService.init(gStorage);
+  CloudSyncService.startBackgroundSync(storage: gStorage, docDir: gDocDir);
   final aiMap = gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?;
   AiService.setConfig(AiConfig.fromMap(aiMap));
   AiService.setPromptRules(gStorage.getAiPromptRules());
@@ -80,16 +82,11 @@ class _IpadBossAppState extends State<IpadBossApp> {
   void _loadTheme() {
     if (gStorageReady && !_themeLoaded) {
       _themeLoaded = true;
-      final saved = gStorage.getSettings()['themeMode'] as String?;
-      switch (saved) {
-        case 'light':
-          gThemeMode = ThemeMode.light;
-          break;
-        case 'system':
-          gThemeMode = ThemeMode.system;
-          break;
-        default:
-          gThemeMode = ThemeMode.dark;
+      gThemeMode = ThemeMode.dark;
+      final settings = gStorage.getSettings();
+      if (settings['themeMode'] != 'dark') {
+        settings['themeMode'] = 'dark';
+        gStorage.saveSettings(settings);
       }
       setState(() {});
     } else if (!gStorageReady) {
@@ -102,7 +99,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
     return MaterialApp(
       title: '货脉',
       debugShowCheckedModeBanner: false,
-      themeMode: gThemeMode,
+      themeMode: ThemeMode.dark,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
       home: const MainShell(),
@@ -129,8 +126,8 @@ class _IpadBossAppState extends State<IpadBossApp> {
     final radius = BorderRadius.circular(C.radiusMd);
     return base.copyWith(
       visualDensity: VisualDensity.standard,
-      splashColor: C.cyan.withOpacity(0.08),
-      highlightColor: Colors.white.withOpacity(0.04),
+      splashColor: C.cyan.withValues(alpha: 0.08),
+      highlightColor: Colors.white.withValues(alpha: 0.04),
       dividerColor: C.divider,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -146,7 +143,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: C.bgSurface.withOpacity(0.72),
+        fillColor: C.bgSurface.withValues(alpha: 0.72),
         hintStyle: const TextStyle(color: C.t3, fontSize: 13),
         labelStyle: const TextStyle(color: C.t2, fontSize: 13),
         contentPadding: const EdgeInsets.symmetric(
@@ -155,11 +152,11 @@ class _IpadBossAppState extends State<IpadBossApp> {
         ),
         border: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(C.radiusMd)),
@@ -168,10 +165,10 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       cardTheme: CardTheme(
         elevation: 0,
-        color: C.bgCard.withOpacity(0.86),
+        color: C.bgCard.withValues(alpha: 0.86),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusLg),
-          side: BorderSide(color: Colors.white.withOpacity(0.08)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -196,7 +193,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: C.t1,
-          side: BorderSide(color: Colors.white.withOpacity(0.12)),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
           shape: const StadiumBorder(),
         ),
       ),

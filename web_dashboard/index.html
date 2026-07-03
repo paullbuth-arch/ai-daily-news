@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DeepSell 双端经营台</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="主导航">
+        <a class="brand" href="#overview" aria-label="DeepSell 总览">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 28 28">
+              <path d="M6 5 22 9 13 24 6 5Z"></path>
+              <path d="M9 8.5 19.6 11.2 13.2 20.3 9 8.5Z"></path>
+              <path d="M10.2 9.5 15 13.2 13.1 20"></path>
+            </svg>
+          </span>
+          <span>
+            <strong>DeepSell</strong>
+            <em>经营后台</em>
+          </span>
+        </a>
+
+        <nav id="mainNav" class="nav-list" aria-label="业务模块">
+          <button class="nav-item active" type="button" data-route="overview">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"></rect><rect x="14" y="4" width="6" height="6" rx="1.5"></rect><rect x="4" y="14" width="6" height="6" rx="1.5"></rect><rect x="14" y="14" width="6" height="6" rx="1.5"></rect></svg>
+            </span>
+            <span>总览</span>
+          </button>
+          <button class="nav-item" type="button" data-route="inventory">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="m12 3 8 4-8 4-8-4 8-4Z"></path><path d="m4 12 8 4 8-4"></path><path d="m4 17 8 4 8-4"></path></svg>
+            </span>
+            <span>库存</span>
+            <b id="navStock">0</b>
+          </button>
+          <button class="nav-item" type="button" data-route="orders">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"></rect><path d="M8 9h8"></path><path d="M8 13h8"></path><path d="M8 17h5"></path></svg>
+            </span>
+            <span>订单</span>
+            <b id="navOrders">0</b>
+          </button>
+          <button class="nav-item" type="button" data-route="analytics">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 19V9"></path><path d="M12 19V5"></path><path d="M19 19v-7"></path></svg>
+            </span>
+            <span>分析</span>
+          </button>
+          <button class="nav-item" type="button" data-route="operations">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 3v5"></path><path d="M12 16v5"></path><path d="M4.9 7.1 8.4 10.6"></path><path d="m15.6 13.4 3.5 3.5"></path><path d="M3 12h5"></path><path d="M16 12h5"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </span>
+            <span>运营</span>
+            <b id="navTasks">0</b>
+          </button>
+          <button class="nav-item" type="button" data-route="sync">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.7-4.4L3 9"></path><path d="M3 4v5h5"></path><path d="M4 13a8 8 0 0 0 14.7 4.4L21 15"></path><path d="M16 15h5v5"></path></svg>
+            </span>
+            <span>同步</span>
+          </button>
+        </nav>
+
+        <div class="side-status">
+          <span id="syncLamp" class="lamp"></span>
+          <div>
+            <strong id="sideMode">连接中</strong>
+            <em id="sideMeta">读取服务器数据</em>
+          </div>
+        </div>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div class="title-block">
+            <h1 id="pageTitle">总览</h1>
+            <p id="pageSubtitle">正在读取安卓 App 后台同步数据</p>
+          </div>
+          <div class="top-actions">
+            <label class="global-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <path d="m21 21-4.3-4.3"></path>
+              </svg>
+              <input id="globalSearch" type="search" autocomplete="off" placeholder="搜索型号、序列号、买家、渠道" />
+            </label>
+            <button id="refreshBtn" class="icon-button" type="button" aria-label="刷新数据">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 11a8 8 0 0 0-14.7-4.4L3 9"></path>
+                <path d="M3 4v5h5"></path>
+                <path d="M4 13a8 8 0 0 0 14.7 4.4L21 15"></path>
+                <path d="M16 15h5v5"></path>
+              </svg>
+            </button>
+          </div>
+        </header>
+
+        <div id="stateBanner" class="state-banner" role="status">
+          <span class="state-dot"></span>
+          <strong id="stateTitle">后台同步检测中</strong>
+          <span id="stateText">网页端读取服务器同步数据，不提供账号配置入口。</span>
+          <button id="stateAction" type="button" data-route="sync">查看同步</button>
+        </div>
+
+        <section id="viewRoot" class="view-root" aria-live="polite"></section>
+      </section>
+    </main>
+
+    <div id="drawerBackdrop" class="drawer-backdrop" hidden></div>
+    <aside id="detailDrawer" class="detail-drawer" hidden aria-label="详情"></aside>
+    <div id="toast" class="toast" role="status" hidden></div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

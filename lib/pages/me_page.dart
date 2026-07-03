@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../backup_service.dart';
 import '../components/index.dart';
 import '../main.dart';
 import '../theme/colors.dart';
@@ -29,63 +28,7 @@ class MePage extends StatefulWidget {
 }
 
 class _MePageState extends State<MePage> {
-  bool _backupReminded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkBackupReminder();
-  }
-
   void _refresh() => setState(() {});
-
-  void _checkBackupReminder() {
-    if (_backupReminded || !BackupService.shouldRemindBackup(gStorage)) return;
-    _backupReminded = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showDialog(
-        context: context,
-        builder:
-            (ctx) => AlertDialog(
-              backgroundColor: C.bgCard,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(C.radiusLg),
-              ),
-              title: const Text(
-                '备份提醒',
-                style: TextStyle(
-                  color: C.t1,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              content: Text(
-                BackupService.lastBackupTime(gStorage) == null
-                    ? '还没有备份过数据，建议导出一份最新备份。'
-                    : '已超过 7 天未备份，建议导出最新备份。',
-                style: const TextStyle(color: C.t2, fontSize: 13),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('稍后'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _nav(const BackupPage());
-                  },
-                  child: const Text(
-                    '去备份',
-                    style: TextStyle(fontWeight: FontWeight.w900),
-                  ),
-                ),
-              ],
-            ),
-      );
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +252,7 @@ class _MePageState extends State<MePage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            '数据本地持久化 · AI 可配置 · WebDAV 云同步',
+            '数据本地持久化 · 后台同步 · WebDAV 备份',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: C.t3,

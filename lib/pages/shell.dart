@@ -73,7 +73,7 @@ class _MainShellState extends State<MainShell> {
             Row(
               children: [
                 _SideDock(index: _index, onTap: _onTap),
-                Expanded(child: IndexedStack(index: _index, children: pages)),
+                Expanded(child: _ShellPages(index: _index, children: pages)),
               ],
             ),
           ],
@@ -84,10 +84,21 @@ class _MainShellState extends State<MainShell> {
     return Scaffold(
       backgroundColor: C.bgDeep,
       extendBody: true,
-      body: IndexedStack(index: _index, children: pages),
+      body: _ShellPages(index: _index, children: pages),
       bottomNavigationBar: _BottomDock(index: _index, onTap: _onTap),
     );
   }
+}
+
+class _ShellPages extends StatelessWidget {
+  final int index;
+  final List<Widget> children;
+
+  const _ShellPages({required this.index, required this.children});
+
+  @override
+  Widget build(BuildContext context) =>
+      IndexedStack(index: index, children: children);
 }
 
 class _NavItem {
@@ -99,7 +110,7 @@ class _NavItem {
 
 const _items = [
   _NavItem(Icons.home_outlined, Icons.home_rounded, '看板'),
-  _NavItem(Icons.inventory_2_outlined, Icons.inventory_2_rounded, '库存'),
+  _NavItem(Icons.inventory_2_outlined, Icons.inventory_2_rounded, '库存管理'),
   _NavItem(Icons.add_rounded, Icons.add_rounded, '收货'),
   _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, '订单'),
   _NavItem(Icons.person_outline_rounded, Icons.person_rounded, '我的'),
@@ -132,7 +143,7 @@ class _SideDock extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: C.cyan.withOpacity(0.28),
+                      color: C.cyan.withValues(alpha: 0.28),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -237,7 +248,7 @@ class _RoundNavButton extends StatelessWidget {
         primary
             ? Colors.white
             : active
-            ? C.cyan.withOpacity(0.18)
+            ? C.cyan.withValues(alpha: 0.18)
             : Colors.transparent;
     final fg =
         primary
@@ -264,14 +275,14 @@ class _RoundNavButton extends StatelessWidget {
                     primary
                         ? Colors.white
                         : active
-                        ? C.cyan.withOpacity(0.24)
-                        : Colors.white.withOpacity(0.03),
+                        ? C.cyan.withValues(alpha: 0.24)
+                        : Colors.white.withValues(alpha: 0.03),
               ),
               boxShadow:
                   primary
                       ? [
                         BoxShadow(
-                          color: Colors.white.withOpacity(0.20),
+                          color: Colors.white.withValues(alpha: 0.20),
                           blurRadius: 18,
                           offset: const Offset(0, 8),
                         ),

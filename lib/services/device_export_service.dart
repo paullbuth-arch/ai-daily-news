@@ -39,6 +39,35 @@ class DeviceExportService {
     'ipad_boss_app/gallery',
   );
 
+  static Future<int> saveImagesToGallery({
+    required List<String> paths,
+    String albumName = '货脉',
+  }) async {
+    if (paths.isEmpty) return 0;
+    final result = await _galleryChannel.invokeMethod('saveImagesToGallery', {
+      'paths': paths,
+      'albumName': albumName,
+    });
+    return (result is Map) ? (result['saved'] as int? ?? 0) : 0;
+  }
+
+  static Future<int> saveVideosToGallery({
+    required List<String> paths,
+    String albumName = '货脉',
+  }) async {
+    if (paths.isEmpty) return 0;
+    final result = await _galleryChannel.invokeMethod('saveVideosToGallery', {
+      'paths': paths,
+      'albumName': albumName,
+    });
+    return (result is Map) ? (result['saved'] as int? ?? 0) : 0;
+  }
+
+  static Future<bool> openUrl(String url) async {
+    final result = await _galleryChannel.invokeMethod('openUrl', {'url': url});
+    return result is Map && result['success'] == true;
+  }
+
   static Future<DeviceExportResult> downloadListing({
     required Device device,
     required String docDir,
@@ -65,11 +94,7 @@ class DeviceExportService {
 
     var saved = 0;
     if (images.isNotEmpty) {
-      final result = await _galleryChannel.invokeMethod('saveImagesToGallery', {
-        'paths': images,
-        'albumName': '货脉',
-      });
-      saved = (result is Map) ? (result['saved'] as int? ?? 0) : 0;
+      saved = await saveImagesToGallery(paths: images);
     }
 
     var opened = false;
@@ -114,7 +139,7 @@ class DeviceExportService {
             ..shader = ui.Gradient.radial(
               const Offset(width * 0.22, height * 0.1),
               430,
-              [C.cyan.withOpacity(0.26), Colors.transparent],
+              [C.cyan.withValues(alpha: 0.26), Colors.transparent],
             );
       canvas.drawRect(rect, glow);
 
@@ -122,8 +147,8 @@ class DeviceExportService {
         canvas,
         Rect.fromLTWH(48, 54, 624, 852),
         36,
-        Colors.white.withOpacity(0.06),
-        stroke: Colors.white.withOpacity(0.10),
+        Colors.white.withValues(alpha: 0.06),
+        stroke: Colors.white.withValues(alpha: 0.10),
       );
 
       _roundRect(canvas, Rect.fromLTWH(80, 86, 72, 72), 18, C.selected);
@@ -147,8 +172,8 @@ class DeviceExportService {
         canvas,
         Rect.fromLTWH(522, 98, 104, 42),
         16,
-        cleanColor.withOpacity(0.18),
-        stroke: cleanColor.withOpacity(0.42),
+        cleanColor.withValues(alpha: 0.18),
+        stroke: cleanColor.withValues(alpha: 0.42),
       );
       _drawText(
         canvas,
@@ -193,8 +218,8 @@ class DeviceExportService {
         canvas,
         Rect.fromLTWH(80, 742, 560, 86),
         24,
-        Colors.white.withOpacity(0.07),
-        stroke: Colors.white.withOpacity(0.12),
+        Colors.white.withValues(alpha: 0.07),
+        stroke: Colors.white.withValues(alpha: 0.12),
       );
       _drawText(
         canvas,

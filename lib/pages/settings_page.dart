@@ -70,22 +70,6 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle('主题'),
-                const SizedBox(height: 10),
-                _themeItem(Icons.dark_mode_outlined, '深色模式', ThemeMode.dark),
-                _themeItem(Icons.light_mode_outlined, '浅色模式', ThemeMode.light),
-                _themeItem(
-                  Icons.brightness_auto_outlined,
-                  '跟随系统',
-                  ThemeMode.system,
-                ),
-              ],
-            ),
-          ),
-          CardBox(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
                 const SectionTitle('关于'),
                 const SizedBox(height: 10),
                 _row('应用名称', '货脉'),
@@ -94,7 +78,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   'AI引擎',
                   '${AiService.effectiveConfig.providerName} · ${AiService.effectiveConfig.model}',
                 ),
-                _row('数据存储', '本地JSON持久化 + WebDAV云同步'),
+                _row('数据存储', '本地JSON持久化 + 账号云同步'),
                 const SizedBox(height: 10),
                 ghostBtn(
                   '配置 AI 引擎',
@@ -132,6 +116,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     context,
                     MaterialPageRoute(builder: (_) => const WebDavConfigPage()),
                   ),
+                  icon: Icons.folder_copy_outlined,
                 ),
                 const SizedBox(height: 8),
                 ghostBtn('检查更新', _checkUpdate),
@@ -155,11 +140,11 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '本地模式',
+                        '后台保护',
                         style: TextStyle(fontSize: 12, color: C.t1),
                       ),
                       const Text(
-                        '账号登录已临时屏蔽，数据保存在本机；需要云备份请使用 WebDAV。',
+                        '数据先保存在本机；服务器同步在后台处理，WebDAV 保留为手动备份。',
                         style: TextStyle(fontSize: 10, color: C.t3),
                       ),
                     ],
@@ -249,58 +234,6 @@ class _SettingsPageState extends State<SettingsPage> {
       ],
     ),
   );
-
-  Widget _themeItem(IconData icon, String label, ThemeMode mode) {
-    final on = gThemeMode == mode;
-    return GestureDetector(
-      onTap: () {
-        gThemeMode = mode;
-        final settings = gStorage.getSettings();
-        settings['themeMode'] =
-            mode == ThemeMode.light
-                ? 'light'
-                : mode == ThemeMode.system
-                ? 'system'
-                : 'dark';
-        gStorage.saveSettings(settings);
-        gOnThemeChange?.call();
-        setState(() {});
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        margin: EdgeInsets.only(bottom: 6),
-        decoration: BoxDecoration(
-          color: on ? C.selected : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: on ? C.cyan.withOpacity(0.3) : C.border),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, size: 18, color: on ? C.cyan : C.t2),
-            SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: on ? C.cyan : C.t1,
-              ),
-            ),
-            Spacer(),
-            if (on)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: C.cyan,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Future<void> _resetAllData() async {
     final devices = gStorage.getDevices();
@@ -393,6 +326,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _shouldDeleteLocalFile(String name) =>
       name.startsWith('about_') ||
       name.startsWith('dev_') ||
+      name.startsWith('import_') ||
       name.startsWith('cover_') ||
       name == 'ipad_boss_data.json.bak';
 

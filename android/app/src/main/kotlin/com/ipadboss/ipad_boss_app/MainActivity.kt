@@ -70,8 +70,48 @@ class MainActivity : FlutterActivity() {
                             result.error("exception", e.message, null)
                         }
                     }
+                    "saveVideosToGallery" -> {
+                        val paths = call.argument<List<String>>("paths") ?: emptyList()
+                        val albumName = call.argument<String>("albumName") ?: "货脉"
+                        if (paths.isEmpty()) {
+                            result.error("empty", "文件路径列表为空", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val saved = ArrayList<String>()
+                            for (p in paths) {
+                                val src = File(p)
+                                if (!src.exists()) continue
+                                val dest = saveVideoToGallery(this, src, albumName)
+                                if (dest != null) saved.add(dest)
+                            }
+                            if (saved.isEmpty()) {
+                                result.error("save_failed", "未能保存任何视频", null)
+                            } else {
+                                result.success(mapOf("success" to true, "saved" to saved.size))
+                            }
+                        } catch (e: Exception) {
+                            result.error("exception", e.message, null)
+                        }
+                    }
                     "canSaveToGallery" -> {
                         result.success(true)
+                    }
+                    "openUrl" -> {
+                        val url = call.argument<String>("url") ?: ""
+                        if (url.isEmpty()) {
+                            result.error("empty", "URL为空", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            context.startActivity(intent)
+                            result.success(mapOf("success" to true))
+                        } catch (e: Exception) {
+                            result.success(mapOf("success" to false, "reason" to (e.message ?: "open_failed")))
+                        }
                     }
                     "openXianyu" -> {
                         // 优先用包名 Intent 拉起闲鱼，失败则尝试 scheme，再失败提示
@@ -128,13 +168,14 @@ class MainActivity : FlutterActivity() {
     /// 把单张图片保存到系统相册 Pictures/<albumName> 目录
     private fun saveImageToGallery(context: Context, src: File, albumName: String): String? {
         val resolver = context.contentResolver
-        val ts = System.currentTimeMillis()
-        val name = "ipadboss_$ts.jpg"
+        val ext = imageExtension(src)
+        val mimeType = imageMimeType(ext)
+        val name = "ipadboss_${System.currentTimeMillis()}_${kotlin.math.abs(src.absolutePath.hashCode())}.$ext"
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // Android 10+ : 走 MediaStore，无需存储权限
             val values = ContentValues().apply {
                 put(MediaStore.Images.Media.DISPLAY_NAME, name)
-                put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                put(MediaStore.Images.Media.MIME_TYPE, mimeType)
                 put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/$albumName")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
@@ -160,6 +201,75 @@ class MainActivity : FlutterActivity() {
             intent.data = android.net.Uri.fromFile(dest)
             context.sendBroadcast(intent)
             dest.absolutePath
+        }
+    }
+
+    private fun imageExtension(src: File): String {
+        val ext = src.extension.lowercase()
+        return when (ext) {
+            "jpg", "jpeg", "png", "webp", "gif" -> ext
+            else -> "jpg"
+        }
+    }
+
+    private fun imageMimeType(ext: String): String {
+        return when (ext) {
+            "png" -> "image/png"
+            "webp" -> "image/webp"
+            "gif" -> "image/gif"
+            else -> "image/jpeg"
+        }
+    }
+
+    private fun saveVideoToGallery(context: Context, src: File, albumName: String): String? {
+        val resolver = context.contentResolver
+        val ext = videoExtension(src)
+        val mimeType = videoMimeType(ext)
+        val name = "ipadboss_${System.currentTimeMillis()}_${kotlin.math.abs(src.absolutePath.hashCode())}.$ext"
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val values = ContentValues().apply {
+                put(MediaStore.Video.Media.DISPLAY_NAME, name)
+                put(MediaStore.Video.Media.MIME_TYPE, mimeType)
+                put(MediaStore.Video.Media.RELATIVE_PATH, "Movies/$albumName")
+                put(MediaStore.Video.Media.IS_PENDING, 1)
+            }
+            val collection = MediaStore.Video.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val uri = resolver.insert(collection, values) ?: return null
+            resolver.openOutputStream(uri)?.use { out ->
+                src.inputStream().use { it.copyTo(out) }
+            } ?: return null
+            values.clear()
+            values.put(MediaStore.Video.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            uri.toString()
+        } else {
+            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), albumName)
+            if (!dir.exists()) dir.mkdirs()
+            val dest = File(dir, name)
+            FileOutputStream(dest).use { out ->
+                src.inputStream().use { it.copyTo(out) }
+            }
+            val intent = android.content.Intent(android.content.Intent.ACTION_MEDIA_SCANNER_SCAN_FILE)
+            intent.data = android.net.Uri.fromFile(dest)
+            context.sendBroadcast(intent)
+            dest.absolutePath
+        }
+    }
+
+    private fun videoExtension(src: File): String {
+        val ext = src.extension.lowercase()
+        return when (ext) {
+            "mp4", "mov", "m4v", "webm" -> ext
+            else -> "mp4"
+        }
+    }
+
+    private fun videoMimeType(ext: String): String {
+        return when (ext) {
+            "mov" -> "video/quicktime"
+            "m4v" -> "video/x-m4v"
+            "webm" -> "video/webm"
+            else -> "video/mp4"
         }
     }
 

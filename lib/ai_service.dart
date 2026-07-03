@@ -365,6 +365,36 @@ class AiService {
     return _extractOpenAIText(result['data'] as Map<String, dynamic>);
   }
 
+  static Future<String> chatWithImages(
+    String systemPrompt,
+    List<String> imageBase64List,
+    String textPrompt, {
+    int maxTokens = 4096,
+  }) async {
+    final content = <Map<String, dynamic>>[];
+    for (final imageBase64 in imageBase64List) {
+      final image = imageBase64.trim();
+      final url =
+          image.startsWith('data:image/')
+              ? image
+              : 'data:image/jpeg;base64,$image';
+      content.add({
+        'type': 'image_url',
+        'image_url': {'url': url},
+      });
+    }
+    content.add({'type': 'text', 'text': textPrompt});
+    final result = await _callOpenAI(
+      systemPrompt: systemPrompt,
+      messages: [
+        {'role': 'user', 'content': content},
+      ],
+      maxTokens: maxTokens,
+    );
+    if (result['error'] != null) return result['error'] as String;
+    return _extractOpenAIText(result['data'] as Map<String, dynamic>);
+  }
+
   static Future<Map<String, String>> recognizeAboutThisDevice(
     String imageBase64,
   ) async {
@@ -393,6 +423,118 @@ class AiService {
         'cycleCount': '未知',
         '_raw': result,
       };
+    }
+  }
+
+  static Future<Map<String, dynamic>> recognizeIpadIntake(
+    List<String> imageBase64List,
+  ) async {
+    if (imageBase64List.isEmpty) {
+      return {'error': '请先上传设备图片'};
+    }
+    const sys = '''
+你是二手 iPad 入库验货助手。你会同时看到最多 12 张图片，可能包含：
+- 设置 > 关于本机截图
+- 电池健康/循环截图
+- 机身正反面、边框、接口、屏幕、配件、瑕疵近照
+
+请只根据图片可见内容判断，不要编造。看不清就填"未知"，并在 warnings 里说明。
+外观和屏幕瑕疵由人工勾选录入，你不要替用户判断划痕、磕碰、掉漆、屏幕出线、亮点、坏点、压伤、漏液等外观细节。
+你只负责补全图片里能稳定读到或能清晰判断的设备信息：序列号、型号、容量、颜色、网络、电池健康、循环次数、配件、可见锁机/监管风险。
+强制规则：
+1. serial/model/capacity/network/batteryHealth/cycleCount 只有在图片里出现清晰文字、关于本机截图、系统设置页、电池截图、机身铭牌、可读 Axxxx 型号或 MLWL3CH/A 这类订货号时才填写；否则必须填"未知"。
+2. 不要根据外观比例、摄像头位置、边框宽窄猜具体型号或容量。没有清晰证据时 model/capacity/network 填"未知"。
+3. color 可以参考清晰实拍图；遇到保护壳、贴膜、反光、偏色、遮挡、光线不足时必须填"未知"。
+4. iCloudLock/activationLock/mdm/configLock 只有在设置页、锁屏提示、监管提示或清晰文字证据可见时判断；否则保持 false，并在 fieldConfidence 对应字段给 0。
+5. confidence 低于 0.72 时，关键字段必须保守，宁可多写"未知"，不要给用户制造错误回填。
+6. fieldConfidence 是每个字段的可信度，0 到 1；没有直接证据的字段必须低于 0.6。
+7. condition 不要根据外观推断；默认填"未知"，由人工成色和外观勾选决定。
+8. appearanceDefects 和 screenDefects 必须返回空数组 []。checks 里的外观边框/后盖/屏幕显示等外观项填"未知"，不要写"正常"。
+9. 普通远景照片不能给 confidence 1.0。照片角度不足、虚焦、反光、遮挡时 confidence 必须低于 0.75。
+10. iPad mini 6 和 iPad mini 7 外观相似，严禁凭外观猜代数。关于本机写着"iPad mini（第6代）"、"iPad mini (6th generation)"、A2567/A2568/A2569 或 MLWL3CH/A 时，model 必须是 "iPad mini 6 (A15)"，不能写 mini 7。
+输出必须是严格 JSON，不要 Markdown，不要解释。
+
+JSON 字段：
+{
+  "serial": "序列号或未知",
+  "model": "最接近的 iPad 型号，如 iPad mini 6 (A15)，未知则未知",
+  "modelName": "关于本机里看到的型号名称原文，如 iPad mini（第6代）或未知",
+  "modelNumber": "Axxxx 型号或未知",
+  "partNumber": "MLWL3CH/A 这类订货号或未知",
+  "generation": "第几代/芯片证据，如 第6代/A15/未知",
+  "capacity": "64G/128G/256G/512G/1TB/未知",
+  "color": "深空灰/银色/星光色/粉色/紫色/蓝色/玫瑰金/金色/绿色/黄色/未知",
+  "network": "WiFi/WiFi+蜂窝/未知",
+  "condition": "全新/99新/95新/9成新/8成新/7成新/未知",
+  "batteryHealth": "数字百分比，不带%或未知",
+  "cycleCount": "数字或未知",
+  "accessories": "裸机/盒装/原装充电器/妙控键盘/Apple Pencil/未知",
+  "idLockClean": true,
+  "iCloudLock": false,
+  "activationLock": false,
+  "mdm": false,
+  "configLock": false,
+  "fieldConfidence": {
+    "serial": 0.0,
+    "model": 0.0,
+    "modelName": 0.0,
+    "modelNumber": 0.0,
+    "partNumber": 0.0,
+    "generation": 0.0,
+    "capacity": 0.0,
+    "color": 0.0,
+    "network": 0.0,
+    "condition": 0.0,
+    "batteryHealth": 0.0,
+    "cycleCount": 0.0,
+    "iCloudLock": 0.0,
+    "activationLock": 0.0,
+    "mdm": 0.0,
+    "configLock": 0.0,
+    "lockStatus": 0.0
+  },
+  "appearanceSummary": "一句话概括外观",
+  "functionSummary": "一句话概括功能/屏幕/按键/接口/摄像头等",
+  "defectSummary": "外观问题由人工勾选记录",
+  "appearanceDefects": [],
+  "screenDefects": [],
+  "confidence": 0.0,
+  "warnings": ["需要人工复核的点"],
+  "checks": {
+    "屏幕显示": "正常/异常/未知",
+    "屏幕触控": "正常/异常/未知",
+    "外观边框": "正常/轻微磕碰/明显磕碰/未知",
+    "后盖": "正常/划痕/凹陷/未知",
+    "摄像头": "正常/异常/未知",
+    "充电接口": "正常/异常/未知",
+    "按键": "正常/异常/未知",
+    "扬声器": "正常/异常/未知",
+    "麦克风": "正常/异常/未知",
+    "WiFi": "正常/异常/未知",
+    "蓝牙": "正常/异常/未知",
+    "ID锁": "无/有/未知"
+  }
+}
+''';
+    final result = await chatWithImages(
+      sys,
+      imageBase64List,
+      '请识别这批 iPad 入库图片，并返回严格 JSON。',
+      maxTokens: 4096,
+    );
+    if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
+      return {'error': result};
+    }
+    try {
+      var jsonStr = result.trim();
+      final match = RegExp(r'\{[\s\S]*\}').firstMatch(jsonStr);
+      if (match != null) jsonStr = match.group(0)!;
+      final decoded = json.decode(jsonStr);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return {'error': 'AI返回格式不是对象', '_raw': result};
+    } catch (_) {
+      return {'error': 'AI返回格式无法解析', '_raw': result};
     }
   }
 
@@ -461,6 +603,7 @@ class AiService {
     required int cycleCount,
     required bool idLockClean,
     String accessories = '裸机',
+    String defectNote = '',
     String copywritingReference = '',
   }) async {
     final reference = copywritingReference.trim();
@@ -469,7 +612,8 @@ class AiService {
     final r = await chat(
       sys,
       '请为以下设备写商品描述：\n型号：$model\n容量：$capacity\n颜色：$color\n网络：$network\n成色：$condition\n'
-      '电池健康度：$batteryHealth%\n充电循环：$cycleCount次\nID锁：${idLockClean ? "无锁（干净）" : "有锁"}\n配件：$accessories',
+      '电池健康度：$batteryHealth%\n充电循环：$cycleCount次\nID锁：${idLockClean ? "无锁（干净）" : "有锁"}\n配件：$accessories'
+      '${defectNote.trim().isEmpty ? "" : "\n外观记录：${defectNote.trim()}"}',
       maxTokens: 2048,
     );
     if (r.startsWith('AI调用') || r.startsWith('AI返回')) return r;

@@ -427,7 +427,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         left: 10,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.32),
+                            color: Colors.black.withValues(alpha: 0.32),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: IconButton(
@@ -742,6 +742,9 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionTitle('基本信息', icon: Icons.tune_rounded),
+        const SizedBox(height: 2),
+        _formGroupLabel('设备参数'),
+        const SizedBox(height: 9),
         _fieldRow(
           _field(_modelCtrl, '型号', Icons.tablet_mac_rounded),
           _field(_serialCtrl, '序列号', Icons.confirmation_number_outlined),
@@ -791,6 +794,17 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
           ),
           _dateField(),
         ),
+        const SizedBox(height: 17),
+        _softDivider(),
+        const SizedBox(height: 13),
+        _formGroupLabel('交易信息'),
+        const SizedBox(height: 9),
+        _choiceField(
+          _channelCtrl,
+          '采购渠道',
+          Icons.storefront_outlined,
+          PurchaseChannels,
+        ),
         const SizedBox(height: 12),
         _fieldRow(
           _field(
@@ -806,14 +820,9 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             keyboardType: TextInputType.number,
           ),
         ),
-        const SizedBox(height: 12),
-        _choiceField(
-          _channelCtrl,
-          '采购渠道',
-          Icons.storefront_outlined,
-          PurchaseChannels,
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 15),
+        _formGroupLabel('设备状态'),
+        const SizedBox(height: 9),
         Row(
           children: [
             Expanded(
@@ -839,7 +848,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             ),
           ],
         ),
-        const SizedBox(height: 13),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -869,8 +878,10 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             style: FilledButton.styleFrom(
               backgroundColor: C.cyan,
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(vertical: 13),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             label: Text(
               savingInfo ? '保存中' : '保存修改',
@@ -902,7 +913,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                 icon: const Icon(Icons.save_outlined, size: 17),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t1,
-                  side: BorderSide(color: Colors.white.withOpacity(0.12)),
+                  side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: const StadiumBorder(),
                 ),
@@ -946,18 +957,115 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     ),
   );
 
+  Widget _formGroupLabel(String label) => Text(
+    label,
+    style: const TextStyle(
+      color: C.t3,
+      fontSize: 11,
+      fontWeight: FontWeight.w900,
+    ),
+  );
+
+  Widget _softDivider() =>
+      Container(height: 1, color: Colors.white.withValues(alpha: 0.06));
+
+  Widget _fieldShell({
+    required String label,
+    required IconData icon,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    final content = AnimatedContainer(
+      duration: C.fast,
+      constraints: const BoxConstraints(minHeight: 58),
+      padding: const EdgeInsets.fromLTRB(11, 8, 10, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xB5161B24),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.055),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: C.t3, size: 17),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: C.t3,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                child,
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: content,
+      ),
+    );
+  }
+
   Widget _field(
     TextEditingController controller,
     String label,
     IconData icon, {
     String? hint,
     TextInputType? keyboardType,
-  }) => AppFormField(
-    controller: controller,
+  }) => _fieldShell(
     label: label,
-    hint: hint,
     icon: icon,
-    keyboardType: keyboardType,
+    child: TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: 1,
+      textInputAction: TextInputAction.next,
+      style: const TextStyle(
+        color: C.t1,
+        fontSize: 15,
+        fontWeight: FontWeight.w900,
+        height: 1.1,
+      ),
+      decoration: InputDecoration(
+        isDense: true,
+        filled: false,
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        hintText: hint ?? '未填写',
+        hintStyle: const TextStyle(
+          color: C.tMuted,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        contentPadding: EdgeInsets.zero,
+      ),
+    ),
   );
 
   Widget _choiceField(
@@ -968,72 +1076,53 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
   ) {
     final values = _optionsWithCurrent(options, controller.text.trim());
     final current = controller.text.trim();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      constraints: const BoxConstraints(minHeight: 48),
-      decoration: BoxDecoration(
-        color: C.bgDeep,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: C.border),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: C.t3, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              color: C.t3,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
+    return _fieldShell(
+      label: label,
+      icon: icon,
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: current.isEmpty ? null : current,
+          isExpanded: true,
+          isDense: true,
+          dropdownColor: C.bgCard,
+          menuMaxHeight: 320,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
+          hint: const Text(
+            '未选择',
+            style: TextStyle(
+              color: C.tMuted,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: current.isEmpty ? null : current,
-                isExpanded: true,
-                dropdownColor: C.bgCard,
-                icon: const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: C.t3,
-                ),
-                hint: const Text(
-                  '未选择',
-                  style: TextStyle(
-                    color: C.t3,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                style: const TextStyle(
-                  color: C.t1,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-                items:
-                    values
-                        .map(
-                          (item) => DropdownMenuItem<String>(
-                            value: item,
-                            child: Text(
-                              item,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 13),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (value) {
-                  if (value == null) return;
-                  _setControllerText(controller, value);
-                },
-              ),
-            ),
+          style: const TextStyle(
+            color: C.t1,
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
+            height: 1.1,
           ),
-        ],
+          items:
+              values
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(
+                        item,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            _setControllerText(controller, value);
+          },
+        ),
       ),
     );
   }
@@ -1045,10 +1134,27 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     return values;
   }
 
-  Widget _dateField() => GestureDetector(
+  Widget _dateField() => _fieldShell(
+    label: '收购日期',
+    icon: Icons.event_outlined,
     onTap: _pickPurchaseDate,
-    child: AbsorbPointer(
-      child: _field(_dateCtrl, '收购日期', Icons.event_outlined, hint: '点击选择日期'),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            _dateCtrl.text.trim().isEmpty ? '点击选择日期' : _dateCtrl.text.trim(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: _dateCtrl.text.trim().isEmpty ? C.tMuted : C.t1,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              height: 1.1,
+            ),
+          ),
+        ),
+        const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3, size: 20),
+      ],
     ),
   );
 
@@ -1060,20 +1166,20 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
       return Row(
         children: [
           Expanded(child: left),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(child: right),
         ],
       );
     },
   );
 
-  Widget _statusOption(String value, String label, Color color) =>
-      AppChoicePill(
-        label: label,
-        selected: _status == value,
-        color: color,
-        onTap: () => setState(() => _status = value),
-      );
+  Widget _statusOption(String value, String label, Color color) => _EditToggle(
+    label: label,
+    selected: _status == value,
+    color: color,
+    compact: true,
+    onTap: () => setState(() => _status = value),
+  );
 
   Widget _tl(String tt, String td, bool active, {bool last = false}) => Row(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1121,30 +1227,50 @@ class _EditToggle extends StatelessWidget {
   final String label;
   final bool selected;
   final Color color;
+  final bool compact;
+  final VoidCallback? onTap;
 
   const _EditToggle({
     required this.label,
     required this.selected,
     required this.color,
+    this.compact = false,
+    this.onTap,
   });
 
   @override
-  Widget build(BuildContext context) => AnimatedContainer(
-    duration: C.fast,
-    height: 48,
-    alignment: Alignment.center,
-    decoration: BoxDecoration(
-      color: selected ? color : C.bgDeep,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: selected ? color : C.border),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        color: selected ? Colors.black : C.t2,
-        fontSize: 13,
-        fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) {
+    final body = AnimatedContainer(
+      duration: C.fast,
+      height: compact ? 38 : 42,
+      padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected ? color : const Color(0xB5161B24),
+        borderRadius: BorderRadius.circular(11),
+        border: Border.all(
+          color: selected ? color : Colors.white.withValues(alpha: 0.08),
+        ),
       ),
-    ),
-  );
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          color: selected ? Colors.black : C.t2,
+          fontSize: compact ? 12 : 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+    if (onTap == null) return body;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(11),
+        child: body,
+      ),
+    );
+  }
 }
