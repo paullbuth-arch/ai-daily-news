@@ -206,6 +206,8 @@ class _IpadBossAppState extends State<IpadBossApp> {
 // ═══════════════════════════════════════════════
 
 const List<Map<String, String>> iPadModels = [
+  {'name': 'iPad Pro 13 2025 (M5)', 'chip': 'M5'},
+  {'name': 'iPad Pro 11 2025 (M5)', 'chip': 'M5'},
   {'name': 'iPad Pro 13 2024 (M4)', 'chip': 'M4'},
   {'name': 'iPad Pro 11 2024 (M4)', 'chip': 'M4'},
   {'name': 'iPad Pro 12.9 2022 (M2)', 'chip': 'M2'},
@@ -216,11 +218,16 @@ const List<Map<String, String>> iPadModels = [
   {'name': 'iPad Pro 11 2020 (A12Z)', 'chip': 'A12Z'},
   {'name': 'iPad Pro 12.9 2018 (A12X)', 'chip': 'A12X'},
   {'name': 'iPad Pro 11 2018 (A12X)', 'chip': 'A12X'},
-  {'name': 'iPad Air 11 2024 (M3)', 'chip': 'M3'},
-  {'name': 'iPad Air 13 2024 (M3)', 'chip': 'M3'},
+  {'name': 'iPad Air 13 2026 (M4)', 'chip': 'M4'},
+  {'name': 'iPad Air 11 2026 (M4)', 'chip': 'M4'},
+  {'name': 'iPad Air 13 2025 (M3)', 'chip': 'M3'},
+  {'name': 'iPad Air 11 2025 (M3)', 'chip': 'M3'},
+  {'name': 'iPad Air 13 2024 (M2)', 'chip': 'M2'},
+  {'name': 'iPad Air 11 2024 (M2)', 'chip': 'M2'},
   {'name': 'iPad Air 5 (M1)', 'chip': 'M1'},
   {'name': 'iPad Air 4 (A14)', 'chip': 'A14'},
   {'name': 'iPad Air 3 (A12)', 'chip': 'A12'},
+  {'name': 'iPad A16 (A16)', 'chip': 'A16'},
   {'name': 'iPad 10 (A14)', 'chip': 'A14'},
   {'name': 'iPad 9 (A13)', 'chip': 'A13'},
   {'name': 'iPad 8 (A12)', 'chip': 'A12'},
