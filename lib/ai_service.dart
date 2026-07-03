@@ -761,13 +761,19 @@ JSON 字段：
     String accessories = '裸机',
     String defectNote = '',
     String copywritingReference = '',
+    String previousDescription = '',
   }) async {
     final reference = copywritingReference.trim();
+    final previous = previousDescription.trim();
+    final variantSeed = DateTime.now().microsecondsSinceEpoch.toString();
     final sys =
         '${prompt(AiPromptKeys.xianyuDescription)}${reference.isEmpty ? "" : "\n\n$reference"}';
     final r = await chat(
       sys,
-      '请为以下设备写商品描述：\n型号：$model\n容量：$capacity\n颜色：$color\n网络：$network\n成色：$condition\n'
+      '请为以下设备写一版新的闲鱼商品描述。本次随机码：$variantSeed。\n'
+      '强制要求：这次必须换开头、换卖点顺序、换句式；不要固定写“这台…搭载…适合…”，不要像参数表。\n'
+      '${previous.isEmpty ? "" : "上一版文案如下，本次必须明显不同，不能复用开头和核心句式：\n$previous\n\n"}'
+      '设备信息：\n型号：$model\n容量：$capacity\n颜色：$color\n网络：$network\n成色：$condition\n'
       '电池健康度：$batteryHealth%\n充电循环：$cycleCount次\nID锁：${idLockClean ? "无锁（干净）" : "有锁"}\n配件：$accessories'
       '${defectNote.trim().isEmpty ? "" : "\n外观记录：${defectNote.trim()}"}',
       maxTokens: 2048,

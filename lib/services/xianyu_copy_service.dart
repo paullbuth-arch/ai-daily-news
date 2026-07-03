@@ -24,6 +24,19 @@ class XianyuCopyService {
 表达要求：少用夸张词，多写可核验信息。把“无任何问题”改成“功能检测正常”，把“完美无瑕”改成“实拍如图，细节可沟通”，把“包退/假一赔十”改成“支持按平台流程验机”。
 ''';
 
+  static const List<String> _writingAngles = [
+    '极简成交型：开头直接给配置和成色，语气像老练卖家，少形容词。',
+    '买家场景型：从学习、办公、追剧、画画中选一个真实场景切入。',
+    '验机安心型：优先讲序列号已核、ID干净、电池和实拍记录。',
+    '性能亮点型：适合 Pro/Air，高刷、芯片、屏幕、扬声器只挑两个重点。',
+    '生活口吻型：像正常闲鱼卖家转让，别像参数表，句子更口语。',
+    '克制促单型：强调成色和价格空间可以聊，但不写具体价格。',
+    '配件到手型：如果配件不是裸机，重点写到手即用；裸机则不要硬写配件。',
+    '瑕疵透明型：有外观记录时先说明已记录，反而增加可信度。',
+    '轻办公型：突出文档、网课、批注、会议记录，避免夸成电脑替代。',
+    '影音娱乐型：突出屏幕、扬声器、续航体验，适合普通买家。',
+  ];
+
   static int get builtInExampleCount => xianyuCopySeeds.length;
 
   static String effectiveRules(Storage storage) {
@@ -64,6 +77,9 @@ class XianyuCopyService {
     b.writeln(effectiveRules(storage));
     b.writeln('\n【内置 100 条素材提炼规则】');
     b.writeln(_builtInStyleGuide.trim());
+    b.writeln('\n【本次随机写法】');
+    b.writeln(_pickWritingAngle(model, condition, randomizeBuiltIns));
+    b.writeln('必须换开头和句式，不要固定使用“这台…搭载…适合…”的模板。');
 
     final examples =
         includeCuratedExamples
@@ -166,6 +182,28 @@ class XianyuCopyService {
     final pool = scored.take(poolSize).map((e) => e.key).toList();
     pool.shuffle(math.Random(DateTime.now().microsecondsSinceEpoch));
     return pool.take(limit).toList();
+  }
+
+  static String _pickWritingAngle(
+    String model,
+    String condition,
+    bool randomize,
+  ) {
+    final pool = <String>[..._writingAngles];
+    final lowerModel = model.toLowerCase();
+    if (lowerModel.contains('pro')) {
+      pool.addAll([
+        '专业创作型：只围绕绘画、修图、视频、文档其中一个场景展开，不要堆满参数。',
+        '高刷屏体验型：用一两句讲滑动、批注、看视频的实际体验。',
+      ]);
+    }
+    if (condition.contains('95') || condition.contains('99')) {
+      pool.add('成色信任型：先讲实拍成色，再讲电池和ID状态，语气稳一点。');
+    }
+    if (!randomize) return pool.first;
+    return pool[math.Random(
+      DateTime.now().microsecondsSinceEpoch,
+    ).nextInt(pool.length)];
   }
 
   static int _scoreExample(

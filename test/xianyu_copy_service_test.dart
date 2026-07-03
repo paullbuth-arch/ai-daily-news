@@ -110,6 +110,7 @@ void main() {
     expect(XianyuCopyService.builtInExampleCount, 100);
     expect(context, contains('本店规则'));
     expect(context, contains('内置 100 条素材提炼规则'));
+    expect(context, contains('本次随机写法'));
     expect(context, contains('高转化样本'));
     expect(context, contains('已售设备历史文案'));
     expect(context, contains('不要照抄'));

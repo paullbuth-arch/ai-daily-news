@@ -323,6 +323,7 @@ class _DetailPageState extends State<DetailPage> {
               ? '裸机'
               : _accessoriesCtrl.text.trim(),
       copywritingReference: copyReference,
+      previousDescription: _descCtrl.text,
     );
     if (!mounted) return;
     setState(() => regeneratingDescription = false);

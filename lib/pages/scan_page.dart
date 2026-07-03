@@ -1007,6 +1007,10 @@ class _ScanPageState extends State<ScanPage> {
         best = math.max(best, _readConfidence(fields[alias]) ?? 0);
       }
     }
+    if (key == 'model' &&
+        _matchModel(_modelSourceEvidence(result)).isNotEmpty) {
+      best = math.max(best, 0.9);
+    }
     return best > 0 ? best : _inspectionConfidence(result);
   }
 
