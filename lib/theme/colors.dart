@@ -96,7 +96,7 @@ class C {
 
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: const Color(0xFF000000).withOpacity(0.22),
+      color: const Color(0xFF000000).withValues(alpha: 0.22),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),
@@ -104,7 +104,7 @@ class C {
 
   static List<BoxShadow> get elevationSm => [
     BoxShadow(
-      color: const Color(0xFF000000).withOpacity(0.18),
+      color: const Color(0xFF000000).withValues(alpha: 0.18),
       blurRadius: 10,
       offset: const Offset(0, 5),
     ),
@@ -112,7 +112,7 @@ class C {
 
   static List<BoxShadow> get glowCyan => [
     BoxShadow(
-      color: cyan.withOpacity(0.16),
+      color: cyan.withValues(alpha: 0.16),
       blurRadius: 18,
       offset: const Offset(0, 0),
     ),
@@ -120,7 +120,7 @@ class C {
 
   static List<BoxShadow> get glowPurple => [
     BoxShadow(
-      color: purple.withOpacity(0.14),
+      color: purple.withValues(alpha: 0.14),
       blurRadius: 18,
       offset: const Offset(0, 0),
     ),
@@ -130,7 +130,7 @@ class C {
   static Color get cardMuted => bgCardMuted;
   static Color get surface => bgSurface;
   static Color get line => border;
-  static Color get selected => cyan.withOpacity(0.14);
+  static Color get selected => cyan.withValues(alpha: 0.14);
   static Color get selectedText => cyan;
   static Color get primaryLight => cyanDim;
   static Color get accentLight => purpleDim;

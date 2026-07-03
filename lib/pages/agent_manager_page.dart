@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../models.dart';
 import '../main.dart';
 
@@ -126,7 +125,7 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: C.pink.withOpacity(0.14),
+                        color: C.pink.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: const Icon(

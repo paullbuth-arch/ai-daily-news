@@ -62,9 +62,17 @@ class UpdateService {
     defaultValue: false,
   );
 
-  /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.9.6';
-  static int get currentBuild => 25;
+  /// 当前版本信息。构建脚本会从 pubspec.yaml 注入，测试/调试时使用兜底值。
+  static const String _definedVersion = String.fromEnvironment(
+    'DEEPSELL_APP_VERSION',
+    defaultValue: '2.9.6',
+  );
+  static const int _definedBuild = int.fromEnvironment(
+    'DEEPSELL_APP_BUILD',
+    defaultValue: 25,
+  );
+  static String get currentVersion => _definedVersion;
+  static int get currentBuild => _definedBuild;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新

@@ -18,7 +18,6 @@ import 'report_page.dart';
 import 'scan_page.dart';
 import 'sell_page.dart';
 import 'settings_page.dart';
-import 'webdav_config_page.dart';
 
 class MePage extends StatefulWidget {
   const MePage({Key? key}) : super(key: key);
@@ -76,7 +75,7 @@ class _MePageState extends State<MePage> {
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: C.cyan.withOpacity(0.20),
+                        color: C.cyan.withValues(alpha: 0.20),
                         blurRadius: 22,
                         offset: const Offset(0, 8),
                       ),
@@ -231,12 +230,6 @@ class _MePageState extends State<MePage> {
                 () => _nav(const BackupPage()),
               ),
               _MenuItem(
-                Icons.cloud_sync_outlined,
-                'WebDAV 云同步',
-                C.blue,
-                () => _nav(const WebDavConfigPage()),
-              ),
-              _MenuItem(
                 Icons.memory_rounded,
                 'AI 配置',
                 C.purple,
@@ -252,7 +245,7 @@ class _MePageState extends State<MePage> {
           ),
           const SizedBox(height: 12),
           const Text(
-            '数据本地持久化 · 后台同步 · WebDAV 备份',
+            '数据本机保存 · 后台保护 · 手动备份',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: C.t3,
@@ -339,7 +332,7 @@ class _MenuGroup extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: C.cyan.withOpacity(0.14),
+                  color: C.cyan.withValues(alpha: 0.14),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: C.cyan, size: 17),
@@ -382,7 +375,7 @@ class _MenuRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: item.color.withOpacity(0.15),
+                color: item.color.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
               child: Icon(item.icon, color: item.color, size: 20),

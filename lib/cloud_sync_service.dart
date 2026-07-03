@@ -23,6 +23,9 @@ class CloudRemoteData {
 
 class CloudSyncService {
   static const String lastCloudSyncKey = 'lastCloudSync';
+  static const String lastCloudSyncAttemptKey = 'lastCloudSyncAttempt';
+  static const String lastCloudSyncErrorKey = 'lastCloudSyncError';
+  static const String lastCloudSyncStateKey = 'lastCloudSyncState';
   static const String _builtInToken = String.fromEnvironment(
     'DEEPSELL_SYNC_TOKEN',
   );
@@ -39,6 +42,8 @@ class CloudSyncService {
   static StreamSubscription<void>? _changeSub;
   static Timer? _debounce;
   static bool _syncing = false;
+
+  static bool get privateOwnerSyncEnabled => _privateOwnerSyncEnabled;
 
   static void startBackgroundSync({
     required Storage storage,
@@ -67,33 +72,44 @@ class CloudSyncService {
     required String docDir,
     bool preferUpload = false,
   }) async {
-    final auth = await _resolveSyncAuth(storage);
-    if (auth == null || _syncing) return;
-    final token = auth.token;
+    if (_syncing) return;
 
     _syncing = true;
     try {
+      await markSyncAttempt(storage);
+      final auth = await _resolveSyncAuth(storage);
+      if (auth == null) {
+        await markSyncFailed(storage, '后台保护未连接');
+        return;
+      }
+      final token = auth.token;
       final remote = await fetchRemote(token);
-      if (remote.error != null && !remote.isMissing) return;
+      if (remote.error != null && !remote.isMissing) {
+        await markSyncFailed(storage, remote.error!);
+        return;
+      }
       if (remote.isMissing || !remote.hasData) {
-        await uploadLocal(token: token, storage: storage);
+        final error = await uploadLocal(token: token, storage: storage);
+        if (error != null) await markSyncFailed(storage, error);
         return;
       }
 
       if (preferUpload) {
-        await uploadLocal(token: token, storage: storage);
+        final error = await uploadLocal(token: token, storage: storage);
+        if (error != null) await markSyncFailed(storage, error);
         return;
       }
 
       final localEmpty = localBusinessDataIsEmpty(storage);
       if (localEmpty) {
-        await downloadRemote(
+        final error = await downloadRemote(
           token: token,
           email: auth.email,
           storage: storage,
           docDir: docDir,
           remoteData: remote.data!,
         );
+        if (error != null) await markSyncFailed(storage, error);
         return;
       }
 
@@ -103,17 +119,24 @@ class CloudSyncService {
         remoteData: remote.data!,
       );
       if (direction == _SyncDirection.download) {
-        await downloadRemote(
+        final error = await downloadRemote(
           token: token,
           email: auth.email,
           storage: storage,
           docDir: docDir,
           remoteData: remote.data!,
         );
+        if (error != null) await markSyncFailed(storage, error);
       } else if (direction == _SyncDirection.upload) {
-        await uploadLocal(token: token, storage: storage);
+        final error = await uploadLocal(token: token, storage: storage);
+        if (error != null) await markSyncFailed(storage, error);
+      } else {
+        await markSynced(storage);
       }
-    } catch (_) {
+    } catch (e) {
+      try {
+        await markSyncFailed(storage, e.toString());
+      } catch (_) {}
       // 静默同步不打断经营流程；下次数据变化或重启时会自动重试。
     } finally {
       _syncing = false;
@@ -125,9 +148,38 @@ class CloudSyncService {
     return raw == null ? null : DateTime.tryParse(raw);
   }
 
+  static DateTime? lastSyncAttemptTime(Storage storage) {
+    final raw = storage.getSettings()[lastCloudSyncAttemptKey] as String?;
+    return raw == null ? null : DateTime.tryParse(raw);
+  }
+
+  static String? lastSyncError(Storage storage) {
+    final raw = storage.getSettings()[lastCloudSyncErrorKey] as String?;
+    final text = raw?.trim() ?? '';
+    return text.isEmpty ? null : text;
+  }
+
+  static Future<void> markSyncAttempt(Storage storage) async {
+    final settings = storage.getSettings();
+    settings[lastCloudSyncAttemptKey] = DateTime.now().toIso8601String();
+    settings[lastCloudSyncStateKey] = 'running';
+    await storage.saveSettings(settings);
+  }
+
   static Future<void> markSynced(Storage storage) async {
     final settings = storage.getSettings();
     settings[lastCloudSyncKey] = DateTime.now().toIso8601String();
+    settings[lastCloudSyncAttemptKey] = settings[lastCloudSyncKey];
+    settings[lastCloudSyncStateKey] = 'ok';
+    settings.remove(lastCloudSyncErrorKey);
+    await storage.saveSettings(settings);
+  }
+
+  static Future<void> markSyncFailed(Storage storage, String message) async {
+    final settings = storage.getSettings();
+    settings[lastCloudSyncAttemptKey] = DateTime.now().toIso8601String();
+    settings[lastCloudSyncStateKey] = 'failed';
+    settings[lastCloudSyncErrorKey] = _shortError(message);
     await storage.saveSettings(settings);
   }
 
@@ -256,6 +308,14 @@ class CloudSyncService {
     return '${time.month}/${time.day} ${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
   }
 
+  static String protectionSummary(Storage storage) {
+    final lastSync = lastSyncTime(storage);
+    if (lastSync != null) return '最近保护 ${fmtSyncTime(lastSync)}';
+    final lastAttempt = lastSyncAttemptTime(storage);
+    if (lastAttempt != null) return '后台保护准备中';
+    return '等待首次后台保护';
+  }
+
   static Future<_SyncAuth?> _resolveSyncAuth(Storage storage) async {
     if (_privateOwnerSyncEnabled && _builtInToken.isNotEmpty) {
       return _SyncAuth(
@@ -312,6 +372,12 @@ class CloudSyncService {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
     return Map<String, dynamic>.from(result);
+  }
+
+  static String _shortError(String message) {
+    final text = message.trim().replaceAll(RegExp(r'\s+'), ' ');
+    if (text.isEmpty) return '后台保护未完成';
+    return text.length <= 160 ? text : '${text.substring(0, 160)}...';
   }
 }
 

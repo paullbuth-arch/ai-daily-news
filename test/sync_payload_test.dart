@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ipad_boss_app/cloud_sync_service.dart';
 import 'package:ipad_boss_app/storage.dart';
 import 'package:ipad_boss_app/utils/utils.dart';
 import 'package:ipad_boss_app/webdav_service.dart';
@@ -32,6 +33,9 @@ void main() {
     settings['syncDeviceId'] = 'local-device';
     settings['lastWebDavSync'] = '2026-07-01T10:00:00';
     settings['lastCloudSync'] = '2026-07-02T10:00:00';
+    settings['lastCloudSyncAttempt'] = '2026-07-02T10:01:00';
+    settings['lastCloudSyncError'] = 'timeout';
+    settings['lastCloudSyncState'] = 'failed';
     settings['aiConfig'] = {'model': 'GLM-4-Flash-250414'};
     await storage.saveSettings(settings);
 
@@ -44,6 +48,9 @@ void main() {
     expect(syncSettings.containsKey('syncDeviceId'), false);
     expect(syncSettings.containsKey('lastWebDavSync'), false);
     expect(syncSettings.containsKey('lastCloudSync'), false);
+    expect(syncSettings.containsKey('lastCloudSyncAttempt'), false);
+    expect(syncSettings.containsKey('lastCloudSyncError'), false);
+    expect(syncSettings.containsKey('lastCloudSyncState'), false);
     expect(syncSettings['aiConfig'], {'model': 'GLM-4-Flash-250414'});
     expect(syncSettings['syncMeta']['deviceId'], 'local-device');
     expect(syncSettings['syncMeta']['schemaVersion'], 1);
@@ -93,6 +100,23 @@ void main() {
     });
     expect(settings['aiConfig'], {'model': 'remote-model'});
   });
+
+  test(
+    'cloud sync status records failure and clears it after success',
+    () async {
+      final storage = Storage('${tmp.path}/data.json');
+      await storage.load();
+
+      await CloudSyncService.markSyncFailed(storage, 'timeout while uploading');
+      expect(CloudSyncService.lastSyncError(storage), contains('timeout'));
+      expect(CloudSyncService.lastSyncAttemptTime(storage), isNotNull);
+
+      await CloudSyncService.markSynced(storage);
+      expect(CloudSyncService.lastSyncTime(storage), isNotNull);
+      expect(CloudSyncService.lastSyncError(storage), isNull);
+      expect(CloudSyncService.protectionSummary(storage), contains('最近保护'));
+    },
+  );
 
   test(
     'restored report collections are retained while retired ERP collections are excluded',

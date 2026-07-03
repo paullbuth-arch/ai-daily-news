@@ -543,7 +543,7 @@ class _ScanPageState extends State<ScanPage> {
         }
       }
 
-      final missingFields = _missingInspectionFields(result);
+      final missingFields = _criticalSupplementalFields(result);
       if (missingFields.isNotEmpty &&
           imagePaths.length > _primaryInspectionImageLimit) {
         final supplementalPaths =
@@ -555,16 +555,12 @@ class _ScanPageState extends State<ScanPage> {
           await _encodeInspectionImages(supplementalPaths),
           supplemental: true,
           totalImageCount: imagePaths.length,
-          focusFields: _supplementalInspectionFields(result),
+          focusFields: missingFields,
         );
         recognizedPaths.addAll(supplementalPaths);
         if (supplement['error'] == null) {
           hasAiResult = true;
-          result = _mergeInspectionResults(
-            result,
-            supplement,
-            _supplementalInspectionFields(result),
-          );
+          result = _mergeInspectionResults(result, supplement, missingFields);
         } else {
           result = _withInspectionWarning(result, '后续图片补充识别失败，已保留前三张识别结果');
         }
@@ -620,6 +616,17 @@ class _ScanPageState extends State<ScanPage> {
         'inspectionSummary',
         'accessories',
       }.toList();
+
+  List<String> _criticalSupplementalFields(Map<String, dynamic> result) {
+    final missing = _missingInspectionFields(result).toSet();
+    missing.remove('color');
+    if (!_hasReliableInspectionValue(result, 'inspectionTool') ||
+        !_hasReliableInspectionValue(result, 'machineType') ||
+        !_hasReliableInspectionValue(result, 'allGreen')) {
+      missing.addAll(['inspectionTool', 'machineType', 'allGreen']);
+    }
+    return missing.toList();
+  }
 
   List<String> _missingInspectionFields(Map<String, dynamic> result) {
     final fields = <String>[];
@@ -908,6 +915,7 @@ class _ScanPageState extends State<ScanPage> {
 
   String _trustedModelMatch(Map<String, dynamic> result) {
     final source = _modelSourceEvidence(result);
+    if (!_usable(source)) return '';
     final sourceMatch = _matchModel(source);
     if (sourceMatch.isNotEmpty) return sourceMatch;
 
@@ -2124,7 +2132,7 @@ class _ScanPageState extends State<ScanPage> {
           if (warnings is List && warnings.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              '需复核：${warnings.take(3).join('、')}',
+              'AI提醒：${warnings.take(3).join('、')}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(

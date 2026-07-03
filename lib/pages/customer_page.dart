@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../main.dart';
 
 class CustomerPage extends StatefulWidget {
@@ -53,7 +52,7 @@ class _CustomerPageState extends State<CustomerPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: C.orange.withOpacity(0.14),
+                        color: C.orange.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: const Icon(
@@ -95,7 +94,7 @@ class _CustomerPageState extends State<CustomerPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: C.green.withOpacity(0.15),
+                          color: C.green.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: const Text(

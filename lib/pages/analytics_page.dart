@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
-import '../storage.dart';
 import '../main.dart';
 
 class AnalyticsPage extends StatefulWidget {

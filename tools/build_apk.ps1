@@ -4,6 +4,7 @@ param(
   [switch]$SkipPubGet,
   [switch]$RunTests,
   [switch]$PrivateOwnerSync,
+  [switch]$NoPrivateOwnerSync,
   [string[]]$ExtraFlutterArgs = @()
 )
 
@@ -48,6 +49,23 @@ function Add-DartDefine {
   )
   if ($Value) {
     $ArgList.Add("--dart-define=$Name=$Value")
+  }
+}
+
+function Resolve-PubspecVersion {
+  param([string]$ProjectRoot)
+  $pubspec = Join-Path $ProjectRoot "pubspec.yaml"
+  $line = Get-Content -LiteralPath $pubspec -Encoding UTF8 |
+    Where-Object { $_ -match "^\s*version:\s*(.+?)\s*$" } |
+    Select-Object -First 1
+  if (-not $line) { return @{ Version = ""; Build = "" } }
+  $raw = ($line -replace "^\s*version:\s*", "").Trim()
+  $parts = $raw.Split("+", 2)
+  $build = ""
+  if ($parts.Length -gt 1) { $build = $parts[1] }
+  return @{
+    Version = $parts[0]
+    Build = $build
   }
 }
 
@@ -210,21 +228,31 @@ try {
   $BuildArgs.Add("build")
   $BuildArgs.Add("apk")
   $BuildArgs.Add("--release")
+  $AppVersion = Resolve-PubspecVersion $ProjectRoot
+  Add-DartDefine $BuildArgs "DEEPSELL_APP_VERSION" $AppVersion.Version
+  Add-DartDefine $BuildArgs "DEEPSELL_APP_BUILD" $AppVersion.Build
   foreach ($arg in $ExtraFlutterArgs) { $BuildArgs.Add($arg) }
-  if ($PrivateOwnerSync) {
-    $OwnerSyncToken = First-NonEmpty $env:DEEPSELL_SYNC_TOKEN $DeepSellSyncToken
-    if (-not $OwnerSyncToken) {
-      throw "PrivateOwnerSync was requested, but DEEPSELL_SYNC_TOKEN is empty."
+  $OwnerSyncToken = First-NonEmpty $env:DEEPSELL_SYNC_TOKEN $DeepSellSyncToken
+  $OwnerSyncEmail = First-NonEmpty $env:DEEPSELL_SYNC_EMAIL $DeepSellSyncEmail
+  $OwnerSyncPassword = First-NonEmpty $env:DEEPSELL_SYNC_PASSWORD $DeepSellSyncPassword
+  $HasOwnerCredential = $OwnerSyncToken -or ($OwnerSyncEmail -and $OwnerSyncPassword)
+  $IncludePrivateOwnerSync = (-not $NoPrivateOwnerSync) -and ($PrivateOwnerSync -or $HasOwnerCredential)
+  if ($IncludePrivateOwnerSync) {
+    if (-not $HasOwnerCredential) {
+      throw "Private owner sync was requested, but no token or email/password credential is configured."
     }
     Add-DartDefine $BuildArgs "DEEPSELL_PRIVATE_OWNER_SYNC" "true"
     Add-DartDefine $BuildArgs "DEEPSELL_SYNC_TOKEN" $OwnerSyncToken
-    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_EMAIL" (First-NonEmpty $env:DEEPSELL_SYNC_EMAIL $DeepSellSyncEmail)
-    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_PASSWORD" (First-NonEmpty $env:DEEPSELL_SYNC_PASSWORD $DeepSellSyncPassword)
+    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_EMAIL" $OwnerSyncEmail
+    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_PASSWORD" $OwnerSyncPassword
     Add-DartDefine $BuildArgs "DEEPSELL_ALLOW_INSECURE_IP_FALLBACK" "true"
     Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_BASE_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_BASE_URL $DeepSellFallbackBaseUrl)
     Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_VERSION_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_VERSION_URL $DeepSellFallbackVersionUrl)
-  } elseif ($env:DEEPSELL_SYNC_TOKEN -or $DeepSellSyncToken) {
-    Write-Host "Private sync credentials detected but not included. Pass -PrivateOwnerSync for your private owner APK."
+    Write-Host "Private owner background sync: included."
+  } elseif ($NoPrivateOwnerSync) {
+    Write-Host "Private owner background sync: disabled by -NoPrivateOwnerSync."
+  } else {
+    Write-Host "Private owner background sync: no local credential configured."
   }
 
   & $Flutter @BuildArgs

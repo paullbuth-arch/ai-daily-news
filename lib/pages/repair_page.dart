@@ -183,7 +183,7 @@ class _RepairPageState extends State<RepairPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: C.t3.withOpacity(0.14),
+                        color: C.t3.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
                       child: Icon(_typeIcon(r.type), color: C.t3, size: 20),

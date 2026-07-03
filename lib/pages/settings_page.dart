@@ -8,7 +8,7 @@ import '../update_service.dart';
 import '../ai_service.dart';
 import '../auth_service.dart';
 import '../backup_service.dart';
-import 'webdav_config_page.dart';
+import '../cloud_sync_service.dart';
 import 'ai_config_page.dart';
 import 'ai_prompt_rules_page.dart';
 import 'xianyu_copywriting_page.dart';
@@ -47,6 +47,8 @@ class _SettingsPageState extends State<SettingsPage> {
     final devices = gStorage.getDevices();
     final orders = gStorage.getOrders();
     final agents = gStorage.getAgents();
+    final protectionSummary = CloudSyncService.protectionSummary(gStorage);
+    final protectionError = CloudSyncService.lastSyncError(gStorage);
     return appScaffold(
       context,
       '设置',
@@ -79,7 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   'AI引擎',
                   '${AiService.effectiveConfig.providerName} · ${AiService.effectiveConfig.model}',
                 ),
-                _row('数据存储', '本地JSON持久化 + 账号云同步'),
+                _row('数据保护', protectionSummary),
                 const SizedBox(height: 10),
                 ghostBtn(
                   '配置 AI 引擎',
@@ -111,15 +113,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.library_books_outlined,
                 ),
                 const SizedBox(height: 8),
-                ghostBtn(
-                  'WebDAV 云同步',
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const WebDavConfigPage()),
-                  ),
-                  icon: Icons.folder_copy_outlined,
-                ),
-                const SizedBox(height: 8),
                 ghostBtn('检查更新', _checkUpdate),
               ],
             ),
@@ -131,7 +124,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   width: 8,
                   height: 8,
                   decoration: BoxDecoration(
-                    color: C.green,
+                    color: protectionError == null ? C.green : C.orange,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -140,13 +133,15 @@ class _SettingsPageState extends State<SettingsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '后台保护',
-                        style: TextStyle(fontSize: 12, color: C.t1),
+                      Text(
+                        protectionError == null ? '后台保护正常' : '后台保护自动重试中',
+                        style: const TextStyle(fontSize: 12, color: C.t1),
                       ),
-                      const Text(
-                        '数据先保存在本机；服务器同步在后台处理，WebDAV 保留为手动备份。',
-                        style: TextStyle(fontSize: 10, color: C.t3),
+                      Text(
+                        protectionError == null
+                            ? '数据会先保存到本机，并在后台完成服务器保护。'
+                            : '本机数据不受影响，后台会在下次数据变化或重启后继续尝试。',
+                        style: const TextStyle(fontSize: 10, color: C.t3),
                       ),
                     ],
                   ),

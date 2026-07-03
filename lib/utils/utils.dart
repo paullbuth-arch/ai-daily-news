@@ -23,7 +23,7 @@ void toast(BuildContext ctx, String m) {
             width: 28,
             height: 28,
             decoration: BoxDecoration(
-              color: C.primary.withOpacity(0.1),
+              color: C.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(Icons.info_rounded, color: C.primary, size: 16),
@@ -73,7 +73,7 @@ Future<bool> confirmAction(
           backgroundColor: C.card,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(24),
-            side: BorderSide(color: Colors.white.withOpacity(0.12)),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
           ),
           title: Text(
             title,
@@ -123,6 +123,9 @@ const Set<String> localOnlySettingKeys = {
   'syncDeviceId',
   'lastWebDavSync',
   'lastCloudSync',
+  'lastCloudSyncAttempt',
+  'lastCloudSyncError',
+  'lastCloudSyncState',
 };
 
 dynamic cloneJsonValue(dynamic value) {

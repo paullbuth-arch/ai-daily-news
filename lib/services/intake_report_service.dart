@@ -64,8 +64,8 @@ class IntakeReportService {
     for (final section in sections) {
       y += 46 + section.rows.length * 34 + 18;
     }
-    if (hasTips) y += 148;
-    return math.max(1960, y + 104);
+    if (hasTips) y += 120;
+    return math.max(1560, y + 96);
   }
 
   static void _drawBackground(Canvas canvas, Rect rect) {
@@ -79,7 +79,7 @@ class IntakeReportService {
   static void _drawHeader(Canvas canvas, Device device, DateTime issuedAt) {
     _drawText(
       canvas,
-      '平台验机报告',
+      '货脉验机报告',
       const Offset(86, 86),
       const TextStyle(
         color: Color(0xFF17233A),
@@ -89,7 +89,7 @@ class IntakeReportService {
     );
     _drawText(
       canvas,
-      '客户版 · 实拍凭证 · 外观记录',
+      '客户版检测凭证 · 实拍留档',
       const Offset(88, 136),
       const TextStyle(
         color: Color(0xFF687386),
@@ -321,12 +321,12 @@ class IntakeReportService {
     _drawStatusPill(
       canvas,
       Rect.fromLTWH(offset.dx, offset.dy - 2, 118, 34),
-      '客户版报告',
+      '检测结论',
       success: true,
     );
     _drawText(
       canvas,
-      '未列明问题按本次检查“未见明显异常”展示',
+      '未记录异常项目：未见明显异常',
       offset + const Offset(134, 3),
       const TextStyle(
         color: Color(0xFF69768A),
@@ -356,29 +356,25 @@ class IntakeReportService {
     final mic = _normalizeStatus(checks['麦克风']);
 
     return [
-      _ReportSection('检测结论', '客户速览', [
+      _ReportSection('核心结论', '已检测', [
         _ReportRow('整机状态', '${device.condition} · 功能${_functionGrade(device)}'),
-        _ReportRow('屏幕结论', screenClear == '无' ? '未记录明显异常' : '见外观记录'),
-        _ReportRow('外观结论', appearanceClear == '无' ? '未记录明显异常' : '见外观记录'),
-        _ReportRow('电池情况', '${device.batteryHealth}%'),
+        _ReportRow('屏幕结论', screenClear == '无' ? '未见明显异常' : '见外观记录'),
+        _ReportRow('外观结论', appearanceClear == '无' ? '未见明显异常' : '见外观记录'),
+        _ReportRow('电池/循环', '${device.batteryHealth}% / ${device.cycleCount}次'),
         _ReportRow('ID锁/监管', device.idLockClean ? '无锁/无监管' : '有锁/请确认'),
       ]),
-      _ReportSection('屏幕与外观', '外观记录', [
+      _ReportSection('屏幕与外观', '人工记录', [
         _ReportRow('显示/触控', '$screenDisplay / $touch'),
         ..._manualDefectRows(inspection),
       ]),
-      _ReportSection('功能检测', '基础项目', [
-        _ReportRow('按键/指纹', button),
-        _ReportRow('摄像头', camera),
-        _ReportRow('充电接口', port),
-        _ReportRow('WiFi/蓝牙', '$wifi / $bluetooth'),
-        _ReportRow('扬声器/麦克风', '$speaker / $mic'),
-        _ReportRow('蜂窝/SIM', device.network.contains('蜂窝') ? '蜂窝版' : '不适用'),
-      ]),
-      _ReportSection('安全与维修', '风险说明', [
+      _ReportSection('功能与安全', '基础项', [
+        _ReportRow('按键/接口', '$button / $port'),
+        _ReportRow('摄像/声音', '$camera / $speaker / $mic'),
+        _ReportRow(
+          '无线连接',
+          '$wifi / $bluetooth / ${device.network.contains('蜂窝') ? '蜂窝版' : 'WiFi版'}',
+        ),
         _ReportRow('维修痕迹', _repairText(inspection)),
-        _ReportRow('进水迹象', '未见异常'),
-        _ReportRow('ID锁', device.idLockClean ? '无锁' : '有锁/请确认'),
         _ReportRow('保修情况', _warrantyText(inspection)),
       ]),
     ];
@@ -408,17 +404,10 @@ class IntakeReportService {
       ),
     );
     if (section.countLabel.isNotEmpty) {
-      _drawGreenCheck(canvas, Offset(714, y + 2));
-      _drawText(
+      _drawSmallBadge(
         canvas,
+        Rect.fromLTWH(672, y - 4, 118, 28),
         section.countLabel,
-        Offset(738, y - 4),
-        const TextStyle(
-          color: Color(0xFF7C8899),
-          fontSize: 15,
-          fontWeight: FontWeight.w800,
-        ),
-        maxWidth: 72,
       );
     }
     y += 38;
@@ -464,23 +453,21 @@ class IntakeReportService {
     );
   }
 
-  static void _drawGreenCheck(Canvas canvas, Offset center) {
-    canvas.drawCircle(center, 10, Paint()..color = const Color(0xFF45D083));
-    final paint =
-        Paint()
-          ..color = Colors.white
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = 2.4;
-    canvas.drawLine(
-      center + const Offset(-4, 0),
-      center + const Offset(-1, 4),
-      paint,
-    );
-    canvas.drawLine(
-      center + const Offset(-1, 4),
-      center + const Offset(5, -4),
-      paint,
+  static void _drawSmallBadge(Canvas canvas, Rect rect, String text) {
+    _roundRect(canvas, rect, 14, const Color(0xFFEAF8F1));
+    _strokeRoundRect(canvas, rect, 14, const Color(0xFFCFECDD), 1);
+    _drawText(
+      canvas,
+      text,
+      Offset(rect.left, rect.top + 5),
+      const TextStyle(
+        color: Color(0xFF247249),
+        fontSize: 14,
+        fontWeight: FontWeight.w900,
+      ),
+      maxWidth: rect.width,
+      maxLines: 1,
+      textAlign: TextAlign.center,
     );
   }
 
@@ -491,7 +478,7 @@ class IntakeReportService {
     _strokeRoundRect(canvas, rect, 8, const Color(0xFFE7ECF3), 1);
     _drawText(
       canvas,
-      '说明：本报告依据入库实拍图与外观记录生成。未列明问题按本次检查未见明显异常展示；交易前建议以实物复验和开箱视频为准。',
+      '说明：本报告依据入库实拍图与人工外观记录生成。未列明异常项目按本次检查未见明显异常展示；交易以实物复验和开箱视频为准。',
       Offset(rect.left + 22, rect.top + 22),
       const TextStyle(
         color: Color(0xFF758195),

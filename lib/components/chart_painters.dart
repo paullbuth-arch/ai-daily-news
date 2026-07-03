@@ -37,7 +37,7 @@ class LineChartPainter extends CustomPainter {
     // Grid lines
     final gridPaint =
         Paint()
-          ..color = C.border.withOpacity(0.5)
+          ..color = C.border.withValues(alpha: 0.5)
           ..strokeWidth = 0.5;
     for (int i = 0; i <= 3; i++) {
       final y = padTop + chartH * i / 3;
@@ -73,7 +73,10 @@ class LineChartPainter extends CustomPainter {
             ..shader = LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [lineColor.withOpacity(0.2), lineColor.withOpacity(0.02)],
+              colors: [
+                lineColor.withValues(alpha: 0.2),
+                lineColor.withValues(alpha: 0.02),
+              ],
             ).createShader(Rect.fromLTWH(0, 0, w, h));
       canvas.drawPath(areaPath, areaPaint);
     }
@@ -102,10 +105,10 @@ class LineChartPainter extends CustomPainter {
         color: lineColor,
         fontWeight: FontWeight.w900,
       );
-      final bgPaint = Paint()..color = C.bgCard.withOpacity(0.92);
+      final bgPaint = Paint()..color = C.bgCard.withValues(alpha: 0.92);
       final borderPaint =
           Paint()
-            ..color = lineColor.withOpacity(0.26)
+            ..color = lineColor.withValues(alpha: 0.26)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1;
       for (int i = 0; i < points.length; i++) {

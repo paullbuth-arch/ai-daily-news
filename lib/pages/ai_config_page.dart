@@ -230,7 +230,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: C.t3.withOpacity(0.2),
+                        color: C.t3.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(

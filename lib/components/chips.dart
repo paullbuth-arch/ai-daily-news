@@ -13,9 +13,9 @@ class StatusChip extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
-      color: outline ? Colors.transparent : color.withOpacity(0.16),
+      color: outline ? Colors.transparent : color.withValues(alpha: 0.16),
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: color.withOpacity(0.28), width: 1),
+      border: Border.all(color: color.withValues(alpha: 0.28), width: 1),
     ),
     child: Text(
       text,
@@ -37,9 +37,9 @@ class TrendChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.16),
+        color: color.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.28)),
+        border: Border.all(color: color.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

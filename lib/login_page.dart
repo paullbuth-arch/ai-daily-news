@@ -415,7 +415,7 @@ class _StageCircle extends StatelessWidget {
     width: 46,
     height: 46,
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.10),
+      color: Colors.white.withValues(alpha: 0.10),
       shape: BoxShape.circle,
     ),
     child: Icon(icon, color: C.t1, size: 22),
@@ -485,7 +485,7 @@ class _FloatingBadge extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.22),
+          color: Colors.black.withValues(alpha: 0.22),
           blurRadius: 18,
           offset: const Offset(0, 8),
         ),
@@ -500,7 +500,7 @@ class _FloatingBadge extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: Colors.black.withOpacity(0.52),
+                  color: Colors.black.withValues(alpha: 0.52),
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
                 ),

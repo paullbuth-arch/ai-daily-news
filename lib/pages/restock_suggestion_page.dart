@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
-import '../storage.dart';
 import '../main.dart';
 
 class RestockSuggestionPage extends StatefulWidget {
@@ -173,7 +172,7 @@ class _RestockSuggestionPageState extends State<RestockSuggestionPage> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: actionColor.withOpacity(0.15),
+                    color: actionColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(

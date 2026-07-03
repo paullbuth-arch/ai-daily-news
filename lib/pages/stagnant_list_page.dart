@@ -93,7 +93,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                 decoration: BoxDecoration(
                   color: C.bgCard,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: C.red.withOpacity(0.3)),
+                  border: Border.all(color: C.red.withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -170,7 +170,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: C.red.withOpacity(0.15),
+                            color: C.red.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(

@@ -30,7 +30,7 @@ class _BackdropPainter extends CustomPainter {
     final tealGlow =
         Paint()
           ..shader = RadialGradient(
-            colors: [C.cyan.withOpacity(0.14), Colors.transparent],
+            colors: [C.cyan.withValues(alpha: 0.14), Colors.transparent],
           ).createShader(
             Rect.fromCircle(
               center: Offset(size.width * 0.18, size.height * 0.08),
@@ -42,7 +42,7 @@ class _BackdropPainter extends CustomPainter {
     final violetGlow =
         Paint()
           ..shader = RadialGradient(
-            colors: [C.purple.withOpacity(0.12), Colors.transparent],
+            colors: [C.purple.withValues(alpha: 0.12), Colors.transparent],
           ).createShader(
             Rect.fromCircle(
               center: Offset(size.width * 0.92, size.height * 0.82),
@@ -51,7 +51,7 @@ class _BackdropPainter extends CustomPainter {
           );
     canvas.drawRect(Offset.zero & size, violetGlow);
 
-    final grain = Paint()..color = Colors.white.withOpacity(0.018);
+    final grain = Paint()..color = Colors.white.withValues(alpha: 0.018);
     const gap = 5.0;
     for (double y = 0; y < size.height; y += gap) {
       for (double x = 0; x < size.width; x += gap) {
@@ -66,8 +66,8 @@ class _BackdropPainter extends CustomPainter {
         Paint()
           ..shader = LinearGradient(
             colors: [
-              Colors.black.withOpacity(0.04),
-              Colors.black.withOpacity(0.42),
+              Colors.black.withValues(alpha: 0.04),
+              Colors.black.withValues(alpha: 0.42),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -107,9 +107,9 @@ class GlassPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final fallbackGradient = LinearGradient(
       colors: [
-        Colors.white.withOpacity(0.075),
-        Colors.white.withOpacity(0.030),
-        Colors.black.withOpacity(0.10),
+        Colors.white.withValues(alpha: 0.075),
+        Colors.white.withValues(alpha: 0.030),
+        Colors.black.withValues(alpha: 0.10),
       ],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
@@ -136,7 +136,7 @@ class GlassPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color:
                       gradient == null
-                          ? (color ?? C.bgCard.withOpacity(0.82))
+                          ? (color ?? C.bgCard.withValues(alpha: 0.82))
                           : null,
                   gradient:
                       gradient ?? (color == null ? fallbackGradient : null),
@@ -148,7 +148,8 @@ class GlassPanel extends StatelessWidget {
               child: CustomPaint(
                 painter: _GlassSkinPainter(
                   radius: radius,
-                  borderColor: borderColor ?? Colors.white.withOpacity(0.09),
+                  borderColor:
+                      borderColor ?? Colors.white.withValues(alpha: 0.09),
                 ),
                 isComplex: false,
                 willChange: false,
@@ -193,7 +194,7 @@ class _GlassSkinPainter extends CustomPainter {
     final topHighlight =
         Paint()
           ..shader = LinearGradient(
-            colors: [Colors.white.withOpacity(0.16), Colors.transparent],
+            colors: [Colors.white.withValues(alpha: 0.16), Colors.transparent],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.42));
@@ -202,7 +203,7 @@ class _GlassSkinPainter extends CustomPainter {
     final edgeLight =
         Paint()
           ..shader = LinearGradient(
-            colors: [Colors.white.withOpacity(0.13), Colors.transparent],
+            colors: [Colors.white.withValues(alpha: 0.13), Colors.transparent],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
@@ -242,9 +243,9 @@ class RoundIconButton extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: background ?? Colors.white.withOpacity(0.08),
+          color: background ?? Colors.white.withValues(alpha: 0.08),
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withOpacity(0.09)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
         ),
         child: Icon(icon, color: color ?? C.t1, size: size * 0.48),
       ),
@@ -407,7 +408,7 @@ class NeonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: padding,
-    borderColor: (glowColor ?? C.cyan).withOpacity(0.18),
+    borderColor: (glowColor ?? C.cyan).withValues(alpha: 0.18),
     onTap: onTap,
     child: child,
   );

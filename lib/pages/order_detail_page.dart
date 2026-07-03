@@ -231,7 +231,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: sc.withOpacity(0.15),
+                        color: sc.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(

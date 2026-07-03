@@ -15,7 +15,7 @@ Future<T?> showAppFormSheet<T>({
     isScrollControlled: true,
     useSafeArea: true,
     backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.54),
+    barrierColor: Colors.black.withValues(alpha: 0.54),
     builder: (ctx) {
       final viewInsets = MediaQuery.viewInsetsOf(ctx);
       return Padding(
@@ -109,7 +109,7 @@ Future<T?> showAppFormDialog<T>({
 }) {
   return showDialog<T>(
     context: context,
-    barrierColor: Colors.black.withOpacity(0.58),
+    barrierColor: Colors.black.withValues(alpha: 0.58),
     builder: (ctx) {
       final media = MediaQuery.of(ctx);
       final viewInsets = media.viewInsets;
@@ -430,7 +430,7 @@ class AppSelectionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: selected ? color.withOpacity(0.16) : C.bgDeep,
+        color: selected ? color.withValues(alpha: 0.16) : C.bgDeep,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: selected ? color : C.border),
       ),

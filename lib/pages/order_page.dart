@@ -234,11 +234,19 @@ class _OrderSummary extends StatelessWidget {
     child: Row(
       children: [
         Expanded(child: _SummaryItem('成交额', yuan(revenue), C.cyan)),
-        Container(width: 1, height: 42, color: Colors.white.withOpacity(0.08)),
+        Container(
+          width: 1,
+          height: 42,
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
         Expanded(
           child: _SummaryItem('净利', yuan(profit), profit >= 0 ? C.mint : C.red),
         ),
-        Container(width: 1, height: 42, color: Colors.white.withOpacity(0.08)),
+        Container(
+          width: 1,
+          height: 42,
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
         Expanded(child: _SummaryItem('订单', '$count', C.purple)),
       ],
     ),
@@ -423,7 +431,7 @@ class _OrderTimelineCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: C.cyan.withOpacity(0.16),
+                  color: C.cyan.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -436,7 +444,7 @@ class _OrderTimelineCard extends StatelessWidget {
               Container(
                 width: 2,
                 height: 34,
-                color: Colors.white.withOpacity(0.08),
+                color: Colors.white.withValues(alpha: 0.08),
               ),
             ],
           ),
@@ -562,9 +570,9 @@ class _ValuePill extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
     decoration: BoxDecoration(
-      color: color.withOpacity(0.14),
+      color: color.withValues(alpha: 0.14),
       borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: color.withOpacity(0.20)),
+      border: Border.all(color: color.withValues(alpha: 0.20)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -573,7 +581,7 @@ class _ValuePill extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: color.withOpacity(0.76),
+            color: color.withValues(alpha: 0.76),
             fontWeight: FontWeight.w900,
           ),
         ),
