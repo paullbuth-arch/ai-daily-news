@@ -410,6 +410,10 @@ class EcommerceMaterialImportService {
   }) {
     final urls = <Uri>[];
     final seen = <String>{};
+
+    final structured = _collectXiaohongshuStructuredImageUrls(html, base);
+    if (structured.isNotEmpty) return structured;
+
     void add(String? raw, {bool embedded = false}) {
       if (raw == null || raw.trim().isEmpty) return;
       for (final part in _srcsetParts(raw)) {
@@ -427,19 +431,177 @@ class EcommerceMaterialImportService {
       add(image.attributes['data-src']);
       add(image.attributes['srcset']);
     }
-    for (final text in _xiaohongshuEmbeddedTexts(document, html)) {
-      for (final uri in _extractUrlsFromText(text, base)) {
-        if (!_looksLikeUsefulImage(uri)) continue;
-        if (!_looksLikeXiaohongshuImage(uri, base)) continue;
-        if (seen.add(_xiaohongshuImageDedupeKey(uri))) urls.add(uri);
-      }
-    }
     if (urls.isEmpty) {
       for (final key in ['og:image', 'twitter:image', 'image']) {
         add(_metaContent(document, key));
       }
     }
     return urls;
+  }
+
+  static List<Uri> _collectXiaohongshuStructuredImageUrls(
+    String? html,
+    Uri base,
+  ) {
+    if (html == null || html.isEmpty) return const <Uri>[];
+    final imageLists = _extractJsonLikeArrays(html, '"imageList"');
+    if (imageLists.isEmpty) return const <Uri>[];
+
+    List<dynamic> best = const <dynamic>[];
+    var bestScore = 0;
+    for (final imageList in imageLists) {
+      final score = _xiaohongshuImageListScore(imageList, base);
+      if (score > bestScore) {
+        best = imageList;
+        bestScore = score;
+      }
+    }
+    if (bestScore <= 0) return const <Uri>[];
+
+    final urls = <Uri>[];
+    final seen = <String>{};
+    for (final item in best) {
+      final raw = _preferredXiaohongshuImageUrl(item);
+      if (raw == null || raw.isEmpty) continue;
+      final uri = _resolveImageUri(raw, base);
+      if (uri == null || !_looksLikeUsefulImage(uri)) continue;
+      if (!_looksLikeXiaohongshuImage(uri, base)) continue;
+      if (seen.add(_xiaohongshuImageDedupeKey(uri))) urls.add(uri);
+    }
+    return urls;
+  }
+
+  static int _xiaohongshuImageListScore(List<dynamic> imageList, Uri base) {
+    var score = 0;
+    for (final item in imageList) {
+      if (item is! Map) continue;
+      final url = _preferredXiaohongshuImageUrl(item);
+      if (url == null || url.isEmpty) continue;
+      final uri = _resolveImageUri(url, base);
+      if (uri == null || !_looksLikeUsefulImage(uri)) continue;
+      if (!_looksLikeXiaohongshuImage(uri, base)) continue;
+      score += 2;
+      if (_stringValue(item['fileId']).isNotEmpty) score += 2;
+      if (item['width'] is num && item['height'] is num) score += 1;
+      final infoList = item['infoList'];
+      if (infoList is List &&
+          infoList.any(
+            (entry) =>
+                entry is Map &&
+                _isXiaohongshuDetailImageScene(
+                  _stringValue(entry['imageScene']),
+                ),
+          )) {
+        score += 3;
+      }
+    }
+    return score;
+  }
+
+  static String? _preferredXiaohongshuImageUrl(dynamic item) {
+    if (item is! Map) return null;
+    final infoList = item['infoList'];
+    if (infoList is List) {
+      for (final entry in infoList) {
+        if (entry is! Map) continue;
+        final scene = _stringValue(entry['imageScene']).toUpperCase();
+        final url = _stringValue(entry['url']);
+        if (url.isNotEmpty && _isXiaohongshuDetailImageScene(scene)) {
+          return url;
+        }
+      }
+      for (final entry in infoList) {
+        if (entry is! Map) continue;
+        final url = _stringValue(entry['url']);
+        if (url.isNotEmpty &&
+            (url.contains('!h5_') || url.contains('!nd_dft'))) {
+          return url;
+        }
+      }
+    }
+
+    final urlDefault = _stringValue(item['urlDefault']);
+    if (urlDefault.isNotEmpty) return urlDefault;
+
+    final direct = _stringValue(item['url']);
+    if (direct.isNotEmpty) return direct;
+
+    final urlPre = _stringValue(item['urlPre']);
+    if (urlPre.isNotEmpty) return urlPre;
+    return null;
+  }
+
+  static bool _isXiaohongshuDetailImageScene(String scene) {
+    final upper = scene.toUpperCase();
+    return upper == 'H5_DTL' ||
+        upper == 'WB_DFT' ||
+        upper.endsWith('_DFT') ||
+        upper.endsWith('_DTL');
+  }
+
+  static List<List<dynamic>> _extractJsonLikeArrays(String text, String key) {
+    final arrays = <List<dynamic>>[];
+    var cursor = 0;
+    while (cursor < text.length) {
+      final keyIndex = text.indexOf(key, cursor);
+      if (keyIndex < 0) break;
+      final bracketIndex = text.indexOf('[', keyIndex + key.length);
+      if (bracketIndex < 0) break;
+      final end = _matchingJsonLikeEnd(text, bracketIndex, '[', ']');
+      if (end < 0) {
+        cursor = bracketIndex + 1;
+        continue;
+      }
+      final raw = text.substring(bracketIndex, end + 1);
+      try {
+        final decoded = json.decode(_sanitizeJsonLike(raw));
+        if (decoded is List) arrays.add(decoded);
+      } catch (_) {}
+      cursor = end + 1;
+    }
+    return arrays;
+  }
+
+  static int _matchingJsonLikeEnd(
+    String text,
+    int start,
+    String open,
+    String close,
+  ) {
+    var depth = 0;
+    var inString = false;
+    var escaped = false;
+    for (var i = start; i < text.length; i++) {
+      final char = text[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (char == r'\') {
+          escaped = true;
+        } else if (char == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (char == '"') {
+        inString = true;
+      } else if (char == open) {
+        depth++;
+      } else if (char == close) {
+        depth--;
+        if (depth == 0) return i;
+      }
+    }
+    return -1;
+  }
+
+  static String _sanitizeJsonLike(String value) {
+    return value
+        .replaceAllMapped(
+          RegExp(r'(:|\[|,)\s*undefined\s*(?=,|\]|\})'),
+          (match) => '${match.group(1)}null',
+        )
+        .replaceAll(RegExp(r',\s*(?=[\]}])'), '');
   }
 
   static List<Uri> _collectXiaohongshuVideoUrls(
@@ -1266,6 +1428,11 @@ class EcommerceMaterialImportService {
     if (RegExp(r'(?:^|[_!])(?:h5_)?\d*jpg$').hasMatch(path)) return '.jpg';
     if (RegExp(r'(?:^|[_!])(?:h5_)?\d*png$').hasMatch(path)) return '.png';
     if (RegExp(r'(?:^|[_!])(?:h5_)?\d*webp$').hasMatch(path)) return '.webp';
+    if (RegExp(r'!(?:nd|h5|style)_[^/]*(?:jpg|jpeg)').hasMatch(path)) {
+      return '.jpg';
+    }
+    if (RegExp(r'!(?:nd|h5|style)_[^/]*png').hasMatch(path)) return '.png';
+    if (RegExp(r'!(?:nd|h5|style)_[^/]*webp').hasMatch(path)) return '.webp';
     return null;
   }
 

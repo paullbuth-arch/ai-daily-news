@@ -96,12 +96,69 @@ void main() {
 </body>
 </html>
 ''');
+      } else if (path == '/xhs-noisy-state') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        String mainImage(int index) =>
+            'http:\\u002F\\u002F$host:$port\\u002Fxhs-img\\u002Fmain-$index!nd_dft_wlteh_jpg_3';
+        String previewImage(int index) =>
+            'http:\\u002F\\u002F$host:$port\\u002Fxhs-img\\u002Fmain-$index!nd_prv_wlteh_jpg_3';
+        String recommendImage(int index) =>
+            'http:\\u002F\\u002F$host:$port\\u002Frec-img\\u002Frec-$index.jpg';
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head><title>XHS Noisy State</title></head>
+<body>
+  <div class="content-container">
+    <div class="reds-text fs18 fw500 title title-no-padding-top">Durian Guide</div>
+    <div class="author-desc-content">Five image note</div>
+  </div>
+  <script>
+    window.__INITIAL_STATE__={
+      "global":{"jsAssetsList":undefined},
+      "note":{
+        "firstNote":{
+          "noteData":{
+            "title":"Durian Guide",
+            "type":"normal",
+            "imageList":[
+              {"fileId":"main-1","width":1260,"height":1680,"url":"","urlDefault":"${mainImage(1)}","urlPre":"${previewImage(1)}","infoList":[{"imageScene":"WB_DFT","url":"${mainImage(1)}"},{"imageScene":"WB_PRV","url":"${previewImage(1)}"}]},
+              {"fileId":"main-2","width":1260,"height":1680,"url":"","urlDefault":"${mainImage(2)}","urlPre":"${previewImage(2)}","infoList":[{"imageScene":"WB_DFT","url":"${mainImage(2)}"},{"imageScene":"WB_PRV","url":"${previewImage(2)}"}]},
+              {"fileId":"main-3","width":1260,"height":1680,"url":"","urlDefault":"${mainImage(3)}","urlPre":"${previewImage(3)}","infoList":[{"imageScene":"WB_DFT","url":"${mainImage(3)}"},{"imageScene":"WB_PRV","url":"${previewImage(3)}"}]},
+              {"fileId":"main-4","width":1260,"height":1680,"url":"","urlDefault":"${mainImage(4)}","urlPre":"${previewImage(4)}","infoList":[{"imageScene":"WB_DFT","url":"${mainImage(4)}"},{"imageScene":"WB_PRV","url":"${previewImage(4)}"}]},
+              {"fileId":"main-5","width":1260,"height":1680,"url":"","urlDefault":"${mainImage(5)}","urlPre":"${previewImage(5)}","infoList":[{"imageScene":"WB_DFT","url":"${mainImage(5)}"},{"imageScene":"WB_PRV","url":"${previewImage(5)}"}]}
+            ]
+          }
+        }
+      },
+      "recommendFeed":{
+        "imageList":[
+          {"url":"${recommendImage(1)}"},
+          {"url":"${recommendImage(2)}"},
+          {"url":"${recommendImage(3)}"},
+          {"url":"${recommendImage(4)}"},
+          {"url":"${recommendImage(5)}"},
+          {"url":"${recommendImage(6)}"},
+          {"url":"${recommendImage(7)}"},
+          {"url":"${recommendImage(8)}"}
+        ]
+      }
+    }
+  </script>
+</body>
+</html>
+''');
       } else if (path.startsWith('/img/') || path.startsWith('/xhs-img/')) {
         request.response.headers.contentType =
             path.endsWith('.png')
                 ? ContentType('image', 'png')
                 : ContentType('image', 'jpeg');
         request.response.add([1, 2, 3, 4, 5]);
+      } else if (path.startsWith('/rec-img/')) {
+        request.response.headers.contentType = ContentType('image', 'jpeg');
+        request.response.add([6, 7, 8]);
       } else if (path.startsWith('/video/')) {
         request.response.headers.contentType = ContentType('video', 'mp4');
         request.response.add(List<int>.filled(16, 7));
@@ -200,6 +257,44 @@ void main() {
       true,
     );
   });
+
+  test(
+    'xiaohongshu state parser keeps note images and ignores noisy feed',
+    () async {
+      final url = Uri(
+        scheme: 'http',
+        host: InternetAddress.loopbackIPv4.host,
+        port: server.port,
+        path: '/xhs-noisy-state',
+      );
+
+      final result = await EcommerceMaterialImportService.importFromText(
+        'xhs note $url',
+        docDir: tmp.path,
+        maxImages: 20,
+      );
+
+      expect(
+        result.images,
+        hasLength(5),
+        reason:
+            'candidate=${result.candidateImageCount}, title=${result.title}, warnings=${result.warnings.join('|')}',
+      );
+      expect(result.candidateImageCount, 5);
+      expect(
+        result.images.map((image) => image.originalUrl.toString()),
+        everyElement(contains('/xhs-img/main-')),
+      );
+      expect(
+        result.images.map((image) => image.originalUrl.toString()),
+        isNot(contains(contains('/rec-img/'))),
+      );
+      expect(
+        result.images.map((image) => image.originalUrl.toString()),
+        isNot(contains(contains('nd_prv'))),
+      );
+    },
+  );
 
   test('cleans platform image processing params without pixel editing', () {
     final cleaned = EcommerceMaterialImportService.cleanPlatformImageUrl(

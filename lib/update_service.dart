@@ -63,8 +63,8 @@ class UpdateService {
   );
 
   /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.9.4';
-  static int get currentBuild => 23;
+  static String get currentVersion => '2.9.5';
+  static int get currentBuild => 24;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
