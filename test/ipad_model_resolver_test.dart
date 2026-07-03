@@ -20,10 +20,10 @@ void main() {
     );
   });
 
-  test('uses mini 6 order number before fuzzy model text', () {
+  test('does not override explicit mini 7 text with local order table', () {
     expect(
       IpadModelResolver.match('iPad mini 7 (A17 Pro) MLWL3CH/A', models),
-      'iPad mini 6 (A15)',
+      'iPad mini 7 (A17 Pro)',
     );
   });
 
@@ -38,17 +38,17 @@ void main() {
     );
   });
 
-  test('keeps iPad Pro 12.9 5th generation on M1 model', () {
+  test('does not map Pro generation with local hard-coded table', () {
     expect(
       IpadModelResolver.match('iPad Pro (12.9英寸)(第5代) MHNH3TA/A', models),
-      'iPad Pro 12.9 2021 (M1)',
+      isEmpty,
     );
   });
 
-  test('uses iPad Pro 12.9 A model number before fuzzy year text', () {
+  test('does not guess Pro 11 M4 from structured old-model clues', () {
     expect(
-      IpadModelResolver.match('iPad Pro 12.9 2022 M2 A2378', models),
-      'iPad Pro 12.9 2021 (M1)',
+      IpadModelResolver.match('iPad Pro（11英寸）（第2代） MY252KH/A A2228', models),
+      isEmpty,
     );
   });
 }

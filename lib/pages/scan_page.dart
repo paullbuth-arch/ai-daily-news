@@ -244,6 +244,7 @@ class _ScanPageState extends State<ScanPage> {
   List<String> imagePaths = [];
 
   // 整机图片AI识别
+  static const int _aboutDeviceOcrImageLimit = 2;
   static const int _primaryInspectionImageLimit = 3;
   static const int _supplementalInspectionImageLimit = 4;
   bool aiInspecting = false;
@@ -499,20 +500,49 @@ class _ScanPageState extends State<ScanPage> {
     if (aiInspecting) return;
     setState(() => aiInspecting = true);
     try {
-      final primaryPaths =
-          imagePaths.take(_primaryInspectionImageLimit).toList();
-      final encoded = await _encodeInspectionImages(primaryPaths);
-      var result = await AiService.recognizeIpadIntake(
-        encoded,
-        totalImageCount: imagePaths.length,
-      );
-      if (result['error'] != null) {
-        if (!mounted) return;
-        toast(context, 'AI识别失败：${result['error']}');
-        return;
+      final recognizedPaths = <String>{};
+      var result = <String, dynamic>{};
+      var hasAiResult = false;
+
+      for (final path in imagePaths.take(_aboutDeviceOcrImageLimit)) {
+        recognizedPaths.add(path);
+        final about = await AiService.recognizeAboutDeviceOcr(
+          await _imageDataUriForAi(path),
+        );
+        if (about['error'] == null) {
+          hasAiResult = true;
+          result = _mergeAboutDeviceOcrResult(result, about);
+        } else {
+          result = _withInspectionWarning(
+            result,
+            '关于本机单图识别失败：${about['error']}',
+          );
+        }
+        if (_hasCoreAboutDeviceInfo(result)) break;
       }
 
-      var recognizedCount = primaryPaths.length;
+      final primarySupplementalPaths =
+          imagePaths
+              .take(_primaryInspectionImageLimit)
+              .where((path) => !recognizedPaths.contains(path))
+              .toList();
+      if (primarySupplementalPaths.isNotEmpty) {
+        final focusFields = _supplementalInspectionFields(result);
+        final supplement = await AiService.recognizeIpadIntake(
+          await _encodeInspectionImages(primarySupplementalPaths),
+          supplemental: true,
+          totalImageCount: imagePaths.length,
+          focusFields: focusFields,
+        );
+        recognizedPaths.addAll(primarySupplementalPaths);
+        if (supplement['error'] == null) {
+          hasAiResult = true;
+          result = _mergeInspectionResults(result, supplement, focusFields);
+        } else {
+          result = _withInspectionWarning(result, '图1-3补充识别失败，已保留单图识别结果');
+        }
+      }
+
       final missingFields = _missingInspectionFields(result);
       if (missingFields.isNotEmpty &&
           imagePaths.length > _primaryInspectionImageLimit) {
@@ -521,27 +551,36 @@ class _ScanPageState extends State<ScanPage> {
                 .skip(_primaryInspectionImageLimit)
                 .take(_supplementalInspectionImageLimit)
                 .toList();
-        final supplementalEncoded = await _encodeInspectionImages(
-          supplementalPaths,
-        );
         final supplement = await AiService.recognizeIpadIntake(
-          supplementalEncoded,
+          await _encodeInspectionImages(supplementalPaths),
           supplemental: true,
           totalImageCount: imagePaths.length,
-          focusFields: missingFields,
+          focusFields: _supplementalInspectionFields(result),
         );
-        recognizedCount += supplementalPaths.length;
+        recognizedPaths.addAll(supplementalPaths);
         if (supplement['error'] == null) {
-          result = _mergeInspectionResults(result, supplement, missingFields);
+          hasAiResult = true;
+          result = _mergeInspectionResults(
+            result,
+            supplement,
+            _supplementalInspectionFields(result),
+          );
         } else {
           result = _withInspectionWarning(result, '后续图片补充识别失败，已保留前三张识别结果');
         }
       }
+
+      if (!hasAiResult) {
+        if (!mounted) return;
+        final warning = _inspectionWarnings(result['warnings']).join('；');
+        toast(context, warning.isEmpty ? 'AI识别失败，请换一张清晰图片再试' : warning);
+        return;
+      }
       result['recognitionStrategy'] =
-          recognizedCount <= _primaryInspectionImageLimit
-              ? '前三张优先识别'
-              : '前三张优先识别，缺字段时补看后续$recognizedCount张内图片';
-      result['recognizedImageCount'] = recognizedCount;
+          recognizedPaths.length <= _primaryInspectionImageLimit
+              ? '关于本机单图优先，图1-3补充'
+              : '关于本机单图优先，缺字段时补看后续${recognizedPaths.length}张内图片';
+      result['recognizedImageCount'] = recognizedPaths.length;
       if (!mounted) return;
       final appliedCount = _applyInspection(result);
       setState(() {
@@ -567,6 +606,21 @@ class _ScanPageState extends State<ScanPage> {
     return encoded;
   }
 
+  bool _hasCoreAboutDeviceInfo(Map<String, dynamic> result) =>
+      _hasReliableInspectionValue(result, 'serial') &&
+      _hasReliableInspectionValue(result, 'model') &&
+      _hasReliableInspectionValue(result, 'capacity');
+
+  List<String> _supplementalInspectionFields(Map<String, dynamic> result) =>
+      {
+        ..._missingInspectionFields(result),
+        'inspectionTool',
+        'machineType',
+        'allGreen',
+        'inspectionSummary',
+        'accessories',
+      }.toList();
+
   List<String> _missingInspectionFields(Map<String, dynamic> result) {
     final fields = <String>[];
     for (final key in const [
@@ -581,6 +635,95 @@ class _ScanPageState extends State<ScanPage> {
       if (!_hasReliableInspectionValue(result, key)) fields.add(key);
     }
     return fields;
+  }
+
+  Map<String, dynamic> _mergeAboutDeviceOcrResult(
+    Map<String, dynamic> primary,
+    Map<String, dynamic> about,
+  ) {
+    var merged = Map<String, dynamic>.from(primary);
+    final isAboutPage = about['isAboutDevicePage'];
+    if (isAboutPage is bool &&
+        !isAboutPage &&
+        _inspectionConfidence(about) < 0.5) {
+      return _withInspectionWarning(merged, '前置图片未识别到清晰的关于本机文字');
+    }
+
+    for (final key in const [
+      'serial',
+      'serialRaw',
+      'model',
+      'modelName',
+      'modelNameRaw',
+      'modelEvidenceText',
+      'modelNumber',
+      'partNumber',
+      'partNumberRaw',
+      'capacity',
+      'capacityRaw',
+      'availableRaw',
+      'ipadOS',
+      'network',
+    ]) {
+      final next = (about[key] ?? '').toString().trim();
+      if (!_usable(next) || _hasProtectedInspectionValue(merged, key)) {
+        continue;
+      }
+      merged[key] = about[key];
+    }
+
+    final modelNameRaw = (merged['modelNameRaw'] ?? '').toString().trim();
+    if (!_usable((merged['modelName'] ?? '').toString()) &&
+        _usable(modelNameRaw)) {
+      merged['modelName'] = modelNameRaw;
+    }
+    final partNumberRaw = (merged['partNumberRaw'] ?? '').toString().trim();
+    if (!_usable((merged['partNumber'] ?? '').toString()) &&
+        _usable(partNumberRaw)) {
+      merged['partNumber'] = partNumberRaw;
+    }
+
+    final mergedConfidence = <String, dynamic>{
+      if (merged['fieldConfidence'] is Map)
+        ...Map<String, dynamic>.from(merged['fieldConfidence'] as Map),
+    };
+    final aboutConfidence =
+        about['fieldConfidence'] is Map
+            ? Map<String, dynamic>.from(about['fieldConfidence'] as Map)
+            : const <String, dynamic>{};
+    for (final entry in aboutConfidence.entries) {
+      final current = _readConfidence(mergedConfidence[entry.key]) ?? 0;
+      final next = _readConfidence(entry.value) ?? 0;
+      if (next > current) mergedConfidence[entry.key] = entry.value;
+    }
+    if (mergedConfidence.isNotEmpty) {
+      merged['fieldConfidence'] = mergedConfidence;
+    }
+
+    final confidence = math.max(
+      _inspectionConfidence(merged),
+      _inspectionConfidence(about),
+    );
+    if (confidence > 0) merged['confidence'] = confidence;
+    final warnings = <String>{
+      ..._inspectionWarnings(merged['warnings']),
+      ..._inspectionWarnings(about['warnings']),
+    };
+    if (warnings.isNotEmpty) merged['warnings'] = warnings.toList();
+    merged['functionSummary'] ??= '关于本机信息已读取，外观由人工记录';
+    merged['appearanceSummary'] ??= '外观问题由人工勾选记录';
+    return merged;
+  }
+
+  bool _hasProtectedInspectionValue(Map<String, dynamic> result, String key) {
+    if (key == 'serial') return _hasReliableInspectionValue(result, 'serial');
+    if (key == 'model') return _hasReliableInspectionValue(result, 'model');
+    if (key == 'capacity') {
+      return _hasReliableInspectionValue(result, 'capacity');
+    }
+    if (key == 'network') return _hasReliableInspectionValue(result, 'network');
+    final value = (result[key] ?? '').toString().trim();
+    return _usable(value) && _fieldConfidence(result, key) >= 0.78;
   }
 
   Map<String, dynamic> _mergeInspectionResults(
@@ -654,7 +797,7 @@ class _ScanPageState extends State<ScanPage> {
   int _applyInspection(Map<String, dynamic> result) {
     var applied = 0;
     String text(String key) => (result[key] ?? '').toString().trim();
-    final serial = text('serial').toUpperCase();
+    final serial = _serialEvidence(result).toUpperCase();
     if (_serialCtrl.text.trim().isEmpty &&
         _usable(serial) &&
         _looksLikeSerial(serial) &&
@@ -663,7 +806,7 @@ class _ScanPageState extends State<ScanPage> {
       applied++;
     }
 
-    final model = _matchModel(_modelEvidence(result));
+    final model = _trustedModelMatch(result);
     if (selectedModel.isEmpty &&
         model.isNotEmpty &&
         _shouldApplyInspectionField(result, 'model', threshold: 0.84)) {
@@ -671,7 +814,7 @@ class _ScanPageState extends State<ScanPage> {
       applied++;
     }
 
-    final capacity = _matchOption(text('capacity'), iPadCapacities);
+    final capacity = _trustedCapacityMatch(result);
     if (selectedCapacity.isEmpty &&
         capacity.isNotEmpty &&
         _shouldApplyInspectionField(result, 'capacity', threshold: 0.82)) {
@@ -739,20 +882,74 @@ class _ScanPageState extends State<ScanPage> {
     return applied;
   }
 
-  String _modelEvidence(Map<String, dynamic> result) {
+  String _serialEvidence(Map<String, dynamic> result) {
+    final raw = (result['serialRaw'] ?? '').toString().trim();
+    if (_usable(raw) && _looksLikeSerial(raw.toUpperCase())) return raw;
+    return (result['serial'] ?? '').toString().trim();
+  }
+
+  String _modelSourceEvidence(Map<String, dynamic> result) {
     final parts = <String>[];
     for (final key in const [
+      'modelEvidenceText',
+      'modelName',
+      'modelNameRaw',
       'modelNumber',
       'partNumber',
+      'partNumberRaw',
       'modelIdentifier',
-      'modelName',
       'generation',
-      'model',
     ]) {
       final value = (result[key] ?? '').toString().trim();
       if (_usable(value)) parts.add(value);
     }
     return parts.join(' ');
+  }
+
+  String _trustedModelMatch(Map<String, dynamic> result) {
+    final source = _modelSourceEvidence(result);
+    final sourceMatch = _matchModel(source);
+    if (sourceMatch.isNotEmpty) return sourceMatch;
+
+    final aiModel = (result['model'] ?? '').toString().trim();
+    if (!_usable(aiModel) || !_aiModelAllowedBySource(aiModel, source)) {
+      return '';
+    }
+    return _matchModel(aiModel);
+  }
+
+  bool _aiModelAllowedBySource(String model, String source) {
+    final m = model.toLowerCase();
+    final s = source.toLowerCase();
+    if ((m.contains('2024') || m.contains('m4')) &&
+        !(s.contains('2024') ||
+            s.contains('m4') ||
+            s.contains('ultra retina') ||
+            s.contains('oled'))) {
+      return false;
+    }
+    if (_hasStructuredModelClue(source) && _matchModel(source).isEmpty) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _hasStructuredModelClue(String raw) {
+    final value = raw.toUpperCase();
+    return RegExp(r'\bA\d{4}\b').hasMatch(value) ||
+        RegExp(r'\b[A-Z]{1,4}\d{3,5}[A-Z0-9]{0,4}/A\b').hasMatch(value) ||
+        RegExp(r'第\s*\d+\s*代').hasMatch(raw) ||
+        RegExp(
+          r'\d+(st|nd|rd|th)\s+generation',
+          caseSensitive: false,
+        ).hasMatch(raw);
+  }
+
+  String _trustedCapacityMatch(Map<String, dynamic> result) {
+    final raw = (result['capacityRaw'] ?? '').toString().trim();
+    final fromRaw = _matchOption(raw, iPadCapacities);
+    if (fromRaw.isNotEmpty) return fromRaw;
+    return _matchOption((result['capacity'] ?? '').toString(), iPadCapacities);
   }
 
   bool _usable(String value) =>
@@ -782,11 +979,16 @@ class _ScanPageState extends State<ScanPage> {
       key,
       if (key == 'model') ...[
         'modelName',
+        'modelNameRaw',
+        'modelEvidenceText',
         'modelNumber',
         'partNumber',
+        'partNumberRaw',
         'modelIdentifier',
         'generation',
       ],
+      if (key == 'serial') 'serialRaw',
+      if (key == 'capacity') 'capacityRaw',
       if (['iCloudLock', 'activationLock', 'mdm', 'configLock'].contains(key))
         'lockStatus',
     ];
@@ -812,10 +1014,13 @@ class _ScanPageState extends State<ScanPage> {
       return false;
     }
     final value = (result[key] ?? '').toString().trim();
-    if (key == 'serial') return _usable(value) && _looksLikeSerial(value);
-    if (key == 'model') return _matchModel(_modelEvidence(result)).isNotEmpty;
+    if (key == 'serial') {
+      final serial = _serialEvidence(result).toUpperCase();
+      return _usable(serial) && _looksLikeSerial(serial);
+    }
+    if (key == 'model') return _trustedModelMatch(result).isNotEmpty;
     if (key == 'capacity') {
-      return _matchOption(value, iPadCapacities).isNotEmpty;
+      return _trustedCapacityMatch(result).isNotEmpty;
     }
     if (key == 'color') return _matchOption(value, iPadColors).isNotEmpty;
     if (key == 'network') return _matchOption(value, iPadNetworks).isNotEmpty;

@@ -5,12 +5,6 @@ class IpadModelResolver {
     final value = raw.trim();
     if (!_usable(value)) return '';
 
-    final direct = _matchHardwareCode(value, models);
-    if (direct.isNotEmpty) return direct;
-
-    final pro = _matchProGeneration(value, models);
-    if (pro.isNotEmpty) return pro;
-
     for (final model in models) {
       if (model == value) return model;
     }
@@ -18,6 +12,7 @@ class IpadModelResolver {
     final mini = _matchMiniGeneration(value, models);
     if (mini.isNotEmpty) return mini;
     if (_mentionsMiniWithoutGeneration(value)) return '';
+    if (_hasStructuredModelClue(value)) return '';
 
     final normalized = _modelKey(value);
     var best = '';
@@ -40,58 +35,6 @@ class IpadModelResolver {
   static bool _usable(String value) =>
       value.isNotEmpty && value != '未知' && value.toLowerCase() != 'unknown';
 
-  static String _matchHardwareCode(String raw, List<String> models) {
-    final value = raw.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9/]'), ' ');
-    if (_hasAny(value, const ['MLWL3', 'A2567', 'A2568', 'A2569'])) {
-      return _findModel(models, 'iPad mini 6');
-    }
-    if (_hasAny(value, const ['MHNH3', 'A2378', 'A2379', 'A2461', 'A2462'])) {
-      return _findModel(models, 'iPad Pro 12.9 2021');
-    }
-    if (_hasAny(value, const ['A2436', 'A2437', 'A2764', 'A2766'])) {
-      return _findModel(models, 'iPad Pro 12.9 2022');
-    }
-    if (_hasAny(value, const ['A2377', 'A2301', 'A2459', 'A2460'])) {
-      return _findModel(models, 'iPad Pro 11 2021');
-    }
-    if (_hasAny(value, const ['A2435', 'A2759', 'A2761', 'A2762'])) {
-      return _findModel(models, 'iPad Pro 11 2022');
-    }
-    return '';
-  }
-
-  static String _matchProGeneration(String raw, List<String> models) {
-    final compact = raw
-        .toLowerCase()
-        .replaceAll(RegExp(r'\s+'), '')
-        .replaceAll('．', '.');
-    if (!compact.contains('ipad') || !compact.contains('pro')) return '';
-
-    final is129 =
-        compact.contains('12.9') ||
-        compact.contains('129英寸') ||
-        compact.contains('129inch');
-    final is11 =
-        !is129 &&
-        (compact.contains('11英寸') ||
-            compact.contains('11inch') ||
-            RegExp(r'(^|[^0-9])11($|[^0-9])').hasMatch(compact));
-
-    if (is129 && _hasAny(compact, const ['第5代', '5thgeneration', '5thgen'])) {
-      return _findModel(models, 'iPad Pro 12.9 2021');
-    }
-    if (is129 && _hasAny(compact, const ['第6代', '6thgeneration', '6thgen'])) {
-      return _findModel(models, 'iPad Pro 12.9 2022');
-    }
-    if (is11 && _hasAny(compact, const ['第3代', '3rdgeneration', '3rdgen'])) {
-      return _findModel(models, 'iPad Pro 11 2021');
-    }
-    if (is11 && _hasAny(compact, const ['第4代', '4thgeneration', '4thgen'])) {
-      return _findModel(models, 'iPad Pro 11 2022');
-    }
-    return '';
-  }
-
   static String _matchMiniGeneration(String raw, List<String> models) {
     final normalized = _modelKey(raw);
     if (!normalized.contains('mini')) return '';
@@ -110,6 +53,17 @@ class IpadModelResolver {
   static bool _mentionsMiniWithoutGeneration(String raw) {
     final normalized = _modelKey(raw);
     return normalized.contains('ipad') && normalized.contains('mini');
+  }
+
+  static bool _hasStructuredModelClue(String raw) {
+    final value = raw.toUpperCase();
+    return RegExp(r'\bA\d{4}\b').hasMatch(value) ||
+        RegExp(r'\b[A-Z]{1,4}\d{3,5}[A-Z0-9]{0,4}/A\b').hasMatch(value) ||
+        RegExp(r'第\s*\d+\s*代').hasMatch(raw) ||
+        RegExp(
+          r'\d+(st|nd|rd|th)\s+generation',
+          caseSensitive: false,
+        ).hasMatch(raw);
   }
 
   static bool _hasAny(String value, List<String> needles) {

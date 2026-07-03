@@ -382,6 +382,11 @@ class AiService {
     String textPrompt, {
     int maxTokens = 4096,
   }) async {
+    final image = imageBase64.trim();
+    final imageUrl =
+        image.startsWith('data:image/')
+            ? image
+            : 'data:image/jpeg;base64,$image';
     final result = await _callOpenAI(
       systemPrompt: systemPrompt,
       messages: [
@@ -390,7 +395,7 @@ class AiService {
           'content': [
             {
               'type': 'image_url',
-              'image_url': {'url': 'data:image/jpeg;base64,$imageBase64'},
+              'image_url': {'url': imageUrl},
             },
             {'type': 'text', 'text': textPrompt},
           ],
@@ -463,6 +468,88 @@ class AiService {
     }
   }
 
+  static Future<Map<String, dynamic>> recognizeAboutDeviceOcr(
+    String imageBase64,
+  ) async {
+    if (imageBase64.trim().isEmpty) {
+      return {'error': '请先上传关于本机图片'};
+    }
+    const sys = '''
+你只做单张 iPad“关于本机/设置/验机文字页”的 OCR 识别。
+目标是读取图片中真实可见文字，尤其是型号名称、型号/订货号、序列号、容量、系统版本、可用容量、网络信息。
+
+强制规则：
+1. 优先逐字抄写图片里的原文，不要凭外观、摄像头、边框、颜色猜型号。
+2. 如果图片不是“关于本机/设置/验机文字页”，isAboutDevicePage 填 false，关键字段填"未知"，confidence 不得超过 0.35。
+3. modelNameRaw/modelEvidenceText/partNumberRaw/serialRaw/capacityRaw 必须尽量保留图片里的原文。
+4. model 可以写成 App 常用标准型号，但只能来自清晰文字证据；不确定就填"未知"。例如：
+   - 图里写 iPad mini（第6代）或 iPad mini (6th generation)，model 写 iPad mini 6 (A15)，不要写 mini 7。
+   - 图里写 iPad Pro（11英寸）（第2代）或 iPad Pro 11-inch (2nd generation)，model 写 iPad Pro 11 2020 (A12Z)，不要写 2024/M4。
+   - 只有图里清晰出现 2024、M4、Ultra Retina、OLED 这类直接证据时，才允许 model 写 2024/M4。
+5. capacity 只根据容量字段读取，输出 64G/128G/256G/512G/1TB/未知。
+6. serial/serialRaw 只填写看清楚的 10-12 位序列号，不能把型号、系统版本、容量当序列号。
+7. network 只有图片文字能确认蜂窝/Cellular/5G/无线局域网等信息时填写 WiFi 或 WiFi+蜂窝，否则"未知"。
+8. 输出必须是严格 JSON，不要 Markdown，不要解释。
+
+JSON 字段：
+{
+  "isAboutDevicePage": true,
+  "serial": "序列号或未知",
+  "serialRaw": "图片中逐字读到的序列号或未知",
+  "model": "标准型号或未知",
+  "modelName": "型号名称原文或未知",
+  "modelNameRaw": "型号名称原文或未知",
+  "modelEvidenceText": "型号相关原始证据汇总或未知",
+  "modelNumber": "Axxxx 或未知",
+  "partNumber": "订货号如 MLWL3CH/A 或未知",
+  "partNumberRaw": "订货号原文或未知",
+  "capacity": "64G/128G/256G/512G/1TB/未知",
+  "capacityRaw": "容量原文或未知",
+  "availableRaw": "可用容量原文或未知",
+  "ipadOS": "系统版本原文或未知",
+  "network": "WiFi/WiFi+蜂窝/未知",
+  "fieldConfidence": {
+    "serial": 0.0,
+    "serialRaw": 0.0,
+    "model": 0.0,
+    "modelName": 0.0,
+    "modelNameRaw": 0.0,
+    "modelEvidenceText": 0.0,
+    "modelNumber": 0.0,
+    "partNumber": 0.0,
+    "partNumberRaw": 0.0,
+    "capacity": 0.0,
+    "capacityRaw": 0.0,
+    "availableRaw": 0.0,
+    "ipadOS": 0.0,
+    "network": 0.0
+  },
+  "confidence": 0.0,
+  "warnings": []
+}
+''';
+    final result = await chatWithImage(
+      sys,
+      imageBase64,
+      '请只读取这张图片中的可见文字，并返回严格 JSON。',
+      maxTokens: 2048,
+    );
+    if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
+      return {'error': result};
+    }
+    try {
+      var jsonStr = result.trim();
+      final match = RegExp(r'\{[\s\S]*\}').firstMatch(jsonStr);
+      if (match != null) jsonStr = match.group(0)!;
+      final decoded = json.decode(jsonStr);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      return {'error': 'AI返回格式不是对象', '_raw': result};
+    } catch (_) {
+      return {'error': 'AI返回格式无法解析', '_raw': result};
+    }
+  }
+
   static Future<Map<String, dynamic>> recognizeIpadIntake(
     List<String> imageBase64List, {
     bool supplemental = false,
@@ -502,20 +589,24 @@ class AiService {
 8. appearanceDefects 和 screenDefects 必须返回空数组 []。checks 里的外观边框/后盖/屏幕显示等外观项填"未知"，不要写"正常"。
 9. 普通远景照片不能给 confidence 1.0。照片角度不足、虚焦、反光、遮挡时 confidence 必须低于 0.75。
 10. iPad mini 6 和 iPad mini 7 外观相似，严禁凭外观猜代数。关于本机写着"iPad mini（第6代）"、"iPad mini (6th generation)"、A2567/A2568/A2569 或 MLWL3CH/A 时，model 必须是 "iPad mini 6 (A15)"，不能写 mini 7。
-11. iPad Pro 12.9（第5代）/ iPad Pro 12.9-inch (5th generation) / A2378/A2379/A2461/A2462 / MHNH3 开头订货号，model 必须是 "iPad Pro 12.9 2021 (M1)"，不能写 2022 M2。
-12. iPad Pro 12.9（第6代）/ iPad Pro 12.9-inch (6th generation) / A2436/A2437/A2764/A2766，model 才能写 "iPad Pro 12.9 2022 (M2)"。
+11. 严禁把旧款 iPad Pro 识别成 2024/M4。只有图片里清晰出现 "2024"、"M4"、"Ultra Retina"、"OLED" 这类新款直接证据时，model 才允许写 2024/M4；否则必须写"未知"或按可见原文保守输出。
+12. 关于本机或爱思报告写着"iPad Pro（11英寸）（第2代）"、"iPad Pro 11-inch (2nd generation)"、"A2228"、"MY252" 时，不能输出 2024/M4；如果你不能稳定映射到可选型号，就把 model 填"未知"，并把原始文字写进 modelEvidenceText。
 13. 爱思/沙漏验机报告中如果“零售机/官换机/官修机/全绿/异常”文字清晰可见，需要写入 machineType、allGreen、inspectionSummary；看不清填"未知"。
+14. 必须保留原始证据：serialRaw/capacityRaw/modelEvidenceText 要写从图里逐字读到的内容。最终 serial/capacity/model 不得与原始证据冲突；冲突时最终字段填"未知"。
 输出必须是严格 JSON，不要 Markdown，不要解释。
 
 JSON 字段：
 {
   "serial": "序列号或未知",
+  "serialRaw": "图中逐字读到的序列号原文或未知",
   "model": "最接近的 iPad 型号，如 iPad mini 6 (A15)，未知则未知",
   "modelName": "关于本机里看到的型号名称原文，如 iPad mini（第6代）或未知",
+  "modelEvidenceText": "型号相关原始证据，如 关于本机型号名称/型号/监管型号/爱思设备型号/销售型号",
   "modelNumber": "Axxxx 型号或未知",
   "partNumber": "MLWL3CH/A 这类订货号或未知",
   "generation": "第几代/芯片证据，如 第6代/A15/未知",
   "capacity": "64G/128G/256G/512G/1TB/未知",
+  "capacityRaw": "图中逐字读到的容量原文或未知",
   "color": "深空灰/银色/星光色/粉色/紫色/蓝色/玫瑰金/金色/绿色/黄色/未知",
   "network": "WiFi/WiFi+蜂窝/未知",
   "condition": "全新/99新/95新/9成新/8成新/7成新/未知",
@@ -533,12 +624,15 @@ JSON 字段：
   "configLock": false,
   "fieldConfidence": {
     "serial": 0.0,
+    "serialRaw": 0.0,
     "model": 0.0,
     "modelName": 0.0,
+    "modelEvidenceText": 0.0,
     "modelNumber": 0.0,
     "partNumber": 0.0,
     "generation": 0.0,
     "capacity": 0.0,
+    "capacityRaw": 0.0,
     "color": 0.0,
     "network": 0.0,
     "condition": 0.0,

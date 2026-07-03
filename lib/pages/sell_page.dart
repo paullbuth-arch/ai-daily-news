@@ -6,6 +6,18 @@ import '../models.dart';
 import '../main.dart';
 
 // ====== 售出页 ======
+class _DeviceSeriesGroup {
+  final String key;
+  final String label;
+  final List<Device> devices;
+
+  const _DeviceSeriesGroup({
+    required this.key,
+    required this.label,
+    required this.devices,
+  });
+}
+
 class SellPage extends StatefulWidget {
   const SellPage({Key? key}) : super(key: key);
   @override
@@ -14,6 +26,7 @@ class SellPage extends StatefulWidget {
 
 class _SellPageState extends State<SellPage> {
   Device? selected;
+  String? selectedSeriesKey;
   final _priceCtrl = TextEditingController();
   final _buyerCtrl = TextEditingController();
   final _repairCtrl = TextEditingController();
@@ -29,6 +42,126 @@ class _SellPageState extends State<SellPage> {
           .toList();
 
   bool get _isXianyu => channel == '闲鱼';
+
+  int _deviceSortPrice(Device device) =>
+      device.sellPrice > 0 ? device.sellPrice : device.purchaseCost;
+
+  List<_DeviceSeriesGroup> get _seriesGroups {
+    final grouped = <String, List<Device>>{};
+    final labels = <String, String>{};
+    for (final device in sellable) {
+      final label = _seriesLabel(device);
+      grouped.putIfAbsent(label, () => <Device>[]).add(device);
+      labels[label] = label;
+    }
+
+    final groups =
+        grouped.entries.map((entry) {
+          final devices =
+              entry.value.toList()..sort((a, b) {
+                final price = _deviceSortPrice(
+                  a,
+                ).compareTo(_deviceSortPrice(b));
+                if (price != 0) return price;
+                return a.stockDays.compareTo(b.stockDays);
+              });
+          return _DeviceSeriesGroup(
+            key: entry.key,
+            label: labels[entry.key] ?? entry.key,
+            devices: devices,
+          );
+        }).toList();
+
+    groups.sort((a, b) {
+      final rank = _seriesRank(a.label).compareTo(_seriesRank(b.label));
+      if (rank != 0) return rank;
+      final price = _groupMinPrice(a).compareTo(_groupMinPrice(b));
+      if (price != 0) return price;
+      return a.label.compareTo(b.label);
+    });
+    return groups;
+  }
+
+  String _seriesLabel(Device device) {
+    final raw = device.model.trim();
+    if (raw.isEmpty || raw == '未知') return '其他型号';
+    final normalized =
+        raw
+            .replaceAll('（', '(')
+            .replaceAll('）', ')')
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .trim();
+    final compact = normalized.toLowerCase().replaceAll(' ', '');
+    final generation = RegExp(r'第\s*(\d+)\s*代').firstMatch(normalized);
+    final generationNumber = generation?.group(1);
+
+    if (compact.contains('mini')) {
+      final match = RegExp(r'mini\s*(\d+)').firstMatch(normalized);
+      final number = match?.group(1) ?? generationNumber;
+      return number == null ? 'iPad mini' : 'iPad mini $number';
+    }
+
+    if (compact.contains('pro')) {
+      final size =
+          compact.contains('12.9') || compact.contains('129英寸')
+              ? '12.9'
+              : compact.contains('13') && compact.contains('2024')
+              ? '13'
+              : compact.contains('11') || compact.contains('11英寸')
+              ? '11'
+              : '';
+      final year = RegExp(r'(20\d{2})').firstMatch(normalized)?.group(1);
+      final suffix =
+          year != null
+              ? year
+              : generationNumber != null
+              ? '第$generationNumber代'
+              : '';
+      return ['iPad Pro', size, suffix].where((s) => s.isNotEmpty).join(' ');
+    }
+
+    if (compact.contains('air')) {
+      final match = RegExp(
+        r'Air\s*(\d+)',
+        caseSensitive: false,
+      ).firstMatch(normalized);
+      final number = match?.group(1) ?? generationNumber;
+      if (number != null) return 'iPad Air $number';
+      final year = RegExp(r'(20\d{2})').firstMatch(normalized)?.group(1);
+      return year == null ? 'iPad Air' : 'iPad Air $year';
+    }
+
+    final base = RegExp(r'^iPad\s*(\d+)').firstMatch(normalized);
+    if (base != null) return 'iPad ${base.group(1)}';
+    return '其他型号';
+  }
+
+  int _seriesRank(String label) {
+    if (label.startsWith('iPad mini')) return 10;
+    if (label.startsWith('iPad Pro')) return 20;
+    if (label.startsWith('iPad Air')) return 30;
+    if (label.startsWith('iPad ')) return 40;
+    return 90;
+  }
+
+  int _groupMinPrice(_DeviceSeriesGroup group) =>
+      group.devices.map(_deviceSortPrice).reduce((a, b) => a < b ? a : b);
+
+  String _seriesPriceRange(_DeviceSeriesGroup group) {
+    final prices = group.devices.map(_deviceSortPrice).toList()..sort();
+    if (prices.isEmpty) return '无价格';
+    if (prices.first == prices.last) return yuan(prices.first);
+    return '${yuan(prices.first)}-${yuan(prices.last)}';
+  }
+
+  _DeviceSeriesGroup? _activeSeriesGroup(List<_DeviceSeriesGroup> groups) {
+    final key = selectedSeriesKey;
+    if (key == null) return null;
+    for (final group in groups) {
+      if (group.key == key) return group;
+    }
+    return null;
+  }
 
   String _serialText(Device device) {
     final serial = device.serial.trim();
@@ -154,72 +287,7 @@ class _SellPageState extends State<SellPage> {
     ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        CardBox(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('选择设备', style: TextStyle(fontSize: 12, color: C.t2)),
-              const SizedBox(height: 8),
-              ...sellable.map(
-                (d) => GestureDetector(
-                  onTap:
-                      () => setState(() {
-                        selected = d;
-                        _computeProfit();
-                      }),
-                  child: Container(
-                    margin: EdgeInsets.only(bottom: 8),
-                    padding: EdgeInsets.all(11),
-                    decoration: BoxDecoration(
-                      color:
-                          selected?.id == d.id
-                              ? C.cyan.withValues(alpha: 0.15)
-                              : C.bgDeep,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: selected?.id == d.id ? C.cyan : C.border,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.tablet_mac_rounded, color: C.t2, size: 20),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${d.model} ${d.capacity} ${d.color}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12.5,
-                                  fontWeight: FontWeight.w600,
-                                  color: C.t1,
-                                ),
-                              ),
-                              Text(
-                                '${_serialText(d)} · 采购${yuan(d.purchaseCost)} · 库${d.stockDays}天',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: 10, color: C.t2),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (selected?.id == d.id)
-                          Text(
-                            '✓',
-                            style: TextStyle(color: C.t3, fontSize: 16),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+        _deviceSelectorCard(),
         if (selected != null)
           CardBox(
             child: Column(
@@ -328,4 +396,234 @@ class _SellPageState extends State<SellPage> {
       ],
     ),
   );
+
+  Widget _deviceSelectorCard() {
+    final groups = _seriesGroups;
+    final activeGroup = _activeSeriesGroup(groups);
+    return CardBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (activeGroup == null)
+            _seriesSelector(groups)
+          else
+            _deviceListForSeries(activeGroup),
+        ],
+      ),
+    );
+  }
+
+  Widget _seriesSelector(List<_DeviceSeriesGroup> groups) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          const Text('选择型号系列', style: TextStyle(fontSize: 12, color: C.t2)),
+          const Spacer(),
+          Text(
+            '${sellable.length}台',
+            style: const TextStyle(fontSize: 11, color: C.t3),
+          ),
+        ],
+      ),
+      const SizedBox(height: 8),
+      if (groups.isEmpty)
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: C.bgDeep,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: C.border),
+          ),
+          child: const Text(
+            '暂无可售库存',
+            style: TextStyle(color: C.t2, fontSize: 12),
+          ),
+        )
+      else
+        ...groups.map(_seriesTile),
+    ],
+  );
+
+  Widget _seriesTile(_DeviceSeriesGroup group) {
+    final isSelected =
+        selected != null && group.devices.any((d) => d.id == selected!.id);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => setState(() => selectedSeriesKey = group.key),
+          child: Ink(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: isSelected ? C.cyan.withValues(alpha: 0.12) : C.bgDeep,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isSelected ? C.cyan : C.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: C.bgSurface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: C.border),
+                  ),
+                  child: const Icon(
+                    Icons.folder_outlined,
+                    color: C.t2,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        group.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: C.t1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${group.devices.length}台 · ${_seriesPriceRange(group)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10.5, color: C.t3),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: C.t3, size: 20),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _deviceListForSeries(_DeviceSeriesGroup group) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Row(
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => selectedSeriesKey = null),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+              child: Icon(Icons.arrow_back_rounded, color: C.t2, size: 18),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              group.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                color: C.t1,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const Text('按价格低到高', style: TextStyle(fontSize: 10.5, color: C.t3)),
+        ],
+      ),
+      const SizedBox(height: 8),
+      ...group.devices.map(_deviceTile),
+    ],
+  );
+
+  Widget _deviceTile(Device d) {
+    final isSelected = selected?.id == d.id;
+    final priceLabel =
+        d.sellPrice > 0
+            ? '标价${yuan(d.sellPrice)}'
+            : '采购${yuan(d.purchaseCost)}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap:
+              () => setState(() {
+                selected = d;
+                _computeProfit();
+              }),
+          child: Ink(
+            padding: const EdgeInsets.all(11),
+            decoration: BoxDecoration(
+              color: isSelected ? C.cyan.withValues(alpha: 0.15) : C.bgDeep,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: isSelected ? C.cyan : C.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.tablet_mac_rounded, color: C.t2, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${d.model} ${d.capacity} ${d.color}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: C.t1,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${_serialText(d)} · 采购${yuan(d.purchaseCost)} · 库${d.stockDays}天',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10, color: C.t2),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      priceLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: isSelected ? C.cyan : C.t2,
+                      ),
+                    ),
+                    if (isSelected)
+                      const Icon(
+                        Icons.check_circle_rounded,
+                        color: C.cyan,
+                        size: 16,
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
