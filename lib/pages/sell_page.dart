@@ -30,6 +30,14 @@ class _SellPageState extends State<SellPage> {
 
   bool get _isXianyu => channel == '闲鱼';
 
+  String _serialText(Device device) {
+    final serial = device.serial.trim();
+    if (serial.isEmpty || serial == '未填写' || serial == '未知') {
+      return '序列号未填';
+    }
+    return '序列号 $serial';
+  }
+
   String _moneyInput(double value) {
     if (value == value.roundToDouble()) return value.toStringAsFixed(0);
     return value.toStringAsFixed(2);
@@ -165,7 +173,7 @@ class _SellPageState extends State<SellPage> {
                     decoration: BoxDecoration(
                       color:
                           selected?.id == d.id
-                              ? C.cyan.withOpacity(0.15)
+                              ? C.cyan.withValues(alpha: 0.15)
                               : C.bgDeep,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
@@ -182,6 +190,8 @@ class _SellPageState extends State<SellPage> {
                             children: [
                               Text(
                                 '${d.model} ${d.capacity} ${d.color}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   fontSize: 12.5,
                                   fontWeight: FontWeight.w600,
@@ -189,7 +199,9 @@ class _SellPageState extends State<SellPage> {
                                 ),
                               ),
                               Text(
-                                '采购${yuan(d.purchaseCost)} · 库${d.stockDays}天',
+                                '${_serialText(d)} · 采购${yuan(d.purchaseCost)} · 库${d.stockDays}天',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(fontSize: 10, color: C.t2),
                               ),
                             ],
@@ -286,7 +298,7 @@ class _SellPageState extends State<SellPage> {
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: (computedProfit! >= 0 ? C.green : C.red)
-                            .withOpacity(0.12),
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(11),
                       ),
                       child: Row(

@@ -244,6 +244,8 @@ class _ScanPageState extends State<ScanPage> {
   List<String> imagePaths = [];
 
   // 整机图片AI识别
+  static const int _primaryInspectionImageLimit = 3;
+  static const int _supplementalInspectionImageLimit = 4;
   bool aiInspecting = false;
   Map<String, dynamic>? aiInspection;
   String? inspectionReportPath;
@@ -497,16 +499,49 @@ class _ScanPageState extends State<ScanPage> {
     if (aiInspecting) return;
     setState(() => aiInspecting = true);
     try {
-      final encoded = <String>[];
-      for (final path in imagePaths.take(12)) {
-        encoded.add(await _imageDataUriForAi(path));
-      }
-      final result = await AiService.recognizeIpadIntake(encoded);
+      final primaryPaths =
+          imagePaths.take(_primaryInspectionImageLimit).toList();
+      final encoded = await _encodeInspectionImages(primaryPaths);
+      var result = await AiService.recognizeIpadIntake(
+        encoded,
+        totalImageCount: imagePaths.length,
+      );
       if (result['error'] != null) {
         if (!mounted) return;
         toast(context, 'AI识别失败：${result['error']}');
         return;
       }
+
+      var recognizedCount = primaryPaths.length;
+      final missingFields = _missingInspectionFields(result);
+      if (missingFields.isNotEmpty &&
+          imagePaths.length > _primaryInspectionImageLimit) {
+        final supplementalPaths =
+            imagePaths
+                .skip(_primaryInspectionImageLimit)
+                .take(_supplementalInspectionImageLimit)
+                .toList();
+        final supplementalEncoded = await _encodeInspectionImages(
+          supplementalPaths,
+        );
+        final supplement = await AiService.recognizeIpadIntake(
+          supplementalEncoded,
+          supplemental: true,
+          totalImageCount: imagePaths.length,
+          focusFields: missingFields,
+        );
+        recognizedCount += supplementalPaths.length;
+        if (supplement['error'] == null) {
+          result = _mergeInspectionResults(result, supplement, missingFields);
+        } else {
+          result = _withInspectionWarning(result, '后续图片补充识别失败，已保留前三张识别结果');
+        }
+      }
+      result['recognitionStrategy'] =
+          recognizedCount <= _primaryInspectionImageLimit
+              ? '前三张优先识别'
+              : '前三张优先识别，缺字段时补看后续$recognizedCount张内图片';
+      result['recognizedImageCount'] = recognizedCount;
       if (!mounted) return;
       final appliedCount = _applyInspection(result);
       setState(() {
@@ -522,6 +557,98 @@ class _ScanPageState extends State<ScanPage> {
     } finally {
       if (mounted) setState(() => aiInspecting = false);
     }
+  }
+
+  Future<List<String>> _encodeInspectionImages(List<String> paths) async {
+    final encoded = <String>[];
+    for (final path in paths) {
+      encoded.add(await _imageDataUriForAi(path));
+    }
+    return encoded;
+  }
+
+  List<String> _missingInspectionFields(Map<String, dynamic> result) {
+    final fields = <String>[];
+    for (final key in const [
+      'serial',
+      'model',
+      'capacity',
+      'color',
+      'network',
+      'batteryHealth',
+      'cycleCount',
+    ]) {
+      if (!_hasReliableInspectionValue(result, key)) fields.add(key);
+    }
+    return fields;
+  }
+
+  Map<String, dynamic> _mergeInspectionResults(
+    Map<String, dynamic> primary,
+    Map<String, dynamic> supplement,
+    List<String> focusFields,
+  ) {
+    final merged = Map<String, dynamic>.from(primary);
+    final fillable = <String>{
+      ...focusFields,
+      'inspectionTool',
+      'machineType',
+      'allGreen',
+      'inspectionSummary',
+      'accessories',
+    };
+    for (final key in fillable) {
+      if (_hasReliableInspectionValue(merged, key)) continue;
+      if (_hasReliableInspectionValue(supplement, key)) {
+        merged[key] = supplement[key];
+      }
+    }
+
+    final mergedConfidence = <String, dynamic>{
+      if (merged['fieldConfidence'] is Map)
+        ...Map<String, dynamic>.from(merged['fieldConfidence'] as Map),
+    };
+    final supplementConfidence =
+        supplement['fieldConfidence'] is Map
+            ? Map<String, dynamic>.from(supplement['fieldConfidence'] as Map)
+            : const <String, dynamic>{};
+    for (final entry in supplementConfidence.entries) {
+      final current = _readConfidence(mergedConfidence[entry.key]) ?? 0;
+      final next = _readConfidence(entry.value) ?? 0;
+      if (next > current) mergedConfidence[entry.key] = entry.value;
+    }
+    if (mergedConfidence.isNotEmpty) {
+      merged['fieldConfidence'] = mergedConfidence;
+    }
+
+    final warnings = <String>{
+      ..._inspectionWarnings(merged['warnings']),
+      ..._inspectionWarnings(supplement['warnings']),
+    };
+    if (warnings.isNotEmpty) merged['warnings'] = warnings.toList();
+    return merged;
+  }
+
+  Map<String, dynamic> _withInspectionWarning(
+    Map<String, dynamic> result,
+    String warning,
+  ) {
+    final merged = Map<String, dynamic>.from(result);
+    final warnings = <String>{..._inspectionWarnings(merged['warnings'])};
+    warnings.add(warning);
+    merged['warnings'] = warnings.toList();
+    return merged;
+  }
+
+  List<String> _inspectionWarnings(dynamic raw) {
+    if (raw is List) {
+      return raw
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+    }
+    final text = raw?.toString().trim() ?? '';
+    return text.isEmpty ? const <String>[] : <String>[text];
   }
 
   int _applyInspection(Map<String, dynamic> result) {
@@ -679,6 +806,56 @@ class _ScanPageState extends State<ScanPage> {
     double threshold = 0.78,
   }) => _fieldConfidence(result, key) >= threshold;
 
+  bool _hasReliableInspectionValue(Map<String, dynamic> result, String key) {
+    final threshold = _inspectionThreshold(key);
+    if (!_shouldApplyInspectionField(result, key, threshold: threshold)) {
+      return false;
+    }
+    final value = (result[key] ?? '').toString().trim();
+    if (key == 'serial') return _usable(value) && _looksLikeSerial(value);
+    if (key == 'model') return _matchModel(_modelEvidence(result)).isNotEmpty;
+    if (key == 'capacity') {
+      return _matchOption(value, iPadCapacities).isNotEmpty;
+    }
+    if (key == 'color') return _matchOption(value, iPadColors).isNotEmpty;
+    if (key == 'network') return _matchOption(value, iPadNetworks).isNotEmpty;
+    if (key == 'batteryHealth') {
+      return _intFromResult(result, key, min: 50, max: 100) != null;
+    }
+    if (key == 'cycleCount') {
+      return _intFromResult(result, key, min: 0, max: 3000) != null;
+    }
+    if (key == 'allGreen') {
+      final raw = result[key];
+      if (raw is bool) return true;
+      final text = raw?.toString().trim().toLowerCase() ?? '';
+      return text == 'true' ||
+          text == 'false' ||
+          text == '是' ||
+          text == '否' ||
+          text.contains('全绿') ||
+          text.contains('异常');
+    }
+    return _usable(value);
+  }
+
+  double _inspectionThreshold(String key) {
+    if (key == 'serial') return 0.86;
+    if (key == 'model') return 0.84;
+    if (key == 'capacity' || key == 'batteryHealth' || key == 'cycleCount') {
+      return 0.82;
+    }
+    if (key == 'network') return 0.84;
+    if (key == 'color') return 0.78;
+    if (key == 'allGreen' ||
+        key == 'machineType' ||
+        key == 'inspectionTool' ||
+        key == 'inspectionSummary') {
+      return 0.72;
+    }
+    return 0.78;
+  }
+
   String _matchOption(String raw, List<String> options) {
     final value = raw.trim();
     if (!_usable(value)) return '';
@@ -720,18 +897,39 @@ class _ScanPageState extends State<ScanPage> {
     double threshold = 0.78,
   }) {
     final inspection = aiInspection;
+    final value = _intFromResult(
+      inspection,
+      key,
+      min: min,
+      max: max,
+      threshold: threshold,
+    );
+    return value ?? fallback;
+  }
+
+  int? _intFromResult(
+    Map<String, dynamic>? inspection,
+    String key, {
+    int? min,
+    int? max,
+    double? threshold,
+  }) {
     if (inspection == null ||
-        !_shouldApplyInspectionField(inspection, key, threshold: threshold)) {
-      return fallback;
+        !_shouldApplyInspectionField(
+          inspection,
+          key,
+          threshold: threshold ?? _inspectionThreshold(key),
+        )) {
+      return null;
     }
-    final raw = aiInspection?[key];
-    if (raw == null) return fallback;
+    final raw = inspection[key];
+    if (raw == null) return null;
     final match = RegExp(r'\d+').firstMatch(raw.toString());
-    if (match == null) return fallback;
+    if (match == null) return null;
     final parsed = int.tryParse(match.group(0)!);
-    if (parsed == null) return fallback;
-    if (min != null && parsed < min) return fallback;
-    if (max != null && parsed > max) return fallback;
+    if (parsed == null) return null;
+    if (min != null && parsed < min) return null;
+    if (max != null && parsed > max) return null;
     return parsed;
   }
 

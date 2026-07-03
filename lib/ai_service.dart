@@ -1,5 +1,6 @@
 // AI 服务层 —— 支持主流国产模型（OpenAI 协议）
 // 零外部依赖，用 dart:io HttpClient 直接发 HTTP 请求
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -236,12 +237,43 @@ String? providerModelsUrl(String providerName) {
 class AiService {
   static AiConfig _config = AiConfig.defaultConfig();
   static Map<String, String> _promptRules = {};
+  static const int _bigModelVisionConcurrencyLimit = 5;
+  static int _bigModelVisionInFlight = 0;
+  static final List<Completer<void>> _bigModelVisionQueue = <Completer<void>>[];
   static AiConfig get config => _config;
   static void setConfig(AiConfig c) => _config = c;
   static AiConfig get effectiveConfig => _config.effective;
   static void setPromptRules(Map<String, String> rules) =>
       _promptRules = Map<String, String>.from(rules);
   static String prompt(String key) => AiPrompts.resolve(key, _promptRules);
+
+  static Future<T> _withBigModelVisionGate<T>(Future<T> Function() task) async {
+    await _acquireBigModelVisionSlot();
+    try {
+      return await task();
+    } finally {
+      _releaseBigModelVisionSlot();
+    }
+  }
+
+  static Future<void> _acquireBigModelVisionSlot() {
+    if (_bigModelVisionInFlight < _bigModelVisionConcurrencyLimit) {
+      _bigModelVisionInFlight++;
+      return Future.value();
+    }
+    final waiter = Completer<void>();
+    _bigModelVisionQueue.add(waiter);
+    return waiter.future;
+  }
+
+  static void _releaseBigModelVisionSlot() {
+    if (_bigModelVisionQueue.isNotEmpty) {
+      final waiter = _bigModelVisionQueue.removeAt(0);
+      if (!waiter.isCompleted) waiter.complete();
+      return;
+    }
+    if (_bigModelVisionInFlight > 0) _bigModelVisionInFlight--;
+  }
 
   static Future<Map<String, dynamic>> _callOpenAI({
     required String systemPrompt,
@@ -253,55 +285,60 @@ class AiService {
     if (cfg.model.isEmpty) return {'error': 'AI配置不完整：缺少模型名称'};
     if (cfg.apiKey.isEmpty) return {'error': 'AI配置不完整：缺少 API 密钥'};
 
-    final uri = Uri.parse(cfg.baseUrl);
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 30);
+    final msgs = <Map<String, dynamic>>[
+      {'role': 'system', 'content': systemPrompt},
+      ...messages,
+    ];
 
-    try {
-      final req = await client.postUrl(uri);
-      req.headers.contentType = ContentType.json;
-      req.headers.set('Authorization', 'Bearer ${cfg.apiKey}');
-
-      final msgs = <Map<String, dynamic>>[
-        {'role': 'system', 'content': systemPrompt},
-        ...messages,
-      ];
-
-      final hasImage = messages.any((m) {
-        final content = m['content'];
-        return content is List &&
-            content.any((item) => item is Map && item['type'] == 'image_url');
-      });
-      final useBigModelVision =
-          hasImage && cfg.baseUrl.contains('open.bigmodel.cn');
-      final body = <String, dynamic>{
-        'model': useBigModelVision ? kDefaultAiVisionModel : cfg.model,
-        'max_tokens': maxTokens,
-        'messages': msgs,
-      };
-      if (cfg.baseUrl.contains('open.bigmodel.cn')) {
-        body['temperature'] = 0.7;
-        if (!hasImage) body['thinking'] = {'type': 'enabled'};
-      }
-      req.write(json.encode(body));
-
-      final resp = await req.close().timeout(const Duration(seconds: 90));
-      final raw = await resp.transform(utf8.decoder).join();
-      client.close();
-
-      if (resp.statusCode != 200) {
-        return {
-          'error':
-              'AI调用失败(${resp.statusCode})：${raw.substring(0, raw.length > 200 ? 200 : raw.length)}',
-        };
-      }
-
-      final data = json.decode(raw) as Map<String, dynamic>;
-      return {'data': data};
-    } catch (e) {
-      client.close();
-      return {'error': 'AI调用异常：$e'};
+    final hasImage = messages.any((m) {
+      final content = m['content'];
+      return content is List &&
+          content.any((item) => item is Map && item['type'] == 'image_url');
+    });
+    final useBigModelVision =
+        hasImage && cfg.baseUrl.contains('open.bigmodel.cn');
+    final body = <String, dynamic>{
+      'model': useBigModelVision ? kDefaultAiVisionModel : cfg.model,
+      'max_tokens': maxTokens,
+      'messages': msgs,
+    };
+    if (cfg.baseUrl.contains('open.bigmodel.cn')) {
+      body['temperature'] = hasImage ? 0.1 : 0.7;
+      if (!hasImage) body['thinking'] = {'type': 'enabled'};
     }
+
+    Future<Map<String, dynamic>> sendRequest() async {
+      final uri = Uri.parse(cfg.baseUrl);
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 30);
+      try {
+        final req = await client.postUrl(uri);
+        req.headers.contentType = ContentType.json;
+        req.headers.set('Authorization', 'Bearer ${cfg.apiKey}');
+        req.write(json.encode(body));
+
+        final resp = await req.close().timeout(const Duration(seconds: 90));
+        final raw = await resp.transform(utf8.decoder).join();
+        client.close();
+
+        if (resp.statusCode != 200) {
+          return {
+            'error':
+                'AI调用失败(${resp.statusCode})：${raw.substring(0, raw.length > 200 ? 200 : raw.length)}',
+          };
+        }
+
+        final data = json.decode(raw) as Map<String, dynamic>;
+        return {'data': data};
+      } catch (e) {
+        client.close();
+        return {'error': 'AI调用异常：$e'};
+      }
+    }
+
+    return useBigModelVision
+        ? _withBigModelVisionGate(sendRequest)
+        : sendRequest();
   }
 
   static String _extractOpenAIText(Map<String, dynamic> data) {
@@ -427,11 +464,19 @@ class AiService {
   }
 
   static Future<Map<String, dynamic>> recognizeIpadIntake(
-    List<String> imageBase64List,
-  ) async {
+    List<String> imageBase64List, {
+    bool supplemental = false,
+    int totalImageCount = 0,
+    List<String> focusFields = const [],
+  }) async {
     if (imageBase64List.isEmpty) {
       return {'error': '请先上传设备图片'};
     }
+    final modePrompt =
+        supplemental
+            ? '本次只是在主识别缺字段时补看后续图片，重点字段：${focusFields.isEmpty ? "缺失字段" : focusFields.join("、")}。只填写图片中能直接确认的信息，不要根据外观猜型号。'
+            : '本次是主识别：默认优先看图1、图2、图3。图1/图2通常是关于本机或设置截图，用来确认型号、容量、序列号、网络；图3通常是爱思/沙漏验机图，用来确认电池健康、充电次数、全绿状态、零售机/官换机。后续外观图不能推翻图1/图3里的文字证据。';
+    final countPrompt = totalImageCount > 0 ? '用户本次共上传$totalImageCount张图。' : '';
     const sys = '''
 你是二手 iPad 入库验货助手。你会同时看到最多 12 张图片，可能包含：
 - 设置 > 关于本机截图
@@ -439,6 +484,11 @@ class AiService {
 - 机身正反面、边框、接口、屏幕、配件、瑕疵近照
 
 请只根据图片可见内容判断，不要编造。看不清就填"未知"，并在 warnings 里说明。
+图片优先级：
+1. 图1优先级最高，一般是“关于本机”。型号名称、订货号、序列号、容量、系统里显示的网络信息，以图1清晰文字为准。
+2. 图2作为第二优先级，可用于交叉确认；如果它只是本 App 的识别结果页或非原始检测来源，不要用它覆盖图1/图3。
+3. 图3一般是爱思/沙漏验机报告。优先从这里读取电池健康、充电次数、验机是否全绿、零售机/官换机/官修机状态。
+4. 外观实拍图只可辅助颜色判断，不能用来猜代数、容量、网络或电池。
 外观和屏幕瑕疵由人工勾选录入，你不要替用户判断划痕、磕碰、掉漆、屏幕出线、亮点、坏点、压伤、漏液等外观细节。
 你只负责补全图片里能稳定读到或能清晰判断的设备信息：序列号、型号、容量、颜色、网络、电池健康、循环次数、配件、可见锁机/监管风险。
 强制规则：
@@ -452,6 +502,9 @@ class AiService {
 8. appearanceDefects 和 screenDefects 必须返回空数组 []。checks 里的外观边框/后盖/屏幕显示等外观项填"未知"，不要写"正常"。
 9. 普通远景照片不能给 confidence 1.0。照片角度不足、虚焦、反光、遮挡时 confidence 必须低于 0.75。
 10. iPad mini 6 和 iPad mini 7 外观相似，严禁凭外观猜代数。关于本机写着"iPad mini（第6代）"、"iPad mini (6th generation)"、A2567/A2568/A2569 或 MLWL3CH/A 时，model 必须是 "iPad mini 6 (A15)"，不能写 mini 7。
+11. iPad Pro 12.9（第5代）/ iPad Pro 12.9-inch (5th generation) / A2378/A2379/A2461/A2462 / MHNH3 开头订货号，model 必须是 "iPad Pro 12.9 2021 (M1)"，不能写 2022 M2。
+12. iPad Pro 12.9（第6代）/ iPad Pro 12.9-inch (6th generation) / A2436/A2437/A2764/A2766，model 才能写 "iPad Pro 12.9 2022 (M2)"。
+13. 爱思/沙漏验机报告中如果“零售机/官换机/官修机/全绿/异常”文字清晰可见，需要写入 machineType、allGreen、inspectionSummary；看不清填"未知"。
 输出必须是严格 JSON，不要 Markdown，不要解释。
 
 JSON 字段：
@@ -468,6 +521,10 @@ JSON 字段：
   "condition": "全新/99新/95新/9成新/8成新/7成新/未知",
   "batteryHealth": "数字百分比，不带%或未知",
   "cycleCount": "数字或未知",
+  "inspectionTool": "爱思/沙漏/系统设置/未知",
+  "machineType": "零售机/官换机/官修机/演示机/未知",
+  "allGreen": "true/false/未知",
+  "inspectionSummary": "验机报告核心结论，如 爱思全绿零售机/未知",
   "accessories": "裸机/盒装/原装充电器/妙控键盘/Apple Pencil/未知",
   "idLockClean": true,
   "iCloudLock": false,
@@ -487,6 +544,10 @@ JSON 字段：
     "condition": 0.0,
     "batteryHealth": 0.0,
     "cycleCount": 0.0,
+    "inspectionTool": 0.0,
+    "machineType": 0.0,
+    "allGreen": 0.0,
+    "inspectionSummary": 0.0,
     "iCloudLock": 0.0,
     "activationLock": 0.0,
     "mdm": 0.0,
@@ -519,7 +580,7 @@ JSON 字段：
     final result = await chatWithImages(
       sys,
       imageBase64List,
-      '请识别这批 iPad 入库图片，并返回严格 JSON。',
+      '$countPrompt$modePrompt\n请识别这批 iPad 入库图片，并返回严格 JSON。',
       maxTokens: 4096,
     );
     if (result.startsWith('AI调用') || result.startsWith('AI返回')) {

@@ -6,6 +6,10 @@ void main() {
     'iPad mini 7 (A17 Pro)',
     'iPad mini 6 (A15)',
     'iPad mini 5 (A12)',
+    'iPad Pro 12.9 2022 (M2)',
+    'iPad Pro 12.9 2021 (M1)',
+    'iPad Pro 11 2022 (M2)',
+    'iPad Pro 11 2021 (M1)',
     'iPad 10 (A14)',
   ];
 
@@ -31,6 +35,20 @@ void main() {
     expect(
       IpadModelResolver.match('iPad mini 7 (A17 Pro)', models),
       'iPad mini 7 (A17 Pro)',
+    );
+  });
+
+  test('keeps iPad Pro 12.9 5th generation on M1 model', () {
+    expect(
+      IpadModelResolver.match('iPad Pro (12.9英寸)(第5代) MHNH3TA/A', models),
+      'iPad Pro 12.9 2021 (M1)',
+    );
+  });
+
+  test('uses iPad Pro 12.9 A model number before fuzzy year text', () {
+    expect(
+      IpadModelResolver.match('iPad Pro 12.9 2022 M2 A2378', models),
+      'iPad Pro 12.9 2021 (M1)',
     );
   });
 }
