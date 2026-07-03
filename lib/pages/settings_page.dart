@@ -23,6 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   String _fileSize = '';
   bool _updateChecking = false;
   String? _updateError;
+  bool _updateMessageIsError = false;
   double? _updateProgress;
 
   @override
@@ -181,7 +182,10 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.only(bottom: 8),
               child: Text(
                 _updateError!,
-                style: TextStyle(fontSize: 12, color: C.red),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _updateMessageIsError ? C.red : C.green,
+                ),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -335,18 +339,32 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _updateChecking = true;
       _updateError = null;
+      _updateMessageIsError = false;
       _updateProgress = null;
     });
     // 1. 检查远端版本
-    final info = await UpdateService.check();
+    UpdateInfo? info;
+    try {
+      info = await UpdateService.check();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _updateChecking = false;
+        _updateMessageIsError = true;
+        _updateError = '检查更新失败，请稍后重试';
+      });
+      return;
+    }
     if (!mounted) return;
     if (info == null) {
       setState(() {
         _updateChecking = false;
+        _updateMessageIsError = false;
         _updateError = '当前已是最新版本（v${UpdateService.currentVersion}）';
       });
       return;
     }
+    final updateInfo = info;
     // 2. 有新版本 → 询问是否下载
     final ok = await showDialog<bool>(
       context: context,
@@ -354,7 +372,7 @@ class _SettingsPageState extends State<SettingsPage> {
           (ctx) => AlertDialog(
             backgroundColor: C.bgCard,
             title: Text(
-              '发现新版本 v${info.version}',
+              '发现新版本 v${updateInfo.version}',
               style: TextStyle(color: C.t1, fontSize: 16),
             ),
             content: Column(
@@ -366,18 +384,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   style: TextStyle(color: C.t2, fontSize: 12),
                 ),
                 Text(
-                  '新版本：v${info.version}',
+                  '新版本：v${updateInfo.version}',
                   style: TextStyle(
                     color: C.green,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                if (info.changelog.isNotEmpty) ...[
+                if (updateInfo.changelog.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text('更新内容：', style: TextStyle(color: C.t2, fontSize: 12)),
                   Text(
-                    info.changelog,
+                    updateInfo.changelog,
                     style: TextStyle(color: C.t1, fontSize: 12),
                   ),
                 ],
@@ -405,7 +423,9 @@ class _SettingsPageState extends State<SettingsPage> {
       _updateProgress = 0.0;
     });
     final apkPath = await UpdateService.downloadApk(
-      info.apkUrl,
+      updateInfo.apkUrl,
+      fileName: 'ipad_boss_${updateInfo.version}_${updateInfo.buildNumber}.apk',
+      expectedSha256: updateInfo.sha256,
       onProgress: (p) {
         if (mounted) setState(() => _updateProgress = p);
       },
@@ -414,16 +434,28 @@ class _SettingsPageState extends State<SettingsPage> {
     if (apkPath == null) {
       setState(() {
         _updateProgress = null;
+        _updateMessageIsError = true;
         _updateError = '下载失败，请检查网络后重试';
       });
       return;
     }
     setState(() => _updateProgress = null);
     // 4. 安装
-    final installed = await UpdateService.installApk(apkPath);
+    final installResult = await UpdateService.installApk(apkPath);
     if (!mounted) return;
-    if (!installed) {
-      setState(() => _updateError = '安装失败，请在设置中手动开启「安装未知应用」权限');
+    if (!installResult.success) {
+      setState(() {
+        _updateMessageIsError = true;
+        _updateError =
+            installResult.permissionRequired
+                ? '已打开权限设置。开启「安装未知应用」后，请回来再点一次检查更新'
+                : '安装失败，请稍后重试';
+      });
+    } else {
+      setState(() {
+        _updateMessageIsError = false;
+        _updateError = '安装器已打开，请按系统提示完成更新';
+      });
     }
   }
 }

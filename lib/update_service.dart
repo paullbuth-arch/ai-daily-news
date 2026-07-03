@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:crypto/crypto.dart';
 
 /// 远端版本信息
 class UpdateInfo {
@@ -11,20 +12,43 @@ class UpdateInfo {
   final int buildNumber; // 构建号，如 7
   final String apkUrl; // APK 下载地址
   final String changelog; // 更新说明
+  final String sha256; // 可选：APK SHA256，用于下载后校验
 
   const UpdateInfo({
     required this.version,
     required this.buildNumber,
     required this.apkUrl,
     this.changelog = '',
+    this.sha256 = '',
   });
 
   factory UpdateInfo.fromJson(Map<String, dynamic> json) => UpdateInfo(
-    version: json['version'] as String? ?? '',
-    buildNumber: json['buildNumber'] as int? ?? 0,
-    apkUrl: json['apkUrl'] as String? ?? '',
-    changelog: json['changelog'] as String? ?? '',
+    version: _asString(json['version']),
+    buildNumber: _asInt(json['buildNumber']),
+    apkUrl: _asString(json['apkUrl']),
+    changelog: _asString(json['changelog']),
+    sha256: _asString(json['sha256'] ?? json['sha256Hash']),
   );
+}
+
+class UpdateCheckException implements Exception {
+  final String message;
+  const UpdateCheckException(this.message);
+
+  @override
+  String toString() => message;
+}
+
+class ApkInstallResult {
+  final bool success;
+  final bool permissionRequired;
+  final String message;
+
+  const ApkInstallResult({
+    required this.success,
+    this.permissionRequired = false,
+    this.message = '',
+  });
 }
 
 class UpdateService {
@@ -39,8 +63,8 @@ class UpdateService {
   );
 
   /// 当前版本信息（从 pubspec.yaml 读取）
-  static String get currentVersion => '2.9.3';
-  static int get currentBuild => 22;
+  static String get currentVersion => '2.9.4';
+  static int get currentBuild => 23;
   static bool allowInsecureCertificates = false;
 
   /// 检查远端更新
@@ -55,10 +79,12 @@ class UpdateService {
                 fallbackCheckUrl,
             ]
             : [checkUrl];
+    final errors = <String>[];
     for (final url in urls) {
+      HttpClient? client;
       try {
         final uri = Uri.parse(url);
-        final client = HttpClient();
+        client = HttpClient();
         client.connectionTimeout = const Duration(seconds: 15);
         client.userAgent = 'ipadboss-update-checker';
         // 不验证 SSL 证书（兼容低版本 Android 证书库）
@@ -72,26 +98,32 @@ class UpdateService {
         req.headers.set('Accept', 'application/json');
         final resp = await req.close();
         final raw = await resp.transform(utf8.decoder).join();
-        client.close();
 
         if (resp.statusCode != 200) {
-          print('Update check failed: HTTP ${resp.statusCode}');
+          errors.add('HTTP ${resp.statusCode}');
           continue;
         }
 
         final data = json.decode(raw) as Map<String, dynamic>;
         final info = UpdateInfo.fromJson(data);
-        if (info.version.isEmpty || info.apkUrl.isEmpty) return null;
+        if (info.version.isEmpty || info.apkUrl.isEmpty) {
+          errors.add('更新信息不完整');
+          continue;
+        }
 
         // 比较版本
-        if (info.buildNumber > currentBuild) return info;
+        if (_isRemoteNewer(info)) return info;
         return null;
       } catch (e) {
-        print('Update check error: $e');
+        errors.add(e.toString());
         continue;
+      } finally {
+        client?.close(force: true);
       }
     }
-    return null;
+    throw UpdateCheckException(
+      errors.isEmpty ? '无法连接更新服务器' : '无法连接更新服务器：${errors.last}',
+    );
   }
 
   /// 下载 APK 到本地
@@ -100,11 +132,31 @@ class UpdateService {
   static Future<String?> downloadApk(
     String url, {
     String? fileName,
+    String? expectedSha256,
     void Function(double)? onProgress,
   }) async {
+    for (final candidate in downloadCandidatesFor(url)) {
+      final path = await _downloadSingleApk(
+        candidate,
+        fileName: fileName,
+        expectedSha256: expectedSha256,
+        onProgress: onProgress,
+      );
+      if (path != null) return path;
+    }
+    return null;
+  }
+
+  static Future<String?> _downloadSingleApk(
+    String url, {
+    String? fileName,
+    String? expectedSha256,
+    void Function(double)? onProgress,
+  }) async {
+    HttpClient? client;
     try {
       final uri = Uri.parse(url);
-      final client = HttpClient();
+      client = HttpClient();
       client.connectionTimeout = const Duration(seconds: 30);
       // 不验证 SSL 证书（兼容低版本 Android）
       client.badCertificateCallback =
@@ -137,29 +189,97 @@ class UpdateService {
       }
       await sink.flush();
       await sink.close();
-      client.close();
 
       if (await file.exists() &&
           (contentLength <= 0 || await file.length() == contentLength)) {
+        if (expectedSha256 != null && expectedSha256.trim().isNotEmpty) {
+          final ok = await _verifySha256(file, expectedSha256);
+          if (!ok) {
+            try {
+              await file.delete();
+            } catch (_) {}
+            return null;
+          }
+        }
         return file.path;
       }
       return null;
     } catch (e) {
       print('Download error: $e');
       return null;
+    } finally {
+      client?.close(force: true);
     }
   }
 
+  static List<String> downloadCandidatesFor(String apkUrl) {
+    final urls = <String>[apkUrl];
+    if (allowInsecureIpFallback && fallbackCheckUrl.isNotEmpty) {
+      try {
+        final original = Uri.parse(apkUrl);
+        final fallback = Uri.parse(fallbackCheckUrl);
+        if (original.hasScheme &&
+            fallback.hasScheme &&
+            fallback.host.isNotEmpty) {
+          final candidate = original.replace(
+            scheme: fallback.scheme,
+            host: fallback.host,
+          );
+          final candidateText = candidate.toString();
+          if (!urls.contains(candidateText)) urls.add(candidateText);
+        }
+      } catch (_) {}
+    }
+    return urls;
+  }
+
   /// 安装 APK（通过 Android MethodChannel）
-  static Future<bool> installApk(String path) async {
+  static Future<ApkInstallResult> installApk(String path) async {
     try {
       const channel = MethodChannel('ipad_boss_app/gallery');
       final result = await channel.invokeMethod<Map>('installApk', {
         'path': path,
       });
-      return result?['success'] == true;
+      return ApkInstallResult(
+        success: result?['success'] == true,
+        permissionRequired: result?['permissionRequired'] == true,
+        message: _asString(result?['message']),
+      );
     } catch (e) {
-      return false;
+      return ApkInstallResult(success: false, message: e.toString());
     }
   }
+
+  static bool _isRemoteNewer(UpdateInfo info) {
+    if (info.buildNumber > currentBuild) return true;
+    if (info.buildNumber > 0) return false;
+    return _compareVersion(info.version, currentVersion) > 0;
+  }
+
+  static int _compareVersion(String a, String b) {
+    final left = a.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final right = b.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final maxLength = left.length > right.length ? left.length : right.length;
+    for (var i = 0; i < maxLength; i++) {
+      final l = i < left.length ? left[i] : 0;
+      final r = i < right.length ? right[i] : 0;
+      if (l != r) return l.compareTo(r);
+    }
+    return 0;
+  }
+
+  static Future<bool> _verifySha256(File file, String expected) async {
+    final normalized = expected.trim().toLowerCase();
+    if (normalized.isEmpty) return true;
+    final digest = sha256.convert(await file.readAsBytes()).toString();
+    return digest == normalized;
+  }
+}
+
+String _asString(Object? value) => value?.toString().trim() ?? '';
+
+int _asInt(Object? value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
 }

@@ -40,8 +40,7 @@ class MainActivity : FlutterActivity() {
                             return@setMethodCallHandler
                         }
                         try {
-                            installApk(path)
-                            result.success(mapOf("success" to true))
+                            result.success(installApk(path))
                         } catch (e: Exception) {
                             result.error("install_failed", e.message, null)
                         }
@@ -274,7 +273,7 @@ class MainActivity : FlutterActivity() {
     }
 
     /// 安装 APK（应用内更新）
-    private fun installApk(apkPath: String) {
+    private fun installApk(apkPath: String): Map<String, Any> {
         val file = File(apkPath)
         if (!file.exists()) throw Exception("APK 文件不存在: $apkPath")
         
@@ -287,7 +286,11 @@ class MainActivity : FlutterActivity() {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 }
                 startActivity(intent)
-                throw Exception("请在弹出的设置页中开启安装未知应用权限")
+                return mapOf(
+                    "success" to false,
+                    "permissionRequired" to true,
+                    "message" to "请在弹出的设置页中开启安装未知应用权限"
+                )
             }
         }
         
@@ -299,5 +302,6 @@ class MainActivity : FlutterActivity() {
             putExtra(Intent.EXTRA_RETURN_RESULT, true)
         }
         startActivity(intent)
+        return mapOf("success" to true)
     }
 }
