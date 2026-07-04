@@ -709,6 +709,10 @@ class _ScanPageState extends State<ScanPage> {
       toast(context, '请先上传设备图片');
       return;
     }
+    if (imagePaths.length < _orderedInspectionImageLimit) {
+      toast(context, '请按顺序上传3张关键图：背面、关于本机、爱思/沙漏报告');
+      return;
+    }
     if (aiInspecting) return;
     setState(() => aiInspecting = true);
     try {
@@ -756,9 +760,14 @@ class _ScanPageState extends State<ScanPage> {
         aiInspection = result;
         inspectionReportPath = null;
       });
+      final missing = _missingReviewFields();
       toast(
         context,
-        appliedCount > 0 ? '三张关键图已补全可信设备信息，请复核后入库' : 'AI已读取图片，未看清的字段已留给人工复核',
+        missing.isEmpty
+            ? '三张关键图已补全可信设备信息，请复核后入库'
+            : appliedCount > 0
+            ? 'AI已读取，仍需补：${missing.join('、')}'
+            : 'AI未读到关键字段，请按顺序重拍或手动补全',
       );
     } catch (e) {
       if (mounted) toast(context, 'AI整机识别失败：$e');
@@ -1158,24 +1167,6 @@ class _ScanPageState extends State<ScanPage> {
     );
   }
 
-  int _intFromInspection(
-    String key,
-    int fallback, {
-    int? min,
-    int? max,
-    double threshold = 0.78,
-  }) {
-    final inspection = aiInspection;
-    final value = _intFromResult(
-      inspection,
-      key,
-      min: min,
-      max: max,
-      threshold: threshold,
-    );
-    return value ?? fallback;
-  }
-
   int? _intFromResult(
     Map<String, dynamic>? inspection,
     String key, {
@@ -1232,16 +1223,6 @@ class _ScanPageState extends State<ScanPage> {
     return text;
   }
 
-  int _boundedInt(String raw, int fallback, {int? min, int? max}) {
-    final match = RegExp(r'\d+').firstMatch(raw);
-    if (match == null) return fallback;
-    final value = int.tryParse(match.group(0)!);
-    if (value == null) return fallback;
-    if (min != null && value < min) return fallback;
-    if (max != null && value > max) return fallback;
-    return value;
-  }
-
   int? _nullableBoundedInt(String raw, {int? min, int? max}) {
     final match = RegExp(r'\d+').firstMatch(raw);
     if (match == null) return null;
@@ -1250,6 +1231,32 @@ class _ScanPageState extends State<ScanPage> {
     if (min != null && value < min) return null;
     if (max != null && value > max) return null;
     return value;
+  }
+
+  List<String> _missingReviewFields() {
+    final missing = <String>[];
+    if (_serialCtrl.text.trim().isEmpty) missing.add('序列号');
+    if (selectedModel.trim().isEmpty) missing.add('型号');
+    if (selectedCapacity.trim().isEmpty) missing.add('容量');
+    if (selectedColor.trim().isEmpty) missing.add('颜色');
+    if (selectedNetwork.trim().isEmpty) missing.add('网络');
+    if (_nullableBoundedInt(_batteryCtrl.text, min: 50, max: 100) == null) {
+      missing.add('电池健康');
+    }
+    if (_nullableBoundedInt(_cycleCtrl.text, min: 0, max: 3000) == null) {
+      missing.add('充电次数');
+    }
+    return missing;
+  }
+
+  String _reviewDeviceSummary() {
+    final parts = <String>[
+      if (selectedModel.trim().isNotEmpty) selectedModel.trim(),
+      if (selectedCapacity.trim().isNotEmpty) selectedCapacity.trim(),
+      if (selectedColor.trim().isNotEmpty) selectedColor.trim(),
+      if (selectedNetwork.trim().isNotEmpty) selectedNetwork.trim(),
+    ];
+    return parts.join(' ');
   }
 
   String _batteryReviewText() {
@@ -1275,12 +1282,10 @@ class _ScanPageState extends State<ScanPage> {
 
   Future<void> _save() async {
     // 校验
-    if (selectedModel.isEmpty) {
-      toast(context, '请选择iPad型号');
-      return;
-    }
-    if (selectedCapacity.isEmpty) {
-      toast(context, '请选择容量');
+    final missing = _missingReviewFields();
+    if (missing.isNotEmpty) {
+      setState(() => currentStep = 1);
+      toast(context, '请先补全：${missing.join('、')}');
       return;
     }
     if (_costCtrl.text.isEmpty || (double.tryParse(_costCtrl.text) ?? 0) <= 0) {
@@ -1293,32 +1298,9 @@ class _ScanPageState extends State<ScanPage> {
     final cost = (double.tryParse(_costCtrl.text) ?? 0) * 100;
     final channel = isCustomChannel ? _customChannelCtrl.text : selectedChannel;
     final serial = _serialCtrl.text.trim().toUpperCase();
-
-    int batteryHealth = 100;
-    int cycleCount = 0;
-    if (aiInspection != null) {
-      batteryHealth = _intFromInspection(
-        'batteryHealth',
-        batteryHealth,
-        min: 50,
-        max: 100,
-        threshold: 0.82,
-      );
-      cycleCount = _intFromInspection(
-        'cycleCount',
-        cycleCount,
-        min: 0,
-        max: 3000,
-        threshold: 0.82,
-      );
-    }
-    batteryHealth = _boundedInt(
-      _batteryCtrl.text,
-      batteryHealth,
-      min: 50,
-      max: 100,
-    );
-    cycleCount = _boundedInt(_cycleCtrl.text, cycleCount, min: 0, max: 3000);
+    final batteryHealth =
+        _nullableBoundedInt(_batteryCtrl.text, min: 50, max: 100)!;
+    final cycleCount = _nullableBoundedInt(_cycleCtrl.text, min: 0, max: 3000)!;
 
     // 序列号解码（如果有）
     final idClean = idCheck != null ? idCheck!['clean'] as bool : true;
@@ -1406,9 +1388,18 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   void _handleStepContinue() {
-    if (currentStep == 0 && imagePaths.isEmpty) {
-      toast(context, '请先上传至少1张验机图片');
-      return;
+    if (currentStep == 0) {
+      if (imagePaths.length < _orderedInspectionImageLimit) {
+        toast(context, '请按顺序上传3张关键图：背面、关于本机、爱思/沙漏报告');
+        return;
+      }
+    }
+    if (currentStep == 1) {
+      final missing = _missingReviewFields();
+      if (missing.isNotEmpty) {
+        toast(context, '请先补全：${missing.join('、')}');
+        return;
+      }
     }
     if (currentStep < 2) setState(() => currentStep++);
   }
@@ -1860,7 +1851,7 @@ class _ScanPageState extends State<ScanPage> {
           width: double.infinity,
           child: FilledButton.icon(
             onPressed:
-                imagePaths.isEmpty || aiInspecting
+                imagePaths.length < _orderedInspectionImageLimit || aiInspecting
                     ? null
                     : _runFullAiInspection,
             icon:
@@ -1875,16 +1866,22 @@ class _ScanPageState extends State<ScanPage> {
                     )
                     : const Icon(Icons.filter_3_rounded),
             style: FilledButton.styleFrom(
-              backgroundColor: imagePaths.isEmpty ? C.bgElevated : C.purple,
-              foregroundColor: imagePaths.isEmpty ? C.t3 : Colors.black,
+              backgroundColor:
+                  imagePaths.length < _orderedInspectionImageLimit
+                      ? C.bgElevated
+                      : C.purple,
+              foregroundColor:
+                  imagePaths.length < _orderedInspectionImageLimit
+                      ? C.t3
+                      : Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(11),
               ),
             ),
             label: Text(
-              imagePaths.isEmpty
-                  ? '请先上传验机图片'
+              imagePaths.length < _orderedInspectionImageLimit
+                  ? '请先上传3张关键图'
                   : aiInspecting
                   ? 'AI识别中'
                   : '识别前三张关键图',
@@ -1921,6 +1918,43 @@ class _ScanPageState extends State<ScanPage> {
     ),
   );
 
+  Widget _reviewFieldGrid(
+    List<Widget> children, {
+    required int maxColumns,
+    required double minItemWidth,
+  }) => LayoutBuilder(
+    builder: (context, constraints) {
+      const spacing = 8.0;
+      final width = constraints.maxWidth;
+      if (!constraints.hasBoundedWidth || width <= minItemWidth) {
+        return Column(
+          children: [
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) const SizedBox(height: spacing),
+              children[i],
+            ],
+          ],
+        );
+      }
+      final columns = math.max(
+        1,
+        math.min(
+          maxColumns,
+          ((width + spacing) / (minItemWidth + spacing)).floor(),
+        ),
+      );
+      final itemWidth = (width - spacing * (columns - 1)) / columns;
+      return Wrap(
+        spacing: spacing,
+        runSpacing: spacing,
+        children: [
+          for (final child in children)
+            SizedBox(width: itemWidth, child: child),
+        ],
+      );
+    },
+  );
+
   Widget _identityReviewCard() => CardBox(
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1952,67 +1986,58 @@ class _ScanPageState extends State<ScanPage> {
           onChanged: (v) => setState(() => selectedModel = v ?? ''),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: AppDropdownField<String>(
-                value: selectedCapacity.isEmpty ? null : selectedCapacity,
-                hint: '容量',
-                options: _optionsWithCurrent(iPadCapacities, selectedCapacity),
-                labelBuilder: (value) => value,
-                fontSize: 12,
-                onChanged: (v) => setState(() => selectedCapacity = v ?? ''),
-              ),
+        _reviewFieldGrid(
+          [
+            AppDropdownField<String>(
+              value: selectedCapacity.isEmpty ? null : selectedCapacity,
+              hint: '容量',
+              options: _optionsWithCurrent(iPadCapacities, selectedCapacity),
+              labelBuilder: (value) => value,
+              fontSize: 12,
+              onChanged: (v) => setState(() => selectedCapacity = v ?? ''),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppDropdownField<String>(
-                value: selectedColor.isEmpty ? null : selectedColor,
-                hint: '颜色',
-                options: _optionsWithCurrent(iPadColors, selectedColor),
-                labelBuilder: (value) => value,
-                fontSize: 12,
-                onChanged: (v) => setState(() => selectedColor = v ?? ''),
-              ),
+            AppDropdownField<String>(
+              value: selectedColor.isEmpty ? null : selectedColor,
+              hint: '颜色',
+              options: _optionsWithCurrent(iPadColors, selectedColor),
+              labelBuilder: (value) => value,
+              fontSize: 12,
+              onChanged: (v) => setState(() => selectedColor = v ?? ''),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppDropdownField<String>(
-                value: selectedNetwork,
-                hint: '网络',
-                options: _optionsWithCurrent(iPadNetworks, selectedNetwork),
-                labelBuilder: (value) => value,
-                fontSize: 12,
-                onChanged: (v) => setState(() => selectedNetwork = v ?? ''),
-              ),
+            AppDropdownField<String>(
+              value: selectedNetwork,
+              hint: '网络',
+              options: _optionsWithCurrent(iPadNetworks, selectedNetwork),
+              labelBuilder: (value) => value,
+              fontSize: 12,
+              onChanged: (v) => setState(() => selectedNetwork = v ?? ''),
             ),
           ],
+          maxColumns: 3,
+          minItemWidth: 124,
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: AppFormField(
-                controller: _batteryCtrl,
-                keyboardType: TextInputType.number,
-                label: '电池健康(%)',
-                hint: '如 93',
-                icon: Icons.battery_5_bar_rounded,
-                onChanged: (_) => setState(() => inspectionReportPath = null),
-              ),
+        _reviewFieldGrid(
+          [
+            AppFormField(
+              controller: _batteryCtrl,
+              keyboardType: TextInputType.number,
+              label: '电池健康(%)',
+              hint: '如 93',
+              icon: Icons.battery_5_bar_rounded,
+              onChanged: (_) => setState(() => inspectionReportPath = null),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppFormField(
-                controller: _cycleCtrl,
-                keyboardType: TextInputType.number,
-                label: '充电次数',
-                hint: '如 676',
-                icon: Icons.battery_charging_full_rounded,
-                onChanged: (_) => setState(() => inspectionReportPath = null),
-              ),
+            AppFormField(
+              controller: _cycleCtrl,
+              keyboardType: TextInputType.number,
+              label: '充电次数',
+              hint: '如 676',
+              icon: Icons.battery_charging_full_rounded,
+              onChanged: (_) => setState(() => inspectionReportPath = null),
             ),
           ],
+          maxColumns: 2,
+          minItemWidth: 176,
         ),
       ],
     ),
@@ -2232,24 +2257,33 @@ class _ScanPageState extends State<ScanPage> {
     final data = aiInspection ?? {};
     final confidence = _inspectionConfidence(data);
     final warnings = data['warnings'];
+    final missing = _missingReviewFields();
+    final isComplete = missing.isEmpty;
+    final statusColor = isComplete ? C.purple : C.orange;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: C.purple.withValues(alpha: 0.10),
+        color: statusColor.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: C.purple.withValues(alpha: 0.24)),
+        border: Border.all(color: statusColor.withValues(alpha: 0.24)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.fact_check_outlined, color: C.purple, size: 18),
+              Icon(
+                isComplete
+                    ? Icons.fact_check_outlined
+                    : Icons.assignment_late_outlined,
+                color: statusColor,
+                size: 18,
+              ),
               const SizedBox(width: 8),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'AI设备信息已补全',
-                  style: TextStyle(
+                  isComplete ? 'AI设备信息已补全' : 'AI已识别，仍需补全',
+                  style: const TextStyle(
                     color: C.t1,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
@@ -2259,8 +2293,8 @@ class _ScanPageState extends State<ScanPage> {
               if (confidence > 0)
                 Text(
                   '${(confidence.clamp(0, 1) * 100).round()}%',
-                  style: const TextStyle(
-                    color: C.purple,
+                  style: TextStyle(
+                    color: statusColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2268,6 +2302,9 @@ class _ScanPageState extends State<ScanPage> {
             ],
           ),
           const SizedBox(height: 8),
+          if (!isComplete) _inspectionLine('待补', missing.join('、')),
+          _inspectionLine('序列号', _serialCtrl.text.trim().toUpperCase()),
+          _inspectionLine('设备', _reviewDeviceSummary()),
           _inspectionLine('电池/循环', _batteryCycleSummary()),
           _inspectionLine('功能', data['functionSummary']),
           _inspectionLine('外观记录', _manualDefectSummary(maxItems: 6)),
