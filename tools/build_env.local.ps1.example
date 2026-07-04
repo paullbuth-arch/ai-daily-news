@@ -9,11 +9,14 @@ $LocalFlutterSdk = Join-Path $LocalDevEnv "flutter"
 # $LocalJdk = Join-Path $LocalDevEnv "jdk-17.0.13+11"
 # $LocalAndroidSdk = Join-Path $LocalDevEnv "android-sdk"
 
+# Optional fallback endpoints. The version endpoint is injected by default so
+# in-app updates still work when the public domain is blocked by ICP/CDN.
+# $DeepSellFallbackBaseUrl = "https://42.193.131.66"
+# $DeepSellFallbackVersionUrl = "https://42.193.131.66/api/version"
+
 # Optional silent server sync credentials for your private owner APK only.
 # These are ignored unless tools/build_apk.ps1 is run with -PrivateOwnerSync.
 # Keep real values only in tools/build_env.local.ps1; do not commit them.
 # $DeepSellSyncToken = ""
 # $DeepSellSyncEmail = ""
 # $DeepSellSyncPassword = ""
-# $DeepSellFallbackBaseUrl = ""
-# $DeepSellFallbackVersionUrl = ""

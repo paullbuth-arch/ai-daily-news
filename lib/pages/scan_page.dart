@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -13,6 +14,7 @@ import '../serial_decoder.dart';
 import '../main.dart';
 import '../services/device_export_service.dart';
 import '../services/intake_report_service.dart';
+import '../services/intake_ai_result_normalizer.dart';
 import '../services/ipad_model_resolver.dart';
 import '../services/xianyu_copy_service.dart';
 
@@ -39,6 +41,20 @@ class _ManualIssueOption {
     this.isScreen = false,
     this.checkKey = '',
     this.checkValue = '需复核',
+  });
+}
+
+class _AiCropSpec {
+  final double left;
+  final double top;
+  final double width;
+  final double height;
+
+  const _AiCropSpec({
+    required this.left,
+    required this.top,
+    required this.width,
+    required this.height,
   });
 }
 
@@ -224,6 +240,8 @@ class ScanPage extends StatefulWidget {
 class _ScanPageState extends State<ScanPage> {
   // 基本信息
   final _serialCtrl = TextEditingController();
+  final _batteryCtrl = TextEditingController();
+  final _cycleCtrl = TextEditingController();
   final _costCtrl = TextEditingController();
   String selectedModel = '';
   String selectedCapacity = '';
@@ -244,9 +262,11 @@ class _ScanPageState extends State<ScanPage> {
   List<String> imagePaths = [];
 
   // 整机图片AI识别
-  static const int _aboutDeviceOcrImageLimit = 2;
-  static const int _primaryInspectionImageLimit = 3;
-  static const int _supplementalInspectionImageLimit = 4;
+  static const int _orderedInspectionImageLimit = 3;
+  static const double _pickedImageMaxDimension = 1280;
+  static const int _pickedImageQuality = 76;
+  static const int _aiCropTargetWidth = 980;
+  static const int _aiFastCropTargetWidth = 720;
   bool aiInspecting = false;
   Map<String, dynamic>? aiInspection;
   String? inspectionReportPath;
@@ -260,6 +280,8 @@ class _ScanPageState extends State<ScanPage> {
   @override
   void dispose() {
     _serialCtrl.dispose();
+    _batteryCtrl.dispose();
+    _cycleCtrl.dispose();
     _costCtrl.dispose();
     _customChannelCtrl.dispose();
     _appearanceNoteCtrl.dispose();
@@ -285,7 +307,7 @@ class _ScanPageState extends State<ScanPage> {
     return values;
   }
 
-  /// 添加实拍图（原图，不压缩）
+  /// 添加实拍图（入库保存压缩副本，降低 AI 识别上传体积）
   Future<void> _addImage(bool fromCamera) async {
     if (imagePaths.length >= 12) {
       toast(context, '最多上传12张图片');
@@ -295,15 +317,15 @@ class _ScanPageState extends State<ScanPage> {
       final picker = ImagePicker();
       final x = await picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 82,
+        maxWidth: _pickedImageMaxDimension,
+        maxHeight: _pickedImageMaxDimension,
+        imageQuality: _pickedImageQuality,
       );
       if (x != null) {
         final now = DateTime.now();
         final dest =
             '$gDocDir/dev_${now.millisecondsSinceEpoch}_${imagePaths.length}.jpg';
-        // 原图拷贝，不做压缩
+        // image_picker 已按上面的尺寸和质量参数生成压缩副本。
         await File(x.path).copy(dest);
         setState(() {
           imagePaths.add(dest);
@@ -327,9 +349,9 @@ class _ScanPageState extends State<ScanPage> {
     try {
       final picker = ImagePicker();
       final List<XFile> images = await picker.pickMultiImage(
-        maxWidth: 1600,
-        maxHeight: 1600,
-        imageQuality: 82,
+        maxWidth: _pickedImageMaxDimension,
+        maxHeight: _pickedImageMaxDimension,
+        imageQuality: _pickedImageQuality,
       );
       if (images.isNotEmpty) {
         int added = 0;
@@ -464,6 +486,196 @@ class _ScanPageState extends State<ScanPage> {
     return 'data:image/jpeg;base64,${base64Encode(bytes)}';
   }
 
+  Future<String> _croppedImageDataUriForAi(
+    String path,
+    _AiCropSpec spec, {
+    int targetWidth = _aiCropTargetWidth,
+  }) async {
+    final bytes = await File(path).readAsBytes();
+    final codec = await ui.instantiateImageCodec(bytes);
+    final frame = await codec.getNextFrame();
+    final image = frame.image;
+    try {
+      final left = (image.width * spec.left).clamp(0.0, image.width - 1.0);
+      final top = (image.height * spec.top).clamp(0.0, image.height - 1.0);
+      final cropWidth = (image.width * spec.width).clamp(
+        1.0,
+        image.width - left,
+      );
+      final cropHeight = (image.height * spec.height).clamp(
+        1.0,
+        image.height - top,
+      );
+      final src = Rect.fromLTWH(left, top, cropWidth, cropHeight);
+
+      final scale = cropWidth > targetWidth ? targetWidth / cropWidth : 1.0;
+      final outWidth = math.max(1, (cropWidth * scale).round());
+      final outHeight = math.max(1, (cropHeight * scale).round());
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final paint = Paint()..filterQuality = FilterQuality.medium;
+      canvas.drawImageRect(
+        image,
+        src,
+        Rect.fromLTWH(0, 0, outWidth.toDouble(), outHeight.toDouble()),
+        paint,
+      );
+      final picture = recorder.endRecording();
+      final cropped = await picture.toImage(outWidth, outHeight);
+      picture.dispose();
+      final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
+      cropped.dispose();
+      if (data == null) return _imageDataUriForAi(path);
+      return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List())}';
+    } finally {
+      image.dispose();
+    }
+  }
+
+  Future<Map<String, dynamic>> _withBackColorFallback(
+    Map<String, dynamic> result,
+  ) async {
+    if (imagePaths.isEmpty ||
+        _matchOption(
+          (result['color'] ?? '').toString(),
+          iPadColors,
+        ).isNotEmpty) {
+      return result;
+    }
+    final color = await _estimateBackColor(imagePaths.first);
+    if (color.isEmpty) return result;
+    final merged = Map<String, dynamic>.from(result);
+    merged['color'] = color;
+    _raiseInspectionConfidence(merged, 'color', 0.82);
+    return merged;
+  }
+
+  Future<String> _estimateBackColor(String path) async {
+    try {
+      final bytes = await File(path).readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 480);
+      final frame = await codec.getNextFrame();
+      final image = frame.image;
+      try {
+        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+        if (data == null) return '';
+        final rgb = _averageBackColorRgb(
+          data.buffer.asUint8List(),
+          image.width,
+          image.height,
+        );
+        if (rgb == null) return '';
+        return _classifyBackColor(rgb);
+      } finally {
+        image.dispose();
+      }
+    } catch (_) {
+      return '';
+    }
+  }
+
+  List<double>? _averageBackColorRgb(Uint8List bytes, int width, int height) {
+    const specs = [
+      _AiCropSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
+      _AiCropSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
+    ];
+    var rSum = 0.0;
+    var gSum = 0.0;
+    var bSum = 0.0;
+    var count = 0;
+    for (final spec in specs) {
+      final left = math.max(0, (width * spec.left).round());
+      final top = math.max(0, (height * spec.top).round());
+      final right = math.min(width, (width * (spec.left + spec.width)).round());
+      final bottom = math.min(
+        height,
+        (height * (spec.top + spec.height)).round(),
+      );
+      for (var y = top; y < bottom; y += 2) {
+        for (var x = left; x < right; x += 2) {
+          final index = (y * width + x) * 4;
+          if (index + 2 >= bytes.length) continue;
+          final r = bytes[index];
+          final g = bytes[index + 1];
+          final b = bytes[index + 2];
+          if (_skipBackColorPixel(r, g, b)) continue;
+          rSum += r;
+          gSum += g;
+          bSum += b;
+          count++;
+        }
+      }
+    }
+    if (count < 40) return null;
+    return [rSum / count, gSum / count, bSum / count];
+  }
+
+  bool _skipBackColorPixel(int r, int g, int b) {
+    final maxChannel = math.max(r, math.max(g, b));
+    final minChannel = math.min(r, math.min(g, b));
+    final value = maxChannel / 255.0;
+    final saturation =
+        maxChannel == 0 ? 0.0 : (maxChannel - minChannel) / maxChannel;
+    final isRedMarkup =
+        r > 140 && g < 120 && b < 120 && r - g > 40 && r - b > 40;
+    return isRedMarkup || value < 0.25 || (value > 0.94 && saturation < 0.08);
+  }
+
+  String _classifyBackColor(List<double> rgb) {
+    final r = rgb[0];
+    final g = rgb[1];
+    final b = rgb[2];
+    final maxChannel = math.max(r, math.max(g, b));
+    final minChannel = math.min(r, math.min(g, b));
+    final value = maxChannel / 255.0;
+    final saturation =
+        maxChannel == 0 ? 0.0 : (maxChannel - minChannel) / maxChannel;
+    final hue = _rgbHue(r, g, b);
+
+    if (saturation < 0.11) return value < 0.45 ? '深空灰' : '银色';
+    if (hue >= 190 && hue <= 250) return '蓝色';
+    if (hue >= 250 && hue <= 310) return '紫色';
+    if (hue >= 85 && hue <= 165) return '绿色';
+    if (hue >= 40 && hue <= 85) {
+      if (value > 0.72 && saturation < 0.22) return '星光色';
+      return saturation > 0.28 ? '黄色' : '金色';
+    }
+    if (hue >= 330 || hue <= 20) {
+      return saturation < 0.22 ? '玫瑰金' : '粉色';
+    }
+    if (hue > 20 && hue < 40) return '玫瑰金';
+    return '';
+  }
+
+  double _rgbHue(double r, double g, double b) {
+    final maxChannel = math.max(r, math.max(g, b));
+    final minChannel = math.min(r, math.min(g, b));
+    final delta = maxChannel - minChannel;
+    if (delta == 0) return 0;
+    double hue;
+    if (maxChannel == r) {
+      hue = 60 * (((g - b) / delta) % 6);
+    } else if (maxChannel == g) {
+      hue = 60 * (((b - r) / delta) + 2);
+    } else {
+      hue = 60 * (((r - g) / delta) + 4);
+    }
+    return hue < 0 ? hue + 360 : hue;
+  }
+
+  void _raiseInspectionConfidence(
+    Map<String, dynamic> result,
+    String key,
+    double value,
+  ) {
+    final raw = result['fieldConfidence'];
+    final fields =
+        raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final current = _readConfidence(fields[key]) ?? 0;
+    if (value > current) fields[key] = value;
+    result['fieldConfidence'] = fields;
+  }
+
   String? _mimeFromBytes(List<int> bytes) {
     if (bytes.length >= 3 &&
         bytes[0] == 0xFF &&
@@ -504,65 +716,26 @@ class _ScanPageState extends State<ScanPage> {
       var result = <String, dynamic>{};
       var hasAiResult = false;
 
-      for (final path in imagePaths.take(_aboutDeviceOcrImageLimit)) {
-        recognizedPaths.add(path);
-        final about = await AiService.recognizeAboutDeviceOcr(
-          await _imageDataUriForAi(path),
+      final primaryPaths =
+          imagePaths.take(_orderedInspectionImageLimit).toList();
+      if (primaryPaths.isNotEmpty) {
+        final primaryImages = await _encodeOrderedInspectionImages(
+          primaryPaths,
         );
-        if (about['error'] == null) {
+        final primary = await AiService.recognizeIpadIntake(
+          primaryImages,
+          croppedRegions: true,
+          totalImageCount: imagePaths.length,
+        );
+        recognizedPaths.addAll(primaryPaths);
+        if (primary['error'] == null) {
           hasAiResult = true;
-          result = _mergeAboutDeviceOcrResult(result, about);
+          result = _normalizeInspectionResult(primary);
         } else {
           result = _withInspectionWarning(
             result,
-            '关于本机单图识别失败：${about['error']}',
+            '图1-3主识别失败：${primary['error']}',
           );
-        }
-        if (_hasCoreAboutDeviceInfo(result)) break;
-      }
-
-      final primarySupplementalPaths =
-          imagePaths
-              .take(_primaryInspectionImageLimit)
-              .where((path) => !recognizedPaths.contains(path))
-              .toList();
-      if (primarySupplementalPaths.isNotEmpty) {
-        final focusFields = _supplementalInspectionFields(result);
-        final supplement = await AiService.recognizeIpadIntake(
-          await _encodeInspectionImages(primarySupplementalPaths),
-          supplemental: true,
-          totalImageCount: imagePaths.length,
-          focusFields: focusFields,
-        );
-        recognizedPaths.addAll(primarySupplementalPaths);
-        if (supplement['error'] == null) {
-          hasAiResult = true;
-          result = _mergeInspectionResults(result, supplement, focusFields);
-        } else {
-          result = _withInspectionWarning(result, '图1-3补充识别失败，已保留单图识别结果');
-        }
-      }
-
-      final missingFields = _criticalSupplementalFields(result);
-      if (missingFields.isNotEmpty &&
-          imagePaths.length > _primaryInspectionImageLimit) {
-        final supplementalPaths =
-            imagePaths
-                .skip(_primaryInspectionImageLimit)
-                .take(_supplementalInspectionImageLimit)
-                .toList();
-        final supplement = await AiService.recognizeIpadIntake(
-          await _encodeInspectionImages(supplementalPaths),
-          supplemental: true,
-          totalImageCount: imagePaths.length,
-          focusFields: missingFields,
-        );
-        recognizedPaths.addAll(supplementalPaths);
-        if (supplement['error'] == null) {
-          hasAiResult = true;
-          result = _mergeInspectionResults(result, supplement, missingFields);
-        } else {
-          result = _withInspectionWarning(result, '后续图片补充识别失败，已保留前三张识别结果');
         }
       }
 
@@ -573,10 +746,10 @@ class _ScanPageState extends State<ScanPage> {
         return;
       }
       result['recognitionStrategy'] =
-          recognizedPaths.length <= _primaryInspectionImageLimit
-              ? '关于本机单图优先，图1-3补充'
-              : '关于本机单图优先，缺字段时补看后续${recognizedPaths.length}张内图片';
+          '三张关键图识别：图1取背面颜色点，图2取关于本机区域，图3取爱思底部区域；第4张以后不上传AI';
       result['recognizedImageCount'] = recognizedPaths.length;
+      result = _normalizeInspectionResult(result);
+      result = await _withBackColorFallback(result);
       if (!mounted) return;
       final appliedCount = _applyInspection(result);
       setState(() {
@@ -585,7 +758,7 @@ class _ScanPageState extends State<ScanPage> {
       });
       toast(
         context,
-        appliedCount > 0 ? 'AI已补全可信设备信息，请复核后入库' : 'AI已读取图片，未看清的字段已留给人工复核',
+        appliedCount > 0 ? '三张关键图已补全可信设备信息，请复核后入库' : 'AI已读取图片，未看清的字段已留给人工复核',
       );
     } catch (e) {
       if (mounted) toast(context, 'AI整机识别失败：$e');
@@ -594,189 +767,50 @@ class _ScanPageState extends State<ScanPage> {
     }
   }
 
-  Future<List<String>> _encodeInspectionImages(List<String> paths) async {
+  Future<List<String>> _encodeOrderedInspectionImages(
+    List<String> paths,
+  ) async {
     final encoded = <String>[];
-    for (final path in paths) {
-      encoded.add(await _imageDataUriForAi(path));
+    for (var i = 0; i < paths.length; i++) {
+      final path = paths[i];
+      final specs = switch (i) {
+        0 => const [
+          // 图1：背面颜色采样点，避开右上贴纸文字。
+          _AiCropSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
+          _AiCropSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
+        ],
+        1 => const [
+          // 图2：关于本机右侧信息区域。
+          _AiCropSpec(left: 0.43, top: 0.14, width: 0.50, height: 0.48),
+        ],
+        _ => const [
+          // 图3：爱思报告中下方电池/锁/匹配信息区域。
+          _AiCropSpec(left: 0.18, top: 0.64, width: 0.64, height: 0.28),
+        ],
+      };
+      for (final spec in specs) {
+        try {
+          encoded.add(
+            await _croppedImageDataUriForAi(
+              path,
+              spec,
+              targetWidth: _aiFastCropTargetWidth,
+            ),
+          );
+        } catch (_) {
+          encoded.add(await _imageDataUriForAi(path));
+        }
+      }
     }
     return encoded;
   }
 
-  bool _hasCoreAboutDeviceInfo(Map<String, dynamic> result) =>
-      _hasReliableInspectionValue(result, 'serial') &&
-      _hasReliableInspectionValue(result, 'model') &&
-      _hasReliableInspectionValue(result, 'capacity');
-
-  List<String> _supplementalInspectionFields(Map<String, dynamic> result) =>
-      {
-        ..._missingInspectionFields(result),
-        'inspectionTool',
-        'machineType',
-        'allGreen',
-        'inspectionSummary',
-        'accessories',
-      }.toList();
-
-  List<String> _criticalSupplementalFields(Map<String, dynamic> result) {
-    final missing = _missingInspectionFields(result).toSet();
-    missing.remove('color');
-    if (!_hasReliableInspectionValue(result, 'inspectionTool') ||
-        !_hasReliableInspectionValue(result, 'machineType') ||
-        !_hasReliableInspectionValue(result, 'allGreen')) {
-      missing.addAll(['inspectionTool', 'machineType', 'allGreen']);
-    }
-    return missing.toList();
-  }
-
-  List<String> _missingInspectionFields(Map<String, dynamic> result) {
-    final fields = <String>[];
-    for (final key in const [
-      'serial',
-      'model',
-      'capacity',
-      'color',
-      'network',
-      'batteryHealth',
-      'cycleCount',
-    ]) {
-      if (!_hasReliableInspectionValue(result, key)) fields.add(key);
-    }
-    return fields;
-  }
-
-  Map<String, dynamic> _mergeAboutDeviceOcrResult(
-    Map<String, dynamic> primary,
-    Map<String, dynamic> about,
-  ) {
-    var merged = Map<String, dynamic>.from(primary);
-    final isAboutPage = about['isAboutDevicePage'];
-    if (isAboutPage is bool &&
-        !isAboutPage &&
-        _inspectionConfidence(about) < 0.5) {
-      return _withInspectionWarning(merged, '前置图片未识别到清晰的关于本机文字');
-    }
-
-    for (final key in const [
-      'serial',
-      'serialRaw',
-      'model',
-      'modelName',
-      'modelNameRaw',
-      'modelEvidenceText',
-      'modelNumber',
-      'partNumber',
-      'partNumberRaw',
-      'capacity',
-      'capacityRaw',
-      'availableRaw',
-      'ipadOS',
-      'network',
-    ]) {
-      final next = (about[key] ?? '').toString().trim();
-      if (!_usable(next) || _hasProtectedInspectionValue(merged, key)) {
-        continue;
-      }
-      merged[key] = about[key];
-    }
-
-    final modelNameRaw = (merged['modelNameRaw'] ?? '').toString().trim();
-    if (!_usable((merged['modelName'] ?? '').toString()) &&
-        _usable(modelNameRaw)) {
-      merged['modelName'] = modelNameRaw;
-    }
-    final partNumberRaw = (merged['partNumberRaw'] ?? '').toString().trim();
-    if (!_usable((merged['partNumber'] ?? '').toString()) &&
-        _usable(partNumberRaw)) {
-      merged['partNumber'] = partNumberRaw;
-    }
-
-    final mergedConfidence = <String, dynamic>{
-      if (merged['fieldConfidence'] is Map)
-        ...Map<String, dynamic>.from(merged['fieldConfidence'] as Map),
-    };
-    final aboutConfidence =
-        about['fieldConfidence'] is Map
-            ? Map<String, dynamic>.from(about['fieldConfidence'] as Map)
-            : const <String, dynamic>{};
-    for (final entry in aboutConfidence.entries) {
-      final current = _readConfidence(mergedConfidence[entry.key]) ?? 0;
-      final next = _readConfidence(entry.value) ?? 0;
-      if (next > current) mergedConfidence[entry.key] = entry.value;
-    }
-    if (mergedConfidence.isNotEmpty) {
-      merged['fieldConfidence'] = mergedConfidence;
-    }
-
-    final confidence = math.max(
-      _inspectionConfidence(merged),
-      _inspectionConfidence(about),
+  Map<String, dynamic> _normalizeInspectionResult(Map<String, dynamic> result) {
+    return IntakeAiResultNormalizer.normalize(
+      result,
+      modelOptions: iPadModels.map((m) => m['name']!).toList(),
+      capacityOptions: iPadCapacities,
     );
-    if (confidence > 0) merged['confidence'] = confidence;
-    final warnings = <String>{
-      ..._inspectionWarnings(merged['warnings']),
-      ..._inspectionWarnings(about['warnings']),
-    };
-    if (warnings.isNotEmpty) merged['warnings'] = warnings.toList();
-    merged['functionSummary'] ??= '关于本机信息已读取，外观由人工记录';
-    merged['appearanceSummary'] ??= '外观问题由人工勾选记录';
-    return merged;
-  }
-
-  bool _hasProtectedInspectionValue(Map<String, dynamic> result, String key) {
-    if (key == 'serial') return _hasReliableInspectionValue(result, 'serial');
-    if (key == 'model') return _hasReliableInspectionValue(result, 'model');
-    if (key == 'capacity') {
-      return _hasReliableInspectionValue(result, 'capacity');
-    }
-    if (key == 'network') return _hasReliableInspectionValue(result, 'network');
-    final value = (result[key] ?? '').toString().trim();
-    return _usable(value) && _fieldConfidence(result, key) >= 0.78;
-  }
-
-  Map<String, dynamic> _mergeInspectionResults(
-    Map<String, dynamic> primary,
-    Map<String, dynamic> supplement,
-    List<String> focusFields,
-  ) {
-    final merged = Map<String, dynamic>.from(primary);
-    final fillable = <String>{
-      ...focusFields,
-      'inspectionTool',
-      'machineType',
-      'allGreen',
-      'inspectionSummary',
-      'accessories',
-    };
-    for (final key in fillable) {
-      if (_hasReliableInspectionValue(merged, key)) continue;
-      if (_hasReliableInspectionValue(supplement, key)) {
-        merged[key] = supplement[key];
-      }
-    }
-
-    final mergedConfidence = <String, dynamic>{
-      if (merged['fieldConfidence'] is Map)
-        ...Map<String, dynamic>.from(merged['fieldConfidence'] as Map),
-    };
-    final supplementConfidence =
-        supplement['fieldConfidence'] is Map
-            ? Map<String, dynamic>.from(supplement['fieldConfidence'] as Map)
-            : const <String, dynamic>{};
-    for (final entry in supplementConfidence.entries) {
-      final current = _readConfidence(mergedConfidence[entry.key]) ?? 0;
-      final next = _readConfidence(entry.value) ?? 0;
-      if (next > current) mergedConfidence[entry.key] = entry.value;
-    }
-    if (mergedConfidence.isNotEmpty) {
-      merged['fieldConfidence'] = mergedConfidence;
-    }
-
-    final warnings = <String>{
-      ..._inspectionWarnings(merged['warnings']),
-      ..._inspectionWarnings(supplement['warnings']),
-    };
-    if (warnings.isNotEmpty) merged['warnings'] = warnings.toList();
-    return merged;
   }
 
   Map<String, dynamic> _withInspectionWarning(
@@ -843,6 +877,44 @@ class _ScanPageState extends State<ScanPage> {
         _shouldApplyInspectionField(result, 'network', threshold: 0.84)) {
       if (selectedNetwork != network) applied++;
       selectedNetwork = network;
+    }
+
+    final batteryHealth = _intFromResult(
+      result,
+      'batteryHealth',
+      min: 50,
+      max: 100,
+      threshold: 0.82,
+    );
+    if (batteryHealth != null &&
+        _shouldReplaceNumericController(
+          _batteryCtrl,
+          batteryHealth,
+          'batteryHealth',
+          min: 50,
+          max: 100,
+        )) {
+      _batteryCtrl.text = batteryHealth.toString();
+      applied++;
+    }
+
+    final cycleCount = _intFromResult(
+      result,
+      'cycleCount',
+      min: 0,
+      max: 3000,
+      threshold: 0.82,
+    );
+    if (cycleCount != null &&
+        _shouldReplaceNumericController(
+          _cycleCtrl,
+          cycleCount,
+          'cycleCount',
+          min: 0,
+          max: 3000,
+        )) {
+      _cycleCtrl.text = cycleCount.toString();
+      applied++;
     }
 
     final iCloud = result['iCloudLock'];
@@ -997,6 +1069,11 @@ class _ScanPageState extends State<ScanPage> {
       ],
       if (key == 'serial') 'serialRaw',
       if (key == 'capacity') 'capacityRaw',
+      if (key == 'batteryHealth') ...[
+        'batteryHealthRaw',
+        'inspectionEvidenceText',
+      ],
+      if (key == 'cycleCount') ...['cycleCountRaw', 'inspectionEvidenceText'],
       if (['iCloudLock', 'activationLock', 'mdm', 'configLock'].contains(key))
         'lockStatus',
     ];
@@ -1019,42 +1096,6 @@ class _ScanPageState extends State<ScanPage> {
     String key, {
     double threshold = 0.78,
   }) => _fieldConfidence(result, key) >= threshold;
-
-  bool _hasReliableInspectionValue(Map<String, dynamic> result, String key) {
-    final threshold = _inspectionThreshold(key);
-    if (!_shouldApplyInspectionField(result, key, threshold: threshold)) {
-      return false;
-    }
-    final value = (result[key] ?? '').toString().trim();
-    if (key == 'serial') {
-      final serial = _serialEvidence(result).toUpperCase();
-      return _usable(serial) && _looksLikeSerial(serial);
-    }
-    if (key == 'model') return _trustedModelMatch(result).isNotEmpty;
-    if (key == 'capacity') {
-      return _trustedCapacityMatch(result).isNotEmpty;
-    }
-    if (key == 'color') return _matchOption(value, iPadColors).isNotEmpty;
-    if (key == 'network') return _matchOption(value, iPadNetworks).isNotEmpty;
-    if (key == 'batteryHealth') {
-      return _intFromResult(result, key, min: 50, max: 100) != null;
-    }
-    if (key == 'cycleCount') {
-      return _intFromResult(result, key, min: 0, max: 3000) != null;
-    }
-    if (key == 'allGreen') {
-      final raw = result[key];
-      if (raw is bool) return true;
-      final text = raw?.toString().trim().toLowerCase() ?? '';
-      return text == 'true' ||
-          text == 'false' ||
-          text == '是' ||
-          text == '否' ||
-          text.contains('全绿') ||
-          text.contains('异常');
-    }
-    return _usable(value);
-  }
 
   double _inspectionThreshold(String key) {
     if (key == 'serial') return 0.86;
@@ -1089,6 +1130,17 @@ class _ScanPageState extends State<ScanPage> {
     }
     if (normalized.contains('wifi') || normalized.contains('wi-fi')) {
       return 'WiFi';
+    }
+    if (options.contains('银色') &&
+        (normalized.contains('银') || normalized.contains('silver'))) {
+      return '银色';
+    }
+    if (options.contains('深空灰') &&
+        (normalized.contains('深空') ||
+            normalized.contains('太空灰') ||
+            normalized.contains('spacegray') ||
+            normalized.contains('spacegrey'))) {
+      return '深空灰';
     }
     if (normalized.contains('tb')) return '1TB';
     final cap = RegExp(r'(\d{2,4})\s*g').firstMatch(normalized);
@@ -1150,12 +1202,75 @@ class _ScanPageState extends State<ScanPage> {
     return parsed;
   }
 
+  bool _shouldReplaceNumericController(
+    TextEditingController controller,
+    int nextValue,
+    String inspectionKey, {
+    int? min,
+    int? max,
+  }) {
+    final text = controller.text.trim();
+    if (text.isEmpty) return true;
+    final current = _nullableBoundedInt(text, min: min, max: max);
+    if (current == null) return true;
+    if (!RegExp(r'^\d+$').hasMatch(text)) return true;
+
+    final previous = _intFromResult(
+      aiInspection,
+      inspectionKey,
+      min: min,
+      max: max,
+    );
+    return previous != null && current == previous && current != nextValue;
+  }
+
   String _inspectionText(String key, {required String fallback}) {
     final raw = aiInspection?[key];
     if (raw == null) return fallback;
     final text = raw.toString().trim();
     if (!_usable(text)) return fallback;
     return text;
+  }
+
+  int _boundedInt(String raw, int fallback, {int? min, int? max}) {
+    final match = RegExp(r'\d+').firstMatch(raw);
+    if (match == null) return fallback;
+    final value = int.tryParse(match.group(0)!);
+    if (value == null) return fallback;
+    if (min != null && value < min) return fallback;
+    if (max != null && value > max) return fallback;
+    return value;
+  }
+
+  int? _nullableBoundedInt(String raw, {int? min, int? max}) {
+    final match = RegExp(r'\d+').firstMatch(raw);
+    if (match == null) return null;
+    final value = int.tryParse(match.group(0)!);
+    if (value == null) return null;
+    if (min != null && value < min) return null;
+    if (max != null && value > max) return null;
+    return value;
+  }
+
+  String _batteryReviewText() {
+    final value =
+        _nullableBoundedInt(_batteryCtrl.text, min: 50, max: 100) ??
+        _intFromResult(aiInspection, 'batteryHealth', min: 50, max: 100);
+    return value == null ? '未识别' : '$value%';
+  }
+
+  String _cycleReviewText() {
+    final value =
+        _nullableBoundedInt(_cycleCtrl.text, min: 0, max: 3000) ??
+        _intFromResult(aiInspection, 'cycleCount', min: 0, max: 3000);
+    return value == null ? '未识别' : '$value次';
+  }
+
+  String _batteryCycleSummary() {
+    final battery = _batteryReviewText();
+    final cycle = _cycleReviewText();
+    if (battery == '未识别' && cycle == '未识别') return '';
+    return '$battery / $cycle';
   }
 
   Future<void> _save() async {
@@ -1197,6 +1312,13 @@ class _ScanPageState extends State<ScanPage> {
         threshold: 0.82,
       );
     }
+    batteryHealth = _boundedInt(
+      _batteryCtrl.text,
+      batteryHealth,
+      min: 50,
+      max: 100,
+    );
+    cycleCount = _boundedInt(_cycleCtrl.text, cycleCount, min: 0, max: 3000);
 
     // 序列号解码（如果有）
     final idClean = idCheck != null ? idCheck!['clean'] as bool : true;
@@ -1434,7 +1556,7 @@ class _ScanPageState extends State<ScanPage> {
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            '建议一次上传：关于本机、电池信息、正面亮屏、背面、四边、接口、四角和瑕疵近照。AI只补充序列号、型号、容量、颜色、电池等信息；外观问题按下方手动勾选写入报告。',
+            '请按顺序上传：第1张背面颜色图、第2张关于本机、第3张爱思/沙漏报告。AI只识别前三张的指定区域；后续外观、屏幕、边框和瑕疵图仅供人工复核。',
             style: TextStyle(
               color: C.t2,
               fontSize: 12,
@@ -1729,8 +1851,8 @@ class _ScanPageState extends State<ScanPage> {
         const SizedBox(height: 8),
         Text(
           imagePaths.isEmpty
-              ? '上传图片后，AI会识别序列号、型号、容量、颜色、电池信息和可见锁机风险。'
-              : '已准备 ${imagePaths.length} 张图片，可以让AI补全设备信息。',
+              ? '按顺序上传：1背面颜色图、2关于本机、3爱思报告；AI只看前三张关键区域。'
+              : '已准备 ${imagePaths.length} 张图片，AI只上传前三张裁剪区域；第4张以后留给人工复核。',
           style: const TextStyle(color: C.t3, fontSize: 11, height: 1.4),
         ),
         const SizedBox(height: 10),
@@ -1751,7 +1873,7 @@ class _ScanPageState extends State<ScanPage> {
                         color: Colors.black,
                       ),
                     )
-                    : const Icon(Icons.auto_awesome_rounded),
+                    : const Icon(Icons.filter_3_rounded),
             style: FilledButton.styleFrom(
               backgroundColor: imagePaths.isEmpty ? C.bgElevated : C.purple,
               foregroundColor: imagePaths.isEmpty ? C.t3 : Colors.black,
@@ -1765,7 +1887,7 @@ class _ScanPageState extends State<ScanPage> {
                   ? '请先上传验机图片'
                   : aiInspecting
                   ? 'AI识别中'
-                  : '开始AI补全信息',
+                  : '识别前三张关键图',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
@@ -1862,6 +1984,32 @@ class _ScanPageState extends State<ScanPage> {
                 labelBuilder: (value) => value,
                 fontSize: 12,
                 onChanged: (v) => setState(() => selectedNetwork = v ?? ''),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: AppFormField(
+                controller: _batteryCtrl,
+                keyboardType: TextInputType.number,
+                label: '电池健康(%)',
+                hint: '如 93',
+                icon: Icons.battery_5_bar_rounded,
+                onChanged: (_) => setState(() => inspectionReportPath = null),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AppFormField(
+                controller: _cycleCtrl,
+                keyboardType: TextInputType.number,
+                label: '充电次数',
+                hint: '如 676',
+                icon: Icons.battery_charging_full_rounded,
+                onChanged: (_) => setState(() => inspectionReportPath = null),
               ),
             ),
           ],
@@ -2042,6 +2190,7 @@ class _ScanPageState extends State<ScanPage> {
         if (selectedCapacity.isNotEmpty)
           _kv('容量/颜色/网络', '$selectedCapacity $selectedColor $selectedNetwork'),
         if (_serialCtrl.text.isNotEmpty) _kv('序列号', _serialCtrl.text),
+        _kv('电池/循环', '${_batteryReviewText()} / ${_cycleReviewText()}'),
         _kv('成色', selectedCondition),
         _kv('采购成本', _costCtrl.text.isEmpty ? '未填写' : '${_costCtrl.text}元'),
         _kv(
@@ -2119,6 +2268,7 @@ class _ScanPageState extends State<ScanPage> {
             ],
           ),
           const SizedBox(height: 8),
+          _inspectionLine('电池/循环', _batteryCycleSummary()),
           _inspectionLine('功能', data['functionSummary']),
           _inspectionLine('外观记录', _manualDefectSummary(maxItems: 6)),
           if (confidence > 0 && confidence < 0.72) ...[

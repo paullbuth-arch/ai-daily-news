@@ -65,11 +65,11 @@ class UpdateService {
   /// 当前版本信息。构建脚本会从 pubspec.yaml 注入，测试/调试时使用兜底值。
   static const String _definedVersion = String.fromEnvironment(
     'DEEPSELL_APP_VERSION',
-    defaultValue: '2.9.6',
+    defaultValue: '2.9.7',
   );
   static const int _definedBuild = int.fromEnvironment(
     'DEEPSELL_APP_BUILD',
-    defaultValue: 25,
+    defaultValue: 26,
   );
   static String get currentVersion => _definedVersion;
   static int get currentBuild => _definedBuild;

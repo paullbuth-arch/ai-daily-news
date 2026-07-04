@@ -279,6 +279,7 @@ class AiService {
     required String systemPrompt,
     required List<Map<String, dynamic>> messages,
     int maxTokens = 4096,
+    bool jsonResponse = false,
   }) async {
     final cfg = effectiveConfig;
     if (cfg.baseUrl.isEmpty) return {'error': 'AI配置不完整：缺少 API 端点'};
@@ -302,44 +303,61 @@ class AiService {
       'max_tokens': maxTokens,
       'messages': msgs,
     };
+    if (jsonResponse) {
+      body['response_format'] = {'type': 'json_object'};
+    }
     if (cfg.baseUrl.contains('open.bigmodel.cn')) {
       body['temperature'] = hasImage ? 0.1 : 0.7;
-      if (!hasImage) body['thinking'] = {'type': 'enabled'};
+      body['thinking'] = {'type': hasImage ? 'disabled' : 'enabled'};
     }
 
     Future<Map<String, dynamic>> sendRequest() async {
       final uri = Uri.parse(cfg.baseUrl);
-      final client = HttpClient();
-      client.connectionTimeout = const Duration(seconds: 30);
-      try {
-        final req = await client.postUrl(uri);
-        req.headers.contentType = ContentType.json;
-        req.headers.set('Authorization', 'Bearer ${cfg.apiKey}');
-        req.write(json.encode(body));
+      for (var attempt = 0; attempt < 2; attempt++) {
+        final client = HttpClient();
+        client.connectionTimeout = const Duration(seconds: 30);
+        try {
+          final req = await client.postUrl(uri);
+          req.headers.contentType = ContentType.json;
+          req.headers.set('Authorization', 'Bearer ${cfg.apiKey}');
+          req.write(json.encode(body));
 
-        final resp = await req.close().timeout(const Duration(seconds: 90));
-        final raw = await resp.transform(utf8.decoder).join();
-        client.close();
+          final resp = await req.close().timeout(const Duration(seconds: 90));
+          final raw = await resp.transform(utf8.decoder).join();
+          client.close();
 
-        if (resp.statusCode != 200) {
-          return {
-            'error':
-                'AI调用失败(${resp.statusCode})：${raw.substring(0, raw.length > 200 ? 200 : raw.length)}',
-          };
+          if (resp.statusCode != 200) {
+            if (_retryableStatus(resp.statusCode) && attempt == 0) {
+              await Future<void>.delayed(const Duration(milliseconds: 600));
+              continue;
+            }
+            return {
+              'error':
+                  'AI调用失败(${resp.statusCode})：${raw.substring(0, raw.length > 200 ? 200 : raw.length)}',
+            };
+          }
+
+          final data = json.decode(raw) as Map<String, dynamic>;
+          return {'data': data};
+        } catch (e) {
+          client.close(force: true);
+          if (attempt == 0) {
+            await Future<void>.delayed(const Duration(milliseconds: 600));
+            continue;
+          }
+          return {'error': 'AI调用异常：$e'};
         }
-
-        final data = json.decode(raw) as Map<String, dynamic>;
-        return {'data': data};
-      } catch (e) {
-        client.close();
-        return {'error': 'AI调用异常：$e'};
       }
+      return {'error': 'AI调用异常：重试后仍无响应'};
     }
 
     return useBigModelVision
         ? _withBigModelVisionGate(sendRequest)
         : sendRequest();
   }
+
+  static bool _retryableStatus(int statusCode) =>
+      statusCode == 408 || statusCode == 429 || statusCode >= 500;
 
   static String _extractOpenAIText(Map<String, dynamic> data) {
     final choices = data['choices'] as List? ?? [];
@@ -358,6 +376,82 @@ class AiService {
       return 'AI返回内容为空（reasoning 内容已生成但未输出最终文本，请尝试增大 max_tokens）';
     }
     return 'AI返回内容为空';
+  }
+
+  static Map<String, dynamic>? _decodeJsonObjectFromAi(String result) {
+    final candidates = <String>[];
+    candidates.add(result.trim());
+    for (final match in RegExp(
+      r'<answer>([\s\S]*?)</answer>',
+      caseSensitive: false,
+    ).allMatches(result)) {
+      candidates.add(match.group(1) ?? '');
+    }
+    for (final match in RegExp(
+      r'```(?:json)?\s*([\s\S]*?)```',
+      caseSensitive: false,
+    ).allMatches(result)) {
+      candidates.add(match.group(1) ?? '');
+    }
+    final withoutThink = result.replaceAll(
+      RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false),
+      '',
+    );
+    candidates.addAll(_jsonObjectCandidates(withoutThink).reversed);
+    candidates.addAll(_jsonObjectCandidates(result).reversed);
+
+    for (final candidate in candidates) {
+      final text = candidate.trim();
+      if (text.isEmpty) continue;
+      try {
+        final decoded = json.decode(text);
+        if (decoded is Map<String, dynamic>) return decoded;
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is Map<String, dynamic>) return item;
+            if (item is Map) return Map<String, dynamic>.from(item);
+          }
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  static List<String> _jsonObjectCandidates(String text) {
+    final candidates = <String>[];
+    var start = -1;
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+    for (var i = 0; i < text.length; i++) {
+      final char = text[i];
+      if (inString) {
+        if (escape) {
+          escape = false;
+        } else if (char == '\\') {
+          escape = true;
+        } else if (char == '"') {
+          inString = false;
+        }
+        continue;
+      }
+      if (char == '"') {
+        inString = true;
+        continue;
+      }
+      if (char == '{') {
+        if (depth == 0) start = i;
+        depth++;
+      } else if (char == '}' && depth > 0) {
+        depth--;
+        if (depth == 0 && start >= 0) {
+          candidates.add(text.substring(start, i + 1));
+          start = -1;
+        }
+      }
+    }
+    return candidates;
   }
 
   static Future<String> chat(
@@ -381,6 +475,7 @@ class AiService {
     String imageBase64,
     String textPrompt, {
     int maxTokens = 4096,
+    bool jsonResponse = false,
   }) async {
     final image = imageBase64.trim();
     final imageUrl =
@@ -402,6 +497,7 @@ class AiService {
         },
       ],
       maxTokens: maxTokens,
+      jsonResponse: jsonResponse,
     );
     if (result['error'] != null) return result['error'] as String;
     return _extractOpenAIText(result['data'] as Map<String, dynamic>);
@@ -412,6 +508,7 @@ class AiService {
     List<String> imageBase64List,
     String textPrompt, {
     int maxTokens = 4096,
+    bool jsonResponse = false,
   }) async {
     final content = <Map<String, dynamic>>[];
     for (final imageBase64 in imageBase64List) {
@@ -432,6 +529,7 @@ class AiService {
         {'role': 'user', 'content': content},
       ],
       maxTokens: maxTokens,
+      jsonResponse: jsonResponse,
     );
     if (result['error'] != null) return result['error'] as String;
     return _extractOpenAIText(result['data'] as Map<String, dynamic>);
@@ -445,13 +543,12 @@ class AiService {
       sys,
       imageBase64,
       '请识别这张iPad关于本机截图中的信息。',
-      maxTokens: 2048,
+      maxTokens: 1536,
+      jsonResponse: true,
     );
     try {
-      String jsonStr = result;
-      final jsonMatch = RegExp(r'\{[^{}]+\}').firstMatch(jsonStr);
-      if (jsonMatch != null) jsonStr = jsonMatch.group(0)!;
-      final map = json.decode(jsonStr) as Map<String, dynamic>;
+      final map = _decodeJsonObjectFromAi(result);
+      if (map == null) throw const FormatException('AI返回格式无法解析');
       return map.map((k, v) => MapEntry(k, v.toString()));
     } catch (_) {
       final serialMatch = RegExp(r'[A-Z0-9]{8,12}').firstMatch(result);
@@ -532,38 +629,41 @@ JSON 字段：
       sys,
       imageBase64,
       '请只读取这张图片中的可见文字，并返回严格 JSON。',
-      maxTokens: 2048,
+      maxTokens: 1536,
+      jsonResponse: true,
     );
     if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
       return {'error': result};
     }
-    try {
-      var jsonStr = result.trim();
-      final match = RegExp(r'\{[\s\S]*\}').firstMatch(jsonStr);
-      if (match != null) jsonStr = match.group(0)!;
-      final decoded = json.decode(jsonStr);
-      if (decoded is Map<String, dynamic>) return decoded;
-      if (decoded is Map) return Map<String, dynamic>.from(decoded);
-      return {'error': 'AI返回格式不是对象', '_raw': result};
-    } catch (_) {
-      return {'error': 'AI返回格式无法解析', '_raw': result};
-    }
+    final decoded = _decodeJsonObjectFromAi(result);
+    return decoded ?? {'error': 'AI返回格式无法解析', '_raw': result};
   }
 
   static Future<Map<String, dynamic>> recognizeIpadIntake(
     List<String> imageBase64List, {
     bool supplemental = false,
+    bool croppedRegions = false,
     int totalImageCount = 0,
     List<String> focusFields = const [],
   }) async {
     if (imageBase64List.isEmpty) {
       return {'error': '请先上传设备图片'};
     }
+    if (croppedRegions && !supplemental) {
+      return _recognizeFastCroppedIpadIntake(
+        imageBase64List,
+        totalImageCount: totalImageCount,
+      );
+    }
     final modePrompt =
         supplemental
             ? '本次只是在主识别缺字段时补看后续图片，重点字段：${focusFields.isEmpty ? "缺失字段" : focusFields.join("、")}。只填写图片中能直接确认的信息；后续外观图只能补充颜色/配件/可见风险，不能推翻关于本机、设置页、爱思/沙漏图里的文字证据，也不要根据外观猜型号。'
             : '本次是主识别：默认优先看图1、图2、图3。图1/图2通常是关于本机或设置截图，用来确认型号、容量、序列号、网络；图3通常是爱思/沙漏验机图，用来确认电池健康、充电次数、全绿状态、零售机/官换机。后续外观图不能推翻图1/图2/图3里的文字证据；如果文字证据不足，宁可返回"未知"，不要为了补齐字段而猜测。';
     final countPrompt = totalImageCount > 0 ? '用户本次共上传$totalImageCount张图。' : '';
+    final cropPrompt =
+        croppedRegions
+            ? '本次传入的是自动框选后的关键区域裁剪图，通常包含：关于本机右侧信息区、爱思/沙漏检测表、底部电池寿命/充电次数信息栏。请把这些裁剪图当作原图证据读取，优先识别文字，不要因为缺少整机外观而降低关于本机和验机报告字段置信度。'
+            : '';
     const sys = '''
 你是二手 iPad 入库验货助手。你会同时看到最多 12 张图片，可能包含：
 - 设置 > 关于本机截图
@@ -575,6 +675,9 @@ JSON 字段：
 1. 图1优先级最高，一般是“关于本机”。型号名称、订货号、序列号、容量、系统里显示的网络信息，以图1清晰文字为准。
 2. 图2作为第二优先级，可用于交叉确认；如果它只是本 App 的识别结果页或非原始检测来源，不要用它覆盖图1/图3。
 3. 图3一般是爱思/沙漏验机报告。优先从这里读取电池健康、充电次数、验机是否全绿、零售机/官换机/官修机状态。
+   - 爱思/沙漏报告里的“电池寿命 93%”必须输出 batteryHealth="93"、batteryHealthRaw="电池寿命 93%"。
+   - 爱思/沙漏报告里的“充电次数 676次”必须输出 cycleCount="676"、cycleCountRaw="充电次数 676次"。
+   - 爱思/沙漏报告里的“设备型号/销售型号/监管型号”要写入 modelEvidenceText，例如“11寸 iPad Pro 第2代 / MY252 / A2228”。
 4. 外观实拍图只可辅助颜色判断，不能用来猜代数、容量、网络或电池。
 5. 后续补看图片只能补缺失字段，不能覆盖已经从关于本机、设置页、爱思/沙漏图中读到的直接文字证据。
 外观和屏幕瑕疵由人工勾选录入，你不要替用户判断划痕、磕碰、掉漆、屏幕出线、亮点、坏点、压伤、漏液等外观细节。
@@ -612,11 +715,14 @@ JSON 字段：
   "network": "WiFi/WiFi+蜂窝/未知",
   "condition": "全新/99新/95新/9成新/8成新/7成新/未知",
   "batteryHealth": "数字百分比，不带%或未知",
+  "batteryHealthRaw": "验机报告或电池页原文，如 电池寿命 93% 或未知",
   "cycleCount": "数字或未知",
+  "cycleCountRaw": "验机报告或电池页原文，如 充电次数 676次 或未知",
   "inspectionTool": "爱思/沙漏/系统设置/未知",
   "machineType": "零售机/官换机/官修机/演示机/未知",
   "allGreen": "true/false/未知",
   "inspectionSummary": "验机报告核心结论，如 爱思全绿零售机/未知",
+  "inspectionEvidenceText": "验机报告中逐字读到的关键原文汇总，如 设备型号/销售型号/监管型号/电池寿命/充电次数",
   "accessories": "裸机/盒装/原装充电器/妙控键盘/Apple Pencil/未知",
   "idLockClean": true,
   "iCloudLock": false,
@@ -638,11 +744,14 @@ JSON 字段：
     "network": 0.0,
     "condition": 0.0,
     "batteryHealth": 0.0,
+    "batteryHealthRaw": 0.0,
     "cycleCount": 0.0,
+    "cycleCountRaw": 0.0,
     "inspectionTool": 0.0,
     "machineType": 0.0,
     "allGreen": 0.0,
     "inspectionSummary": 0.0,
+    "inspectionEvidenceText": 0.0,
     "iCloudLock": 0.0,
     "activationLock": 0.0,
     "mdm": 0.0,
@@ -675,23 +784,97 @@ JSON 字段：
     final result = await chatWithImages(
       sys,
       imageBase64List,
-      '$countPrompt$modePrompt\n请识别这批 iPad 入库图片，并返回严格 JSON。',
-      maxTokens: 4096,
+      '$countPrompt$cropPrompt$modePrompt\n请识别这批 iPad 入库图片，并返回严格 JSON。',
+      maxTokens: 3072,
+      jsonResponse: true,
     );
     if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
       return {'error': result};
     }
-    try {
-      var jsonStr = result.trim();
-      final match = RegExp(r'\{[\s\S]*\}').firstMatch(jsonStr);
-      if (match != null) jsonStr = match.group(0)!;
-      final decoded = json.decode(jsonStr);
-      if (decoded is Map<String, dynamic>) return decoded;
-      if (decoded is Map) return Map<String, dynamic>.from(decoded);
-      return {'error': 'AI返回格式不是对象', '_raw': result};
-    } catch (_) {
-      return {'error': 'AI返回格式无法解析', '_raw': result};
+    final decoded = _decodeJsonObjectFromAi(result);
+    return decoded ?? {'error': 'AI返回格式无法解析', '_raw': result};
+  }
+
+  static Future<Map<String, dynamic>> _recognizeFastCroppedIpadIntake(
+    List<String> imageBase64List, {
+    int totalImageCount = 0,
+  }) async {
+    final countPrompt = totalImageCount > 0 ? '用户本次共上传$totalImageCount张图。' : '';
+    const sys = '''
+你是二手 iPad 入库的三图定向识别助手。本次只会看到前三张上传原图的自动裁剪区域；第4张上传原图及后续原图不会提供，也不要推断。
+
+裁剪图顺序固定：
+1. 第1张上传图的背面颜色采样点A，只用于判断机身颜色。
+2. 第1张上传图的背面颜色采样点B，只用于判断机身颜色。
+3. 第2张上传图的“关于本机”信息区域，用于读取型号名称、订货号、序列号、容量、系统版本。
+4. 第3张上传图的爱思/沙漏中下方信息区域，用于读取电池寿命、充电次数、激活/越狱/锁状态、序列号匹配、五码匹配。
+
+强制规则：
+1. 只读取这些裁剪图中清晰可见的信息。不要根据外观猜型号、容量、网络、电池。
+2. 第1、2张裁剪图只判断颜色，不要从它们读取贴纸、序列号、容量或电池字段。
+3. 型号、序列号、容量必须优先来自第3张“关于本机”裁剪图。
+4. 电池健康度、充电次数必须优先来自第4张爱思/沙漏底部裁剪图，并且只输出纯数字。例如“电池寿命 93%”输出 batteryHealth="93"；“充电次数 676次”输出 cycleCount="676"。
+5. 如果容量显示“128 GB/256 GB/512 GB/1 TB”，capacity 分别输出 128G/256G/512G/1TB。
+6. 如果关于本机写着“iPad Pro（11英寸）（第2代）/ MY252 / A2228”，model 输出 "iPad Pro 11 2020 (A12Z)"，不要输出 2024/M4。
+7. 如果爱思底部显示“Apple ID锁 未开启/激活状态 已激活/越狱状态 未越狱/Wi-Fi模块 高通Wi-Fi/序列号匹配 是/五码匹配 是”，写入 inspectionEvidenceText，可把 idLockClean 写 true；看不清就保持 false 并降低置信度。
+8. 输出必须是严格 JSON，不要 Markdown，不要解释。
+
+JSON 字段：
+{
+  "serial": "序列号或未知",
+  "serialRaw": "序列号原文或未知",
+  "model": "标准型号或未知",
+  "modelName": "型号名称原文或未知",
+  "modelEvidenceText": "型号相关原文或未知",
+  "modelNumber": "Axxxx 或未知",
+  "partNumber": "订货号或未知",
+  "capacity": "64G/128G/256G/512G/1TB/未知",
+  "capacityRaw": "容量原文或未知",
+  "color": "颜色或未知",
+  "network": "WiFi/WiFi+蜂窝/未知",
+  "batteryHealth": "纯数字或未知",
+  "batteryHealthRaw": "电池健康原文或未知",
+  "cycleCount": "纯数字或未知",
+  "cycleCountRaw": "充电次数原文或未知",
+  "inspectionTool": "爱思/沙漏/系统设置/本App截图/未知",
+  "machineType": "零售机/官换机/官修机/演示机/未知",
+  "allGreen": "true/false/未知",
+  "inspectionSummary": "核心结论或未知",
+  "inspectionEvidenceText": "关键原文汇总或未知",
+  "idLockClean": true,
+  "iCloudLock": false,
+  "activationLock": false,
+  "mdm": false,
+  "configLock": false,
+  "fieldConfidence": {
+    "serial": 0.0,
+    "model": 0.0,
+    "capacity": 0.0,
+    "color": 0.0,
+    "network": 0.0,
+    "batteryHealth": 0.0,
+    "cycleCount": 0.0,
+    "inspectionTool": 0.0,
+    "machineType": 0.0,
+    "allGreen": 0.0,
+    "lockStatus": 0.0
+  },
+  "confidence": 0.0,
+  "warnings": []
+}
+''';
+    final result = await chatWithImages(
+      sys,
+      imageBase64List,
+      '$countPrompt请快速读取这些裁剪区域，返回严格 JSON。核心字段看不清就填"未知"。',
+      maxTokens: 1280,
+      jsonResponse: true,
+    );
+    if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
+      return {'error': result};
     }
+    final decoded = _decodeJsonObjectFromAi(result);
+    return decoded ?? {'error': 'AI返回格式无法解析', '_raw': result};
   }
 
   static Future<String> priceAdvice({

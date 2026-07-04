@@ -17,7 +17,8 @@ $DeepSellSyncToken = ""
 $DeepSellSyncEmail = ""
 $DeepSellSyncPassword = ""
 $DeepSellFallbackBaseUrl = ""
-$DeepSellFallbackVersionUrl = ""
+$DefaultDeepSellFallbackVersionUrl = "https://42.193.131.66/api/version"
+$DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
 
 $LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
 if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
@@ -29,7 +30,7 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
   $DeepSellSyncEmail = ""
   $DeepSellSyncPassword = ""
   $DeepSellFallbackBaseUrl = ""
-  $DeepSellFallbackVersionUrl = ""
+  $DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
   . $LocalConfig
 
   if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
@@ -235,6 +236,14 @@ try {
   $OwnerSyncToken = First-NonEmpty $env:DEEPSELL_SYNC_TOKEN $DeepSellSyncToken
   $OwnerSyncEmail = First-NonEmpty $env:DEEPSELL_SYNC_EMAIL $DeepSellSyncEmail
   $OwnerSyncPassword = First-NonEmpty $env:DEEPSELL_SYNC_PASSWORD $DeepSellSyncPassword
+  $FallbackBaseUrl = First-NonEmpty $env:DEEPSELL_FALLBACK_BASE_URL $DeepSellFallbackBaseUrl
+  $FallbackVersionUrl = First-NonEmpty $env:DEEPSELL_FALLBACK_VERSION_URL $DeepSellFallbackVersionUrl
+  if ($FallbackBaseUrl -or $FallbackVersionUrl) {
+    Add-DartDefine $BuildArgs "DEEPSELL_ALLOW_INSECURE_IP_FALLBACK" "true"
+    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_BASE_URL" $FallbackBaseUrl
+    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_VERSION_URL" $FallbackVersionUrl
+    Write-Host "Fallback update endpoint: included."
+  }
   $HasOwnerCredential = $OwnerSyncToken -or ($OwnerSyncEmail -and $OwnerSyncPassword)
   $IncludePrivateOwnerSync = (-not $NoPrivateOwnerSync) -and ($PrivateOwnerSync -or $HasOwnerCredential)
   if ($IncludePrivateOwnerSync) {
@@ -245,9 +254,6 @@ try {
     Add-DartDefine $BuildArgs "DEEPSELL_SYNC_TOKEN" $OwnerSyncToken
     Add-DartDefine $BuildArgs "DEEPSELL_SYNC_EMAIL" $OwnerSyncEmail
     Add-DartDefine $BuildArgs "DEEPSELL_SYNC_PASSWORD" $OwnerSyncPassword
-    Add-DartDefine $BuildArgs "DEEPSELL_ALLOW_INSECURE_IP_FALLBACK" "true"
-    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_BASE_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_BASE_URL $DeepSellFallbackBaseUrl)
-    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_VERSION_URL" (First-NonEmpty $env:DEEPSELL_FALLBACK_VERSION_URL $DeepSellFallbackVersionUrl)
     Write-Host "Private owner background sync: included."
   } elseif ($NoPrivateOwnerSync) {
     Write-Host "Private owner background sync: disabled by -NoPrivateOwnerSync."
