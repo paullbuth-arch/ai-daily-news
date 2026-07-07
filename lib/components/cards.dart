@@ -30,7 +30,7 @@ class AppCard extends StatelessWidget {
     child: GlassPanel(
       padding: padding ?? const EdgeInsets.all(C.sp16),
       radius: radius,
-      color: bgColor,
+      color: bgColor ?? C.bgCard,
       gradient: customGradient ?? (gradient ? C.glassGradient : null),
       child: child,
     ),
@@ -54,6 +54,8 @@ class PageCard extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: C.sp12),
     child: GlassPanel(
       padding: padding ?? const EdgeInsets.all(C.sp16),
+      radius: C.radiusLg,
+      color: C.bgCard,
       child: child,
     ),
   );
@@ -73,12 +75,8 @@ class HeroCard extends StatelessWidget {
     child: GlassPanel(
       padding: padding ?? const EdgeInsets.all(C.sp20),
       radius: C.radiusXl,
-      gradient: const LinearGradient(
-        colors: [Color(0xFF2A313B), Color(0xFF10131A)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderColor: Colors.white24,
+      gradient: C.heroGradient,
+      borderColor: C.navBorder,
       child: child,
     ),
   );
@@ -93,7 +91,8 @@ class CardBox extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: GlassPanel(
       padding: const EdgeInsets.all(16),
-      radius: C.radiusMd,
+      radius: C.radiusLg,
+      color: C.bgCard,
       child: child,
     ),
   );

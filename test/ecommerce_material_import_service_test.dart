@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -150,15 +151,148 @@ void main() {
 </body>
 </html>
 ''');
+      } else if (path == '/generic-video') {
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Generic Video Product</title>
+  <meta property="og:title" content="Generic Video Product">
+  <meta property="og:description" content="Page with a downloadable video">
+  <meta property="og:image" content="/img/main.jpg">
+  <meta property="og:video" content="/media/item.mp4">
+</head>
+<body>
+  <video src="/media/item.mp4"></video>
+</body>
+</html>
+''');
+      } else if (path == '/quality-video') {
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Quality Video Product</title>
+  <meta property="og:title" content="Quality Video Product">
+  <meta property="og:video" content="/stream/demo_360.mp4?ratio=360p">
+</head>
+<body>
+  <video src="/stream/demo_360.mp4?ratio=360p"></video>
+  <source src="/stream/demo_1080.mp4?ratio=1080p">
+</body>
+</html>
+''');
+      } else if (path == '/douyin') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        final cover = 'http://$host:$port/douyin-img/cover.jpeg?sign=cover';
+        final video =
+            'http://$host:$port/aweme/v1/play/?video_id=douyin_test&ratio=720p';
+        final renderData = Uri.encodeComponent(
+          json.encode({
+            'aweme': {
+              'detail': {
+                'desc': 'Douyin iPad demo body',
+                'images': [
+                  {
+                    'url_list': [cover],
+                  },
+                ],
+                'video': {
+                  'play_addr': {
+                    'url_list': [video],
+                  },
+                },
+              },
+            },
+          }),
+        );
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Douyin Share</title>
+  <meta property="og:title" content="Douyin iPad demo">
+  <meta property="og:description" content="Douyin iPad demo body">
+  <meta property="og:image" content="$cover">
+</head>
+<body>
+  <script id="RENDER_DATA" type="application/json">$renderData</script>
+</body>
+</html>
+''');
+      } else if (path == '/video/7651960984093110778') {
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head><title>Douyin shell</title></head>
+<body>douyin page without media</body>
+</html>
+''');
+      } else if (path == '/share/video/7651960984093110778/') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        final video =
+            'http://$host:$port/aweme/v1/play/?video_id=douyin_fallback&ratio=720p';
+        final routerData = json.encode({
+          'loaderData': {
+            'video_(id)/page': {
+              'videoInfoRes': {
+                'item_list': [
+                  {
+                    'desc': 'Douyin fallback body',
+                    'video': {
+                      'play_addr': {
+                        'url_list': [video],
+                      },
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        });
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Douyin fallback share</title>
+  <meta property="og:description" content="Douyin fallback body">
+</head>
+<body>
+  <script>window._ROUTER_DATA = $routerData</script>
+</body>
+</html>
+''');
       } else if (path.startsWith('/img/') || path.startsWith('/xhs-img/')) {
         request.response.headers.contentType =
             path.endsWith('.png')
                 ? ContentType('image', 'png')
                 : ContentType('image', 'jpeg');
         request.response.add([1, 2, 3, 4, 5]);
+      } else if (path.startsWith('/douyin-img/')) {
+        request.response.headers.contentType = ContentType('image', 'jpeg');
+        request.response.add([9, 8, 7, 6, 5]);
       } else if (path.startsWith('/rec-img/')) {
         request.response.headers.contentType = ContentType('image', 'jpeg');
         request.response.add([6, 7, 8]);
+      } else if (path.startsWith('/media/')) {
+        request.response.headers.contentType = ContentType('video', 'mp4');
+        request.response.add(List<int>.filled(18, 8));
+      } else if (path.startsWith('/stream/')) {
+        request.response.headers.contentType = ContentType('video', 'mp4');
+        final isHigh = path.contains('1080');
+        request.response.add(
+          List<int>.filled(isHigh ? 32 : 12, isHigh ? 10 : 3),
+        );
+      } else if (path.startsWith('/aweme/v1/play')) {
+        request.response.headers.contentType = ContentType.binary;
+        request.response.add(List<int>.filled(20, 9));
       } else if (path.startsWith('/video/')) {
         request.response.headers.contentType = ContentType('video', 'mp4');
         request.response.add(List<int>.filled(16, 7));
@@ -296,6 +430,129 @@ void main() {
     },
   );
 
+  test('downloads generic page videos as link material', () async {
+    final url = Uri(
+      scheme: 'http',
+      host: InternetAddress.loopbackIPv4.host,
+      port: server.port,
+      path: '/generic-video',
+    );
+
+    final result = await EcommerceMaterialImportService.importFromText(
+      'generic product $url',
+      docDir: tmp.path,
+    );
+
+    expect(result.title, 'Generic Video Product');
+    expect(result.images, hasLength(1));
+    expect(result.videos, hasLength(1));
+    expect(result.candidateVideoCount, 1);
+    expect(File(result.videos.single.savedPath).existsSync(), true);
+  });
+
+  test('saves image and video link manifest for imported media', () async {
+    final url = Uri(
+      scheme: 'http',
+      host: InternetAddress.loopbackIPv4.host,
+      port: server.port,
+      path: '/generic-video',
+    );
+
+    final result = await EcommerceMaterialImportService.importFromText(
+      'generic product $url',
+      docDir: tmp.path,
+    );
+
+    expect(result.linkManifestPath, isNotNull);
+    final manifest =
+        json.decode(await File(result.linkManifestPath!).readAsString())
+            as Map<String, dynamic>;
+
+    expect(manifest['sourceUrl'], url.toString());
+    expect(manifest['downloadedImageCount'], 1);
+    expect(manifest['downloadedVideoCount'], 1);
+    expect(manifest['images'], hasLength(1));
+    expect(manifest['videos'], hasLength(1));
+    expect(
+      (manifest['images'] as List).single['downloadedUrl'],
+      contains('/img/main.jpg'),
+    );
+    expect(
+      (manifest['videos'] as List).single['downloadedUrl'],
+      contains('/media/item.mp4'),
+    );
+    expect(manifest['watermarkHandling']['pixelEditing'], false);
+  });
+
+  test(
+    'downloads highest quality variant when video alternatives exist',
+    () async {
+      final url = Uri(
+        scheme: 'http',
+        host: InternetAddress.loopbackIPv4.host,
+        port: server.port,
+        path: '/quality-video',
+      );
+
+      final result = await EcommerceMaterialImportService.importFromText(
+        'quality product $url',
+        docDir: tmp.path,
+        maxVideos: 1,
+      );
+
+      expect(result.videos, hasLength(1));
+      expect(result.videos.single.downloadedUrl.toString(), contains('1080'));
+      expect(await File(result.videos.single.savedPath).length(), 32);
+    },
+  );
+
+  test('extracts douyin image and video from encoded render data', () async {
+    final url = Uri(
+      scheme: 'http',
+      host: InternetAddress.loopbackIPv4.host,
+      port: server.port,
+      path: '/douyin',
+    );
+
+    final result = await EcommerceMaterialImportService.importFromText(
+      'douyin share $url',
+      docDir: tmp.path,
+    );
+
+    expect(result.platform, '抖音');
+    expect(result.title, 'Douyin iPad demo');
+    expect(result.description, 'Douyin iPad demo body');
+    expect(result.images, hasLength(1));
+    expect(result.videos, hasLength(1));
+    expect(result.candidateVideoCount, 1);
+    expect(File(result.images.single.savedPath).existsSync(), true);
+    expect(File(result.videos.single.savedPath).existsSync(), true);
+  });
+
+  test(
+    'falls back to douyin share page when video page has no media',
+    () async {
+      final url = Uri(
+        scheme: 'http',
+        host: InternetAddress.loopbackIPv4.host,
+        port: server.port,
+        path: '/video/7651960984093110778',
+      );
+
+      final result = await EcommerceMaterialImportService.importFromText(
+        'douyin shell $url',
+        docDir: tmp.path,
+      );
+
+      expect(result.platform, '抖音');
+      expect(result.finalUrl.path, '/share/video/7651960984093110778/');
+      expect(result.description, 'Douyin fallback body');
+      expect(result.videos, hasLength(1));
+      expect(result.candidateVideoCount, 1);
+      expect(File(result.videos.single.savedPath).existsSync(), true);
+    },
+  );
+
   test('cleans platform image processing params without pixel editing', () {
     final cleaned = EcommerceMaterialImportService.cleanPlatformImageUrl(
       Uri.parse(
@@ -329,6 +586,41 @@ void main() {
     );
 
     expect(itemId, '1050975779389');
+  });
+
+  test('extracts goofish videos from detail videoPlayInfo', () {
+    final urls = EcommerceMaterialImportService.extractGoofishVideoUrls({
+      'flowData': {
+        'body': {
+          'sections': [
+            {
+              'components': [
+                {
+                  'data': {
+                    'videoPlayInfo': {
+                      'ld320pUrl':
+                          'https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/d/ld/572665021724.mp4',
+                      'sd480pUrl':
+                          'https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/d/sd/572665021724.mp4',
+                      'playUrl':
+                          'http://xianyu-video.alicdn.com/aus/xianyu_item/438225802/E730F4621E9F47D8A6CDC41F8F6B84DC',
+                      'url': 'http://img.alicdn.com/bao/uploaded/cover.jpg',
+                    },
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    expect(urls, hasLength(2));
+    expect(
+      urls.first.toString(),
+      'https://cloud.video.taobao.com/play/u/1/p/1/e/6/t/1/d/sd/572665021724.mp4',
+    );
+    expect(urls.last.host, 'xianyu-video.alicdn.com');
   });
 
   test('does not treat ordinary taobao short links as goofish', () {

@@ -126,7 +126,7 @@ if (-not $SourceFlutter -or -not (Test-Path -LiteralPath (Join-Path $SourceFlutt
 if (-not $SourceJdk -or -not (Test-Path -LiteralPath (Join-Path $SourceJdk "bin\java.exe"))) {
   throw "Source JDK not found. Put JDK 17 in dev_env, set JAVA_HOME, or pass -SourceJdk."
 }
-if (-not $SourceAndroidSdk -or -not (Test-Path -LiteralPath (Join-Path $SourceAndroidSdk "platforms\android-35\android.jar"))) {
+if (-not $SourceAndroidSdk -or -not (Test-Path -LiteralPath (Join-Path $SourceAndroidSdk "platforms\android-36\android.jar"))) {
   throw "Source Android SDK not found. Put it in dev_env\android-sdk, set ANDROID_HOME, or pass -SourceAndroidSdk."
 }
 

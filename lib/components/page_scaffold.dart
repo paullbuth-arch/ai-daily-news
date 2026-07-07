@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
@@ -6,69 +5,54 @@ class AppBackdrop extends StatelessWidget {
   const AppBackdrop({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-    child: CustomPaint(
-      painter: _BackdropPainter(),
-      isComplex: true,
-      willChange: false,
-      child: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF46484F), Color(0xFF2C3035), Color(0xFF1F2228)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
+  Widget build(BuildContext context) => const DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        colors: [Color(0xFF081018), C.bgDeep, Color(0xFF05070A)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
+    ),
+    child: CustomPaint(
+      painter: _OpsBackdropPainter(),
+      child: SizedBox.expand(),
     ),
   );
 }
 
-class _BackdropPainter extends CustomPainter {
+class _OpsBackdropPainter extends CustomPainter {
+  const _OpsBackdropPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
-    final tealGlow =
+    final gridPaint =
         Paint()
-          ..shader = RadialGradient(
-            colors: [C.cyan.withValues(alpha: 0.14), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.18, size.height * 0.08),
-              radius: size.shortestSide * 0.72,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, tealGlow);
-
-    final violetGlow =
-        Paint()
-          ..shader = RadialGradient(
-            colors: [C.purple.withValues(alpha: 0.12), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.92, size.height * 0.82),
-              radius: size.shortestSide * 0.58,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, violetGlow);
-
-    final grain = Paint()..color = Colors.white.withValues(alpha: 0.018);
-    const gap = 5.0;
-    for (double y = 0; y < size.height; y += gap) {
-      for (double x = 0; x < size.width; x += gap) {
-        final v = ((x * 17 + y * 31).round() % 11);
-        if (v == 0 || v == 3) {
-          canvas.drawCircle(Offset(x, y), 0.45, grain);
-        }
-      }
+          ..color = C.primary.withValues(alpha: 0.035)
+          ..strokeWidth = 1;
+    const gap = 28.0;
+    for (double x = 0; x <= size.width; x += gap) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
+    for (double y = 0; y <= size.height; y += gap) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    final horizon =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Colors.transparent, C.primary, Colors.transparent],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(0, size.height * 0.18),
+      Offset(size.width, size.height * 0.18),
+      horizon,
+    );
 
     final shade =
         Paint()
           ..shader = LinearGradient(
-            colors: [
-              Colors.black.withValues(alpha: 0.04),
-              Colors.black.withValues(alpha: 0.42),
-            ],
+            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.42)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(Offset.zero & size);
@@ -105,116 +89,30 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallbackGradient = LinearGradient(
-      colors: [
-        Colors.white.withValues(alpha: 0.075),
-        Colors.white.withValues(alpha: 0.030),
-        Colors.black.withValues(alpha: 0.10),
-      ],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(radius),
+      side: BorderSide(color: borderColor ?? C.border),
     );
-    final content = Container(
-      margin: margin,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: C.cardShadow,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: Stack(
-          children: [
-            if (realtimeBlur)
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color:
-                      gradient == null
-                          ? (color ?? C.bgCard.withValues(alpha: 0.82))
-                          : null,
-                  gradient:
-                      gradient ?? (color == null ? fallbackGradient : null),
-                  borderRadius: BorderRadius.circular(radius),
-                ),
-              ),
-            ),
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _GlassSkinPainter(
-                  radius: radius,
-                  borderColor:
-                      borderColor ?? Colors.white.withValues(alpha: 0.09),
-                ),
-                isComplex: false,
-                willChange: false,
-              ),
-            ),
-            Padding(padding: padding, child: child),
-          ],
+    final surface = Material(
+      color: Colors.transparent,
+      shape: shape,
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: BoxDecoration(
+          color: gradient == null ? (color ?? C.bgCard) : null,
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(radius),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(radius),
+          child: Padding(padding: padding, child: child),
         ),
       ),
     );
-    final panel = RepaintBoundary(child: content);
-    if (onTap == null) return panel;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(radius),
-        child: panel,
-      ),
-    );
+    if (margin == null) return surface;
+    return Padding(padding: margin!, child: surface);
   }
-}
-
-class _GlassSkinPainter extends CustomPainter {
-  final double radius;
-  final Color borderColor;
-
-  const _GlassSkinPainter({required this.radius, required this.borderColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(radius));
-
-    final borderPaint =
-        Paint()
-          ..color = borderColor
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1;
-    canvas.drawRRect(rrect.deflate(0.5), borderPaint);
-
-    final topHighlight =
-        Paint()
-          ..shader = LinearGradient(
-            colors: [Colors.white.withValues(alpha: 0.16), Colors.transparent],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.42));
-    canvas.drawRRect(rrect, topHighlight);
-
-    final edgeLight =
-        Paint()
-          ..shader = LinearGradient(
-            colors: [Colors.white.withValues(alpha: 0.13), Colors.transparent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2;
-    canvas.drawRRect(rrect.deflate(1.0), edgeLight);
-  }
-
-  @override
-  bool shouldRepaint(covariant _GlassSkinPainter oldDelegate) =>
-      oldDelegate.radius != radius || oldDelegate.borderColor != borderColor;
 }
 
 class RoundIconButton extends StatelessWidget {
@@ -234,19 +132,18 @@ class RoundIconButton extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(size / 2),
-      child: Ink(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: background ?? Colors.white.withValues(alpha: 0.08),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
-        ),
+  Widget build(BuildContext context) => SizedBox(
+    width: size,
+    height: size,
+    child: Material(
+      color: background ?? C.bgSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusMd),
+        side: const BorderSide(color: C.border),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
         child: Icon(icon, color: color ?? C.t1, size: size * 0.48),
       ),
     ),
@@ -261,22 +158,23 @@ class AppLayout {
 
   static double pageHorizontal(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
+    if (width >= 900) return 24;
     if (width >= 720) return 20;
     if (width <= 380) return 14;
     return 16;
   }
 
   static double titleSize(BuildContext context) =>
-      MediaQuery.of(context).size.width <= 390 ? 23 : 25;
+      MediaQuery.of(context).size.width <= 390 ? 21 : 22;
 
   static double scrollBottomPadding(BuildContext context) =>
-      hasSideDock(context) ? 30 : 120;
+      hasSideDock(context) ? 28 : 104;
 
   static EdgeInsets pagePadding(BuildContext context) {
     final horizontal = pageHorizontal(context);
     return EdgeInsets.fromLTRB(
       horizontal,
-      12,
+      14,
       horizontal,
       scrollBottomPadding(context),
     );
@@ -312,7 +210,7 @@ class PageScaffold extends StatelessWidget {
             children: [
               if (title != null || action != null)
                 Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.only(bottom: 14),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -323,13 +221,16 @@ class PageScaffold extends StatelessWidget {
                             if (title != null) title!,
                             if (subtitle != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 5),
+                                padding: const EdgeInsets.only(top: 4),
                                 child: subtitle!,
                               ),
                           ],
                         ),
                       ),
-                      if (action != null) action!,
+                      if (action != null) ...[
+                        const SizedBox(width: 12),
+                        action!,
+                      ],
                     ],
                   ),
                 ),
@@ -408,7 +309,7 @@ class NeonCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: padding,
-    borderColor: (glowColor ?? C.cyan).withValues(alpha: 0.18),
+    borderColor: (glowColor ?? C.cyan).withValues(alpha: 0.36),
     onTap: onTap,
     child: child,
   );

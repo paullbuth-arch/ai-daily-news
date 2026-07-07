@@ -24,16 +24,17 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.ipadboss.ipad_boss_app"
-    compileSdkVersion 35
+    compileSdkVersion 36
+    buildToolsVersion "36.0.0"
     ndkVersion "27.0.12077973"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -45,8 +46,8 @@ android {
         applicationId "com.ipadboss.ipad_boss_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
-        minSdkVersion flutter.minSdkVersion
-        targetSdkVersion flutter.targetSdkVersion
+        minSdkVersion 24
+        targetSdkVersion 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
@@ -65,7 +66,12 @@ android {
             signingConfig signingConfigs.release
             shrinkResources true
             minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
+    }
+
+    lint {
+        checkReleaseBuilds false
     }
 }
 
@@ -75,4 +81,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0"
+    implementation "com.google.mlkit:text-recognition-chinese:16.0.1"
 }

@@ -115,9 +115,9 @@ class _IpadBossAppState extends State<IpadBossApp> {
       scaffoldBackgroundColor: C.bgDeep,
       fontFamily: null,
       colorScheme: const ColorScheme.dark(
-        primary: C.cyan,
-        secondary: C.purple,
-        tertiary: C.mint,
+        primary: C.primary,
+        secondary: C.blue,
+        tertiary: C.green,
         surface: C.bgCard,
         onPrimary: Colors.black,
         onSurface: C.t1,
@@ -127,7 +127,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
     return base.copyWith(
       visualDensity: VisualDensity.standard,
       splashColor: C.cyan.withValues(alpha: 0.08),
-      highlightColor: Colors.white.withValues(alpha: 0.04),
+      highlightColor: C.t1.withValues(alpha: 0.04),
       dividerColor: C.divider,
       appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
@@ -143,7 +143,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: C.bgSurface.withValues(alpha: 0.72),
+        fillColor: C.bgSurface,
         hintStyle: const TextStyle(color: C.t3, fontSize: 13),
         labelStyle: const TextStyle(color: C.t2, fontSize: 13),
         contentPadding: const EdgeInsets.symmetric(
@@ -152,49 +152,55 @@ class _IpadBossAppState extends State<IpadBossApp> {
         ),
         border: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          borderSide: const BorderSide(color: C.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          borderSide: const BorderSide(color: C.border),
         ),
         focusedBorder: const OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(C.radiusMd)),
-          borderSide: BorderSide(color: C.cyan, width: 1.4),
+          borderSide: BorderSide(color: C.primary, width: 1.4),
         ),
       ),
       cardTheme: CardTheme(
         elevation: 0,
-        color: C.bgCard.withValues(alpha: 0.86),
+        color: C.bgCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusLg),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          side: const BorderSide(color: C.border),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: C.cyan,
+          backgroundColor: C.primary,
           foregroundColor: Colors.black,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: C.cyan,
+          backgroundColor: C.primary,
           foregroundColor: Colors.black,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
-          shape: const StadiumBorder(),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: C.t1,
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-          shape: const StadiumBorder(),
+          side: const BorderSide(color: C.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
         ),
       ),
     );

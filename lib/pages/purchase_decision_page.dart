@@ -8,7 +8,12 @@ import 'market_price_page.dart';
 import 'restock_suggestion_page.dart';
 
 class PurchaseDecisionPage extends StatefulWidget {
-  const PurchaseDecisionPage({Key? key}) : super(key: key);
+  final String? initialModel;
+  final int? initialCostFen;
+
+  const PurchaseDecisionPage({Key? key, this.initialModel, this.initialCostFen})
+    : super(key: key);
+
   @override
   State<PurchaseDecisionPage> createState() => _PurchaseDecisionPageState();
 }
@@ -34,6 +39,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
     super.initState();
     _costCtrl.addListener(_onInputChanged);
     _qtyCtrl.addListener(_onInputChanged);
+    _applyInitialInput();
   }
 
   @override
@@ -48,6 +54,29 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
   void _onInputChanged() {
     if (_suppressInputNotify || !mounted) return;
     setState(() => _aiResult = null);
+  }
+
+  void _applyInitialInput() {
+    final model = widget.initialModel?.trim();
+    if (model == null || model.isEmpty) return;
+
+    final ref = _computeRefPrices(model);
+    final market = gStorage.getMarketPrice(model);
+    final history = gStorage.getMarketPriceHistory(model, days: 30);
+    final analysis = gStorage.getModelAnalysis(model);
+    final initialCost = widget.initialCostFen ?? _initialCost(ref, market);
+
+    _suppressInputNotify = true;
+    if (initialCost > 0) {
+      _costCtrl.text = (initialCost / 100).toStringAsFixed(0);
+    }
+    _suppressInputNotify = false;
+
+    _selectedModel = model;
+    _analysis = analysis;
+    _refPrices = ref;
+    _marketPrice = market;
+    _marketHistory = history;
   }
 
   List<String> get _modelOptions {

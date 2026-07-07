@@ -107,8 +107,8 @@ $Checks = @(
   [pscustomobject]@{ Name = "DevEnv"; Path = $DevEnv; Required = "jdk + android-sdk"; Ok = [bool]$DevEnv },
   [pscustomobject]@{ Name = "Flutter"; Path = $FlutterSdk; Required = "bin\flutter.bat"; Ok = $FlutterSdk -and (Test-Path -LiteralPath (Join-Path $FlutterSdk "bin\flutter.bat")) },
   [pscustomobject]@{ Name = "JDK"; Path = $Jdk; Required = "bin\java.exe"; Ok = $Jdk -and (Test-Path -LiteralPath (Join-Path $Jdk "bin\java.exe")) },
-  [pscustomobject]@{ Name = "Android SDK"; Path = $AndroidSdk; Required = "platforms\android-35"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "platforms\android-35\android.jar")) },
-  [pscustomobject]@{ Name = "Android build-tools"; Path = $AndroidSdk; Required = "build-tools"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "build-tools")) },
+  [pscustomobject]@{ Name = "Android SDK"; Path = $AndroidSdk; Required = "platforms\android-36"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "platforms\android-36\android.jar")) },
+  [pscustomobject]@{ Name = "Android build-tools"; Path = $AndroidSdk; Required = "build-tools\36.0.0"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "build-tools\36.0.0")) },
   [pscustomobject]@{ Name = "Android NDK"; Path = $AndroidSdk; Required = "ndk\27.0.12077973"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "ndk\27.0.12077973")) }
 )
 

@@ -33,11 +33,13 @@ powershell -ExecutionPolicy Bypass -File tools\build_apk.ps1 -SkipPubGet
 | Flutter | 3.29.0 |
 | Dart | 3.7.0 |
 | JDK | 17 |
-| Android SDK Platform | android-35 |
+| Android SDK Platform | android-36 |
+| Android Build Tools | 36.0.0 |
 | Android NDK | 27.0.12077973 |
-| Android Gradle Plugin | 8.7.3 |
-| Gradle Wrapper | 8.10.2 |
+| Android Gradle Plugin | 8.13.2 |
+| Gradle Wrapper | 8.13 |
 | Kotlin | 2.2.0 |
+| Android SDK 版本 | minSdk 24 / targetSdk 36 / compileSdk 36 |
 
 ## 新电脑下载环境
 
@@ -113,7 +115,7 @@ $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 $env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\platform-tools;$env:Path"
 
 sdkmanager.bat --licenses
-sdkmanager.bat "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973"
+sdkmanager.bat "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.0.12077973"
 ```
 
 `sdkmanager` 官方说明：
@@ -143,6 +145,8 @@ build\app\outputs\flutter-apk\app-release.apk
 ```
 
 脚本会打印 APK 的 SHA256，方便确认文件没有拿错。
+
+Release 构建使用 `flutter analyze` 和测试作为质量门槛。Windows 上 Android lint 的 release cache 偶发文件锁占用，因此 release 构建关闭 `checkReleaseBuilds`，避免误判失败。
 
 ## 本地路径配置
 

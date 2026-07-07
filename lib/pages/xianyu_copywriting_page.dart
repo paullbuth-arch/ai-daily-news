@@ -201,7 +201,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
         AppFormField(
           controller: _linkCtrl,
           label: '商品链接或分享口令',
-          hint: '粘贴淘宝、京东、拼多多等商品页链接',
+          hint: '粘贴抖音、小红书、淘宝、京东、拼多多等商品页链接',
           icon: Icons.content_paste_rounded,
           keyboardType: TextInputType.multiline,
           maxLines: 3,

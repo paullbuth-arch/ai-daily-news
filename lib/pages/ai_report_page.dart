@@ -5,9 +5,13 @@ import '../utils/utils.dart';
 import '../models.dart';
 import '../ai_service.dart';
 import '../main.dart';
+import '../services/automation_service.dart';
+import '../services/xianyu_copy_service.dart';
 import 'detail_page.dart';
 import 'market_price_page.dart';
 import 'order_detail_page.dart';
+import 'purchase_decision_page.dart';
+import 'restock_suggestion_page.dart';
 import 'stagnant_list_page.dart';
 
 class AiReportPage extends StatefulWidget {
@@ -19,6 +23,7 @@ class AiReportPage extends StatefulWidget {
 class _AiReportPageState extends State<AiReportPage> {
   String? report;
   bool loading = false;
+  final Set<String> _busyTaskIds = <String>{};
 
   Future<void> _gen() async {
     setState(() => loading = true);
@@ -50,9 +55,8 @@ class _AiReportPageState extends State<AiReportPage> {
   Widget build(BuildContext context) {
     final stats = gStorage.computeStats();
     final devices = gStorage.getDevices();
-    final orders =
-        gStorage.getOrders().where((o) => o.status != 'cancelled').toList();
-    final actions = _buildActions(stats, devices, orders);
+    final plan = AutomationService.buildPlan(gStorage);
+    final actions = plan.openTasks;
     final week = _weekSummary();
     final staleCapital = devices
         .where((d) => d.isStagnant)
@@ -66,12 +70,12 @@ class _AiReportPageState extends State<AiReportPage> {
         children: [
           _buildSnapshot(stats, week, staleCapital),
           const SizedBox(height: 2),
-          _SectionHeader(
-            title: '今天先做什么',
-            subtitle: '${actions.where((a) => a.priority <= 2).length} 项需要处理',
-          ),
+          _SectionHeader(title: '今天先做什么', subtitle: _taskSubtitle(plan)),
           const SizedBox(height: 10),
-          ...actions.map(_buildActionCard),
+          if (actions.isEmpty)
+            _buildCompletedCard(plan)
+          else
+            ...actions.map(_buildActionCard),
           const SizedBox(height: 2),
           _buildFocusModels(devices),
           const SizedBox(height: 2),
@@ -79,6 +83,15 @@ class _AiReportPageState extends State<AiReportPage> {
           const SizedBox(height: 12),
         ],
       ),
+      trailing:
+          plan.completedCount > 0
+              ? RoundIconButton(
+                icon: Icons.restart_alt_rounded,
+                onTap: _clearCompletedTasks,
+                color: C.t2,
+                background: Colors.white.withValues(alpha: 0.07),
+              )
+              : null,
     );
   }
 
@@ -157,186 +170,238 @@ class _AiReportPageState extends State<AiReportPage> {
     );
   }
 
-  List<_OpsAction> _buildActions(
-    Stats stats,
-    List<Device> devices,
-    List<Order> orders,
-  ) {
-    final inStock =
-        devices
-            .where((d) => d.status == 'in_stock' || d.status == 'listed')
-            .toList();
-    final unpriced =
-        inStock.where((d) => d.sellPrice <= 0).toList()
-          ..sort((a, b) => b.purchaseCost.compareTo(a.purchaseCost));
-    final stagnant =
-        inStock.where((d) => d.isStagnant).toList()
-          ..sort((a, b) => b.stockDays.compareTo(a.stockDays));
-    final todayKey = _dateKey(DateTime.now());
-    final todayOrders =
-        orders.where((o) => o.createdAt.startsWith(todayKey)).toList();
-    final lowProfitOrders =
-        todayOrders.where((o) => o.netProfit < 15000).toList()
-          ..sort((a, b) => a.netProfit.compareTo(b.netProfit));
-    final pendingOrders = orders.where((o) => o.status == 'pending').toList();
-    final actions = <_OpsAction>[];
-
-    if (unpriced.isNotEmpty) {
-      final capital = unpriced.fold<int>(0, (sum, d) => sum + d.purchaseCost);
-      actions.add(
-        _OpsAction(
-          priority: 1,
-          icon: Icons.edit_note_rounded,
-          color: C.orange,
-          title: '先补齐定价与描述',
-          value: '${unpriced.length}台',
-          detail: '占用 ${yuan(capital)}',
-          reason: '未定价设备无法判断毛利，也不适合直接导出闲鱼资料。',
-          action: '处理首台',
-          lines:
-              unpriced
-                  .take(3)
-                  .map(
-                    (d) =>
-                        '${d.model} ${d.capacity} · 成本${yuan(d.purchaseCost)}',
-                  )
-                  .toList(),
-          onTap:
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => DetailPage(device: unpriced.first),
-                ),
-              ).then((_) => setState(() {})),
-        ),
-      );
-    }
-
-    if (stagnant.isNotEmpty) {
-      final capital = stagnant.fold<int>(0, (sum, d) => sum + d.purchaseCost);
-      actions.add(
-        _OpsAction(
-          priority: 1,
-          icon: Icons.trending_down_rounded,
-          color: C.red,
-          title: '处理滞销资金',
-          value: '${stagnant.length}台',
-          detail: '压住 ${yuan(capital)}',
-          reason: '超过15天还没动销，今天要降价、换标题图，或转快速出货价。',
-          action: '打开滞销列表',
-          lines:
-              stagnant
-                  .take(3)
-                  .map((d) => '${d.model} ${d.capacity} · 已在库${d.stockDays}天')
-                  .toList(),
-          onTap:
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const StagnantListPage()),
-              ).then((_) => setState(() {})),
-        ),
-      );
-    }
-
-    if (pendingOrders.isNotEmpty) {
-      actions.add(
-        _OpsAction(
-          priority: 2,
-          icon: Icons.local_shipping_outlined,
-          color: C.cyan,
-          title: '核对待发货订单',
-          value: '${pendingOrders.length}单',
-          detail: '避免漏发',
-          reason: '待发货订单会拖慢回款和售后响应，先确认物流与买家信息。',
-          action: '处理首单',
-          lines:
-              pendingOrders
-                  .take(3)
-                  .map((o) => '${o.deviceName} · ${yuan(o.amount)}')
-                  .toList(),
-          onTap:
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => OrderDetailPage(order: pendingOrders.first),
-                ),
-              ).then((_) => setState(() {})),
-        ),
-      );
-    }
-
-    if (lowProfitOrders.isNotEmpty) {
-      final min = lowProfitOrders.first.netProfit;
-      actions.add(
-        _OpsAction(
-          priority: min < 0 ? 1 : 2,
-          icon: Icons.warning_amber_rounded,
-          color: min < 0 ? C.red : C.orange,
-          title: min < 0 ? '复盘亏损订单' : '复盘低毛利订单',
-          value: '${lowProfitOrders.length}单',
-          detail: '最低 ${yuan(min)}',
-          reason: '低毛利通常来自拿货过高、维修漏算或平台手续费漏算。',
-          action: null,
-          lines:
-              lowProfitOrders
-                  .take(3)
-                  .map((o) => '${o.deviceName} · 净利${yuan(o.netProfit)}')
-                  .toList(),
-        ),
-      );
-    }
-
-    if (!gStorage.isMarketPriceUpdatedToday() && inStock.isNotEmpty) {
-      actions.add(
-        _OpsAction(
-          priority: 3,
-          icon: Icons.price_change_outlined,
-          color: C.blue,
-          title: '补今日批发价',
-          value: '未更新',
-          detail: '影响采购判断',
-          reason: '采购决策会用今日行情做校验，批发价缺失时只能靠历史均值。',
-          action: '录入行情',
-          lines: const ['至少录入主力型号，采购页会自动带入。'],
-          onTap:
-              () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const MarketPricePage()),
-              ).then((_) => setState(() {})),
-        ),
-      );
-    }
-
-    if (actions.isEmpty) {
-      actions.add(
-        _OpsAction(
-          priority: 4,
-          icon: Icons.check_circle_outline_rounded,
-          color: C.mint,
-          title: '今天没有硬风险',
-          value: '正常',
-          detail: '继续巡检',
-          reason: '先看主力型号有没有低库存，再把新到货的标题图和描述补齐。',
-          action: null,
-          lines: const ['建议保留15分钟做价格巡检，避免采购价跑偏。'],
-        ),
-      );
-    }
-
-    actions.sort((a, b) => a.priority.compareTo(b.priority));
-    return actions.take(5).toList();
+  String _taskSubtitle(AutomationPlan plan) {
+    final open = plan.openTasks.length;
+    if (open == 0) return '今日任务已清空';
+    final parts = <String>[
+      if (plan.criticalCount > 0) '${plan.criticalCount}急',
+      if (plan.warningCount > 0) '${plan.warningCount}提醒',
+      '共$open项',
+      if (plan.completedCount > 0) '已完成${plan.completedCount}',
+    ];
+    return parts.join(' · ');
   }
 
-  Widget _buildActionCard(_OpsAction a) {
-    final urgent = a.priority <= 1;
+  Future<void> _clearCompletedTasks() async {
+    await AutomationService.clearCompletedToday(gStorage);
+    if (!mounted) return;
+    setState(() {});
+    toast(context, '已恢复今日完成项');
+  }
+
+  Future<void> _markTaskDone(AutomationTask task) async {
+    await AutomationService.markCompleted(gStorage, task.id);
+    if (!mounted) return;
+    setState(() {});
+    toast(context, '已从今日清单移除');
+  }
+
+  Future<void> _openPage(Widget page) async {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _runTaskAction(AutomationTask task) async {
+    switch (task.actionKind) {
+      case AutomationActionKind.openDevice:
+        final device = _deviceById(task.deviceId);
+        if (device == null) {
+          toast(context, '设备已经不在库存里');
+          return;
+        }
+        await _openPage(DetailPage(device: device));
+        break;
+      case AutomationActionKind.openOrder:
+        final order = _orderById(task.orderId);
+        if (order == null) {
+          toast(context, '订单已经不存在');
+          return;
+        }
+        await _openPage(OrderDetailPage(order: order));
+        break;
+      case AutomationActionKind.openMarketPrice:
+        await _openPage(const MarketPricePage());
+        break;
+      case AutomationActionKind.openPurchaseDecision:
+        await _openPage(
+          PurchaseDecisionPage(
+            initialModel: task.model,
+            initialCostFen: task.suggestedPriceFen,
+          ),
+        );
+        break;
+      case AutomationActionKind.openRestock:
+        await _openPage(const RestockSuggestionPage());
+        break;
+      case AutomationActionKind.openStagnantList:
+        await _openPage(const StagnantListPage());
+        break;
+      case AutomationActionKind.applyPriceCut:
+        await _applyPriceTask(task);
+        break;
+      case AutomationActionKind.generateCopy:
+        await _generateCopyTask(task);
+        break;
+      case AutomationActionKind.none:
+        await _markTaskDone(task);
+        break;
+    }
+  }
+
+  Future<void> _applyPriceTask(AutomationTask task) async {
+    final device = _deviceById(task.deviceId);
+    final price = task.suggestedPriceFen ?? 0;
+    if (device == null || price <= 0) {
+      await _openPage(const StagnantListPage());
+      return;
+    }
+    final ok = await confirmAction(
+      context,
+      title: '套用建议价格',
+      message:
+          '${device.model} ${device.capacity}\n'
+          '${device.sellPrice > 0 ? '当前售价 ${yuan(device.sellPrice)}\n' : ''}'
+          '建议调整为 ${yuan(price)}。确认后会更新设备售价，并标记为已处理。',
+      confirmText: '确认调整',
+      confirmColor: C.orange,
+    );
+    if (!ok) return;
+    await _withTaskBusy(task, () async {
+      device.sellPrice = price;
+      if (device.status == 'in_stock') device.status = 'listed';
+      await gStorage.updateDevice(device);
+      await AutomationService.markCompleted(gStorage, task.id);
+    });
+    if (!mounted) return;
+    toast(context, '已更新 ${device.model} 售价为 ${yuan(price)}');
+  }
+
+  Future<void> _generateCopyTask(AutomationTask task) async {
+    final device = _deviceById(task.deviceId);
+    if (device == null) {
+      toast(context, '设备已经不在库存里');
+      return;
+    }
+    await _withTaskBusy(task, () async {
+      try {
+        final reference = XianyuCopyService.buildReferenceContext(
+          gStorage,
+          model: device.model,
+          condition: device.condition,
+        );
+        final desc = await AiService.generateDescription(
+          model: device.model,
+          capacity: device.capacity,
+          color: device.color,
+          network: device.network,
+          condition: device.condition,
+          batteryHealth: device.batteryHealth,
+          cycleCount: device.cycleCount,
+          idLockClean: device.idLockClean,
+          accessories: device.accessories,
+          copywritingReference: reference,
+          previousDescription: device.description ?? '',
+        );
+        if (!mounted) return;
+        if (desc.startsWith('AI调用') || desc.startsWith('AI返回')) {
+          toast(context, desc);
+          return;
+        }
+        device.description = desc;
+        await gStorage.updateDevice(device);
+        await AutomationService.markCompleted(gStorage, task.id);
+        if (!mounted) return;
+        toast(context, '已补好 ${device.model} 的闲鱼文案');
+      } catch (e) {
+        if (mounted) toast(context, '文案生成失败：$e');
+      }
+    });
+  }
+
+  Future<void> _withTaskBusy(
+    AutomationTask task,
+    Future<void> Function() run,
+  ) async {
+    if (_busyTaskIds.contains(task.id)) return;
+    setState(() => _busyTaskIds.add(task.id));
+    try {
+      await run();
+    } finally {
+      if (mounted) setState(() => _busyTaskIds.remove(task.id));
+    }
+  }
+
+  Device? _deviceById(String? id) {
+    if (id == null) return null;
+    for (final device in gStorage.getDevices()) {
+      if (device.id == id) return device;
+    }
+    return null;
+  }
+
+  Order? _orderById(String? id) {
+    if (id == null) return null;
+    for (final order in gStorage.getOrders()) {
+      if (order.id == id) return order;
+    }
+    return null;
+  }
+
+  Widget _buildCompletedCard(AutomationPlan plan) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: 18,
+      color: C.mint.withValues(alpha: 0.10),
+      borderColor: C.mint.withValues(alpha: 0.26),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: C.mint.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.check_circle_outline_rounded,
+              color: C.mint,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              plan.completedCount > 0 ? '今日巡店任务已处理完' : '今天没有硬风险',
+              style: const TextStyle(
+                color: C.t1,
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          smallBtn(
+            '恢复',
+            _clearCompletedTasks,
+            color: C.mint,
+            icon: Icons.restart_alt_rounded,
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _buildActionCard(AutomationTask task) {
+    final color = _taskColor(task);
+    final urgent = task.impact == AutomationImpact.critical;
+    final busy = _busyTaskIds.contains(task.id);
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: GlassPanel(
         padding: const EdgeInsets.all(14),
         radius: 18,
-        color:
-            urgent ? a.color.withValues(alpha: 0.10) : const Color(0xDE0B0F16),
-        borderColor: a.color.withValues(alpha: urgent ? 0.35 : 0.18),
+        color: urgent ? color.withValues(alpha: 0.10) : const Color(0xDE0B0F16),
+        borderColor: color.withValues(alpha: urgent ? 0.35 : 0.18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -347,10 +412,10 @@ class _AiReportPageState extends State<AiReportPage> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: a.color.withValues(alpha: 0.16),
+                    color: color.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(a.icon, color: a.color, size: 20),
+                  child: Icon(_taskIcon(task), color: color, size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -358,7 +423,7 @@ class _AiReportPageState extends State<AiReportPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        a.title,
+                        task.title,
                         style: const TextStyle(
                           color: C.t1,
                           fontSize: 14,
@@ -367,7 +432,7 @@ class _AiReportPageState extends State<AiReportPage> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        a.reason,
+                        task.reason,
                         style: const TextStyle(
                           color: C.t2,
                           fontSize: 12,
@@ -382,17 +447,23 @@ class _AiReportPageState extends State<AiReportPage> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      a.value,
-                      style: TextStyle(
-                        color: a.color,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 92),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          task.metric,
+                          style: TextStyle(
+                            color: color,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      a.detail,
+                      task.detail,
                       style: const TextStyle(
                         color: C.t3,
                         fontSize: 10,
@@ -403,9 +474,19 @@ class _AiReportPageState extends State<AiReportPage> {
                 ),
               ],
             ),
-            if (a.lines.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              task.summary,
+              style: const TextStyle(
+                color: C.t3,
+                fontSize: 11.5,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            if (task.lines.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ...a.lines.map(
+              ...task.lines.map(
                 (line) => Padding(
                   padding: const EdgeInsets.only(bottom: 5),
                   child: Row(
@@ -416,7 +497,7 @@ class _AiReportPageState extends State<AiReportPage> {
                         width: 5,
                         height: 5,
                         decoration: BoxDecoration(
-                          color: a.color,
+                          color: color,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -436,17 +517,105 @@ class _AiReportPageState extends State<AiReportPage> {
                 ),
               ),
             ],
-            if (a.onTap != null && a.action != null) ...[
+            if (task.hasAction || task.impact != AutomationImpact.success) ...[
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerRight,
-                child: smallBtn(a.action!, a.onTap!, color: a.color),
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    if (busy) _BusyChip(color: color),
+                    if (task.hasAction && !busy)
+                      smallBtn(
+                        task.actionLabel!,
+                        () => _runTaskAction(task),
+                        color: color,
+                        icon: _actionIcon(task.actionKind),
+                      ),
+                    if (!busy && task.impact != AutomationImpact.success)
+                      smallBtn(
+                        '完成',
+                        () => _markTaskDone(task),
+                        color: C.t3,
+                        icon: Icons.check_rounded,
+                      ),
+                  ],
+                ),
               ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Color _taskColor(AutomationTask task) {
+    if (task.impact == AutomationImpact.critical) return C.red;
+    if (task.impact == AutomationImpact.success) return C.mint;
+    switch (task.kind) {
+      case AutomationTaskKind.marketPrice:
+        return C.blue;
+      case AutomationTaskKind.orderRisk:
+        return C.cyan;
+      case AutomationTaskKind.restock:
+        return C.mint;
+      case AutomationTaskKind.staleStock:
+        return C.red;
+      case AutomationTaskKind.purchaseGuard:
+        return C.red;
+      case AutomationTaskKind.listingPipeline:
+      case AutomationTaskKind.supplierRisk:
+      case AutomationTaskKind.dataHealth:
+        return C.orange;
+    }
+  }
+
+  IconData _taskIcon(AutomationTask task) {
+    switch (task.kind) {
+      case AutomationTaskKind.staleStock:
+        return Icons.trending_down_rounded;
+      case AutomationTaskKind.listingPipeline:
+        return Icons.edit_note_rounded;
+      case AutomationTaskKind.marketPrice:
+        return Icons.price_change_outlined;
+      case AutomationTaskKind.purchaseGuard:
+        return Icons.do_not_disturb_alt_rounded;
+      case AutomationTaskKind.supplierRisk:
+        return Icons.handshake_outlined;
+      case AutomationTaskKind.orderRisk:
+        return Icons.local_shipping_outlined;
+      case AutomationTaskKind.restock:
+        return Icons.playlist_add_check_rounded;
+      case AutomationTaskKind.dataHealth:
+        return task.impact == AutomationImpact.success
+            ? Icons.check_circle_outline_rounded
+            : Icons.fact_check_outlined;
+    }
+  }
+
+  IconData _actionIcon(AutomationActionKind kind) {
+    switch (kind) {
+      case AutomationActionKind.applyPriceCut:
+        return Icons.trending_down_rounded;
+      case AutomationActionKind.generateCopy:
+        return Icons.auto_awesome_rounded;
+      case AutomationActionKind.openMarketPrice:
+        return Icons.price_change_outlined;
+      case AutomationActionKind.openPurchaseDecision:
+        return Icons.calculate_outlined;
+      case AutomationActionKind.openRestock:
+        return Icons.playlist_add_check_rounded;
+      case AutomationActionKind.openOrder:
+        return Icons.receipt_long_outlined;
+      case AutomationActionKind.openDevice:
+        return Icons.tablet_mac_rounded;
+      case AutomationActionKind.openStagnantList:
+        return Icons.inventory_2_outlined;
+      case AutomationActionKind.none:
+        return Icons.check_rounded;
+    }
   }
 
   Widget _buildFocusModels(List<Device> devices) {
@@ -609,35 +778,6 @@ class _AiReportPageState extends State<AiReportPage> {
     final now = DateTime.now();
     return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
   }
-
-  String _dateKey(DateTime d) =>
-      '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-}
-
-class _OpsAction {
-  final int priority;
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String value;
-  final String detail;
-  final String reason;
-  final String? action;
-  final List<String> lines;
-  final VoidCallback? onTap;
-
-  const _OpsAction({
-    required this.priority,
-    required this.icon,
-    required this.color,
-    required this.title,
-    required this.value,
-    required this.detail,
-    required this.reason,
-    required this.action,
-    required this.lines,
-    this.onTap,
-  });
 }
 
 class _WeekSummary {
@@ -650,6 +790,43 @@ class _WeekSummary {
     required this.profit,
     required this.activeDays,
   });
+}
+
+class _BusyChip extends StatelessWidget {
+  final Color color;
+
+  const _BusyChip({required this.color});
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(18),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          width: 13,
+          height: 13,
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            valueColor: AlwaysStoppedAnimation<Color>(color),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          '处理中',
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _SectionHeader extends StatelessWidget {

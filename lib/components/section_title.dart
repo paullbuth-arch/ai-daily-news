@@ -25,11 +25,11 @@ class SectionTitle extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.07),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              color: C.bgSurface,
+              borderRadius: BorderRadius.circular(C.radiusSm),
+              border: Border.all(color: C.border),
             ),
-            child: Icon(icon, color: C.cyan, size: 16),
+            child: Icon(icon, color: C.primary, size: 16),
           ),
           const SizedBox(width: 9),
         ],
@@ -37,7 +37,7 @@ class SectionTitle extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w900,
               color: C.t1,
             ),
@@ -47,9 +47,11 @@ class SectionTitle extends StatelessWidget {
           TextButton(
             onPressed: onTap,
             style: TextButton.styleFrom(
-              foregroundColor: C.cyan,
+              foregroundColor: C.primary,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              shape: const StadiumBorder(),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(C.radiusSm),
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

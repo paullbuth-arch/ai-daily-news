@@ -5,6 +5,7 @@ import '../components/index.dart';
 import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
+import '../services/automation_service.dart';
 import 'sell_page.dart';
 
 // ====== 滞销预警列表页 ======
@@ -60,6 +61,26 @@ class _StagnantListPageState extends State<StagnantListPage> {
     }
   }
 
+  Future<void> _applySuggestedPrice(Device d, int price) async {
+    final ok = await confirmAction(
+      context,
+      title: '套用建议价格',
+      message:
+          '${d.model} ${d.capacity}\n'
+          '${d.sellPrice > 0 ? '当前售价 ${yuan(d.sellPrice)}\n' : ''}'
+          '建议调整为 ${yuan(price)}。',
+      confirmText: '确认调整',
+      confirmColor: C.orange,
+    );
+    if (!ok) return;
+    d.sellPrice = price;
+    if (d.status == 'in_stock') d.status = 'listed';
+    await gStorage.updateDevice(d);
+    if (!mounted) return;
+    setState(() {});
+    toast(context, '已更新为${yuan(price)}');
+  }
+
   @override
   Widget build(BuildContext context) {
     final list = gStorage.getDevices().where((d) => d.isStagnant).toList();
@@ -87,6 +108,10 @@ class _StagnantListPageState extends State<StagnantListPage> {
             ...list.map((d) {
               final hasImg = d.imagePath != null && d.imagePath!.isNotEmpty;
               final firstImg = hasImg ? d.imagePath!.split(';').first : null;
+              final suggested = AutomationService.recommendedStalePrice(
+                d,
+                gStorage,
+              );
               return Container(
                 margin: EdgeInsets.only(bottom: 10),
                 padding: EdgeInsets.all(12),
@@ -184,6 +209,48 @@ class _StagnantListPageState extends State<StagnantListPage> {
                         ),
                       ],
                     ),
+                    if (suggested > 0) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: C.orange.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: C.orange.withValues(alpha: 0.18),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.auto_awesome_rounded,
+                              color: C.orange,
+                              size: 17,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                '建议调到 ${yuan(suggested)}',
+                                style: const TextStyle(
+                                  color: C.t2,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            smallBtn(
+                              '套用',
+                              () => _applySuggestedPrice(d, suggested),
+                              color: C.orange,
+                              icon: Icons.trending_down_rounded,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     Row(
                       children: [

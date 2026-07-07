@@ -10,17 +10,20 @@ Widget primaryBtn(
   child: FilledButton(
     onPressed: onTap,
     style: FilledButton.styleFrom(
-      backgroundColor: C.cyan,
+      backgroundColor: C.primary,
       foregroundColor: Colors.black,
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 18),
-      shape: const StadiumBorder(),
+      minimumSize: const Size.fromHeight(48),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusMd),
+      ),
       textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 8)],
-        Text(label),
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
       ],
     ),
   ),
@@ -32,10 +35,13 @@ Widget ghostBtn(String label, VoidCallback onTap, {IconData? icon}) => SizedBox(
     onPressed: onTap,
     style: OutlinedButton.styleFrom(
       foregroundColor: C.t1,
-      side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 18),
-      shape: const StadiumBorder(),
-      backgroundColor: Colors.white.withValues(alpha: 0.05),
+      side: const BorderSide(color: C.border),
+      minimumSize: const Size.fromHeight(48),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusMd),
+      ),
+      backgroundColor: C.bgSurface,
       textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
     ),
     child: Row(
@@ -45,7 +51,7 @@ Widget ghostBtn(String label, VoidCallback onTap, {IconData? icon}) => SizedBox(
           Icon(icon, size: 18, color: C.t2),
           const SizedBox(width: 8),
         ],
-        Text(label),
+        Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
       ],
     ),
   ),
@@ -59,17 +65,20 @@ Widget smallBtn(
 }) => TextButton(
   onPressed: onTap,
   style: TextButton.styleFrom(
-    foregroundColor: color ?? C.cyan,
+    foregroundColor: color ?? C.primary,
+    minimumSize: const Size(44, 36),
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    shape: const StadiumBorder(),
-    backgroundColor: (color ?? C.cyan).withValues(alpha: 0.10),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(C.radiusSm),
+    ),
+    backgroundColor: (color ?? C.primary).withValues(alpha: 0.12),
     textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
   ),
   child: Row(
     mainAxisSize: MainAxisSize.min,
     children: [
       if (icon != null) ...[Icon(icon, size: 15), const SizedBox(width: 5)],
-      Text(label),
+      Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
     ],
   ),
 );
@@ -78,21 +87,20 @@ Widget iconBtn(
   IconData icon,
   VoidCallback onTap, {
   Color? color,
-  double size = 38,
-}) => Material(
-  color: Colors.transparent,
-  child: InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(size / 2),
-    child: Ink(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: (color ?? C.cyan).withValues(alpha: 0.12),
-        shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withValues(alpha: 0.09)),
-      ),
-      child: Icon(icon, color: color ?? C.cyan, size: size * 0.48),
+  double size = 40,
+}) => SizedBox(
+  width: size,
+  height: size,
+  child: Material(
+    color: (color ?? C.primary).withValues(alpha: 0.12),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      side: BorderSide(color: (color ?? C.primary).withValues(alpha: 0.20)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Icon(icon, color: color ?? C.primary, size: size * 0.48),
     ),
   ),
 );

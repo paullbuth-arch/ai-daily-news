@@ -9,6 +9,7 @@ import '../models.dart';
 import '../main.dart';
 import '../services/device_export_service.dart';
 import '../services/ecommerce_material_import_service.dart';
+import '../services/automation_service.dart';
 import 'ai_report_page.dart';
 import 'market_price_page.dart';
 import 'sell_page.dart';
@@ -47,6 +48,7 @@ class HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final margin = stats.gmv > 0 ? stats.grossProfit / stats.gmv * 100 : 0.0;
+    final automationPlan = AutomationService.buildPlan(gStorage);
     return PageScaffold(
       title: const Text(
         '货脉',
@@ -87,7 +89,11 @@ class HomePageState extends State<HomePage> {
           const SizedBox(height: 14),
           if (channelGmv.isNotEmpty) _ChannelPanel(channelGmv: channelGmv),
           const SizedBox(height: 14),
-          _AiPanel(onTap: () => _push(const AiReportPage())),
+          _AiPanel(
+            openTaskCount: automationPlan.openTasks.length,
+            criticalCount: automationPlan.criticalCount,
+            onTap: () => _push(const AiReportPage()),
+          ),
         ],
       ),
     );
@@ -130,134 +136,183 @@ class _HeroPhoneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: EdgeInsets.zero,
-    radius: 30,
-    borderColor: Colors.white.withValues(alpha: 0.16),
-    color: const Color(0xEE080A10),
+    radius: C.radiusXl,
+    gradient: C.heroGradient,
+    borderColor: C.primary.withValues(alpha: 0.24),
     child: Stack(
       children: [
-        Positioned.fill(child: CustomPaint(painter: _HeroTexturePainter())),
+        const Positioned.fill(
+          child: CustomPaint(painter: _CommandHeroPainter()),
+        ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _CircleTool(icon: Icons.search_rounded, onTap: onSearch),
-                  const Spacer(),
-                  Container(
-                    width: 84,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                  ),
-                  const Spacer(),
-                  _CircleTool(icon: Icons.tune_rounded, onTap: onTune),
-                ],
-              ),
-              const SizedBox(height: 18),
-              const Text(
-                '今日经营舱',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: C.t2,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 6),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  yuan(stats.gmv),
-                  style: const TextStyle(
-                    fontSize: 46,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                    color: C.t1,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '今日毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: C.t2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 18),
-              LayoutBuilder(
-                builder:
-                    (context, box) => Wrap(
-                      spacing: 10,
-                      runSpacing: 10,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SizedBox(
-                          width: (box.maxWidth - 10) / 2,
-                          child: _MiniMetric(
-                            label: '今日订单',
-                            value: '${stats.orderCount}',
-                            tint: C.purple,
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            _CommandBadge(
+                              icon: Icons.sensors_rounded,
+                              label: 'HUOMAI OPS',
+                              color: C.primary,
+                            ),
+                            _CommandBadge(
+                              icon: Icons.bolt_rounded,
+                              label: 'LIVE',
+                              color: C.orange,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          '今日经营',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: C.t2,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                        SizedBox(
-                          width: (box.maxWidth - 10) / 2,
-                          child: _MiniMetric(
-                            label: '在售设备',
-                            value: '${stats.inStockCount}',
-                            tint: C.cyan,
+                        const SizedBox(height: 6),
+                        FittedBox(
+                          alignment: Alignment.centerLeft,
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            yuan(stats.gmv),
+                            style: const TextStyle(
+                              fontSize: 44,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
+                              color: C.t1,
+                            ),
                           ),
                         ),
-                        SizedBox(
-                          width: box.maxWidth,
-                          child: _MiniMetric(
-                            label: '资金占用',
-                            value: yuan(stats.capitalOccupied),
-                            tint: C.mint,
+                        const SizedBox(height: 8),
+                        Text(
+                          '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: C.t2,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      StatusChip('${stats.orderCount} 单', C.primary),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 68,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: C.primary.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(C.radiusMd),
+                          border: Border.all(
+                            color: C.primary.withValues(alpha: 0.24),
+                          ),
+                        ),
+                        child: const Icon(
+                          Icons.tablet_mac_rounded,
+                          color: C.primary,
+                          size: 22,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
               LayoutBuilder(
                 builder: (context, box) {
-                  final half = (box.maxWidth - 10) / 2;
+                  final compact = box.maxWidth < 430;
+                  final width =
+                      compact
+                          ? (box.maxWidth - 8) / 2
+                          : (box.maxWidth - 16) / 3;
                   return Wrap(
-                    spacing: 10,
-                    runSpacing: 10,
+                    spacing: 8,
+                    runSpacing: 8,
                     children: [
                       SizedBox(
-                        width: half,
+                        width: width,
+                        child: _MiniMetric(
+                          label: '在售',
+                          value: '${stats.inStockCount} 台',
+                          tint: C.primary,
+                        ),
+                      ),
+                      SizedBox(
+                        width: width,
+                        child: _MiniMetric(
+                          label: '库存资金',
+                          value: yuan(stats.capitalOccupied),
+                          tint: C.orange,
+                        ),
+                      ),
+                      SizedBox(
+                        width: compact ? box.maxWidth : width,
+                        child: _MiniMetric(
+                          label: '今日毛利',
+                          value: yuan(stats.grossProfit),
+                          tint: stats.grossProfit >= 0 ? C.green : C.red,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              LayoutBuilder(
+                builder: (context, box) {
+                  final wide = box.maxWidth >= 520;
+                  final itemWidth =
+                      wide ? (box.maxWidth - 16) / 3 : box.maxWidth;
+                  return Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      SizedBox(
+                        width: itemWidth,
                         child: _PastelPill(
-                          label: '链接下载',
-                          sub: '图片入相册 · 文案进剪贴板',
+                          label: '链接素材',
+                          sub: '下载图片/视频，复制文案',
                           icon: Icons.link_rounded,
-                          color: C.cyan,
+                          color: C.primary,
                           onTap: onScan,
                         ),
                       ),
                       SizedBox(
-                        width: half,
+                        width: itemWidth,
                         child: _PastelPill(
-                          label: '批发价',
-                          sub: '行情参考',
+                          label: '批发行情',
+                          sub: '导入报价，辅助收货',
                           icon: Icons.query_stats_rounded,
-                          color: C.mint,
+                          color: C.blue,
                           onTap: onPrice,
                         ),
                       ),
                       SizedBox(
-                        width: box.maxWidth,
+                        width: itemWidth,
                         child: _PastelPill(
-                          label: '售出设备',
-                          sub: '生成订单并计算利润',
+                          label: '售出登记',
+                          sub: '生成订单并算利润',
                           icon: Icons.point_of_sale_outlined,
-                          color: C.purple,
+                          color: C.green,
                           onTap: onSell,
                         ),
                       ),
@@ -273,77 +328,94 @@ class _HeroPhoneCard extends StatelessWidget {
   );
 }
 
-class _HeroTexturePainter extends CustomPainter {
+class _CommandBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _CommandBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.12),
+      borderRadius: BorderRadius.circular(C.radiusSm),
+      border: Border.all(color: color.withValues(alpha: 0.28)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 13),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _CommandHeroPainter extends CustomPainter {
+  const _CommandHeroPainter();
+
   @override
   void paint(Canvas canvas, Size size) {
-    final topGlow =
+    final accent =
         Paint()
-          ..shader = RadialGradient(
-            colors: [C.cyan.withValues(alpha: 0.28), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.18, 0),
-              radius: size.width * 0.95,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, topGlow);
-
-    final band =
-        Paint()
-          ..shader = LinearGradient(
-            colors: [Colors.white.withValues(alpha: 0.08), Colors.transparent],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ).createShader(Offset.zero & size);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          -20,
-          size.height * 0.34,
-          size.width + 40,
-          size.height * 0.46,
-        ),
-        const Radius.circular(36),
-      ),
-      band,
+          ..color = C.primary.withValues(alpha: 0.18)
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke;
+    const cut = 24.0;
+    canvas.drawLine(const Offset(0, cut), const Offset(cut, 0), accent);
+    canvas.drawLine(
+      Offset(size.width - cut, 0),
+      Offset(size.width, cut),
+      accent,
+    );
+    canvas.drawLine(
+      Offset(0, size.height - cut),
+      Offset(cut, size.height),
+      accent,
+    );
+    canvas.drawLine(
+      Offset(size.width - cut, size.height),
+      Offset(size.width, size.height - cut),
+      accent,
     );
 
-    final linePaint =
+    final grid =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.055)
+          ..color = Colors.white.withValues(alpha: 0.035)
           ..strokeWidth = 1;
-    for (double y = size.height * 0.68; y < size.height - 16; y += 16) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+    for (double y = 44; y < size.height; y += 28) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
     }
+
+    final beam =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              C.primary.withValues(alpha: 0.25),
+              Colors.transparent,
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
+          ..strokeWidth = 1;
+    canvas.drawLine(Offset(0, 64), Offset(size.width, 64), beam);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _CircleTool extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onTap;
-  const _CircleTool({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(22),
-      child: Ink(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.10),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-        ),
-        child: Icon(icon, color: C.t1, size: 21),
-      ),
-    ),
-  );
 }
 
 class _LinkMaterialImportPage extends StatelessWidget {
@@ -382,11 +454,11 @@ class _LinkMaterialIntro extends StatelessWidget {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: const [
-        Icon(Icons.download_for_offline_rounded, color: C.cyan, size: 22),
+        Icon(Icons.download_for_offline_rounded, color: C.primary, size: 22),
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            '复制商品链接或分享口令后解析，图片保存到相册，文案复制到剪贴板。',
+            '复制商品链接或分享口令后解析，图片/视频保存到相册，文案复制到剪贴板。',
             style: TextStyle(
               color: C.t2,
               fontSize: 12,
@@ -587,7 +659,7 @@ class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
                       )
                       : const Icon(Icons.download_rounded, size: 17),
               style: FilledButton.styleFrom(
-                backgroundColor: C.cyan,
+                backgroundColor: C.primary,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
@@ -632,7 +704,7 @@ class _LinkImportResultCard extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(12),
     radius: 14,
-    color: const Color(0xEA0B1018),
+    color: C.bgCard,
     borderColor: C.border,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -644,7 +716,7 @@ class _LinkImportResultCard extends StatelessWidget {
             _ImportBadge(
               icon: Icons.storefront_outlined,
               label: result.platform,
-              color: C.cyan,
+              color: C.primary,
             ),
             _ImportBadge(
               icon: Icons.photo_library_outlined,
@@ -864,9 +936,9 @@ class _MiniMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.07),
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      color: C.bgSurface,
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: C.border),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -879,7 +951,7 @@ class _MiniMetric extends StatelessWidget {
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 5),
+        const SizedBox(height: 6),
         FittedBox(
           alignment: Alignment.centerLeft,
           fit: BoxFit.scaleDown,
@@ -916,54 +988,58 @@ class _PastelPill extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     width: double.infinity,
     child: Material(
-      color: Colors.transparent,
+      color: color.withValues(alpha: 0.12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusMd),
+        side: BorderSide(color: color.withValues(alpha: 0.26)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Ink(
-          padding: const EdgeInsets.fromLTRB(14, 11, 10, 11),
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(24),
-          ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
           child: Row(
             children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(C.radiusSm),
+                ),
+                child: Icon(icon, color: Colors.black, size: 19),
+              ),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: C.t1,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
                     Text(
                       sub,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: Colors.black.withValues(alpha: 0.50),
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w900,
+                        color: C.t2.withValues(alpha: 0.88),
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
                 ),
               ),
-              Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 19),
-              ),
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, color: color, size: 20),
             ],
           ),
         ),
@@ -1004,39 +1080,48 @@ class _AttentionStrip extends StatelessWidget {
                 .round();
     final agingCount = stagnant.length;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _AlertTile(
-            icon: Icons.account_balance_wallet_outlined,
-            title: '库存资金',
-            value: yuan(stats.capitalOccupied),
-            subtitle: '${devices.length} 台在库/在售',
-            color: C.cyan,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _AlertTile(
-            icon: Icons.trending_up_rounded,
-            title: '预估毛利',
-            value: yuan(estimatedProfit),
-            subtitle: '${priced.length} 台已定价',
-            color: C.mint,
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _AlertTile(
-            icon: Icons.schedule_rounded,
-            title: '平均库龄',
-            value: '${avgStockDays}天',
-            subtitle: agingCount > 0 ? '$agingCount 台超过15天' : '周转正常',
-            color: agingCount > 0 ? C.orange : C.blue,
-            onTap: onStagnantTap,
-          ),
-        ),
-      ],
+    return LayoutBuilder(
+      builder: (context, box) {
+        final columns = box.maxWidth >= 520 ? 3 : 1;
+        final itemWidth = (box.maxWidth - (columns - 1) * 8) / columns;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            SizedBox(
+              width: itemWidth,
+              child: _AlertTile(
+                icon: Icons.account_balance_wallet_outlined,
+                title: '库存资金',
+                value: yuan(stats.capitalOccupied),
+                subtitle: '${devices.length} 台在库/在售',
+                color: C.orange,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              child: _AlertTile(
+                icon: Icons.trending_up_rounded,
+                title: '预估毛利',
+                value: yuan(estimatedProfit),
+                subtitle: '${priced.length} 台已定价',
+                color: C.green,
+              ),
+            ),
+            SizedBox(
+              width: itemWidth,
+              child: _AlertTile(
+                icon: Icons.schedule_rounded,
+                title: '平均库龄',
+                value: '${avgStockDays}天',
+                subtitle: agingCount > 0 ? '$agingCount 台超过15天' : '周转正常',
+                color: agingCount > 0 ? C.orange : C.blue,
+                onTap: onStagnantTap,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -1061,46 +1146,61 @@ class _AlertTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(12),
-    radius: 18,
+    radius: C.radiusLg,
+    color: C.bgCard,
     onTap: onTap,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    child: Row(
       children: [
-        Icon(icon, color: color, size: 19),
-        const SizedBox(height: 10),
-        FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 21,
-              color: C.t1,
-              fontWeight: FontWeight.w900,
-            ),
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(C.radiusSm),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    color: C.t1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: C.t2,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: C.t3,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 11,
-            color: C.t2,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 10,
-              color: C.t3,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
       ],
     ),
   );
@@ -1130,35 +1230,14 @@ class _TrendPanelState extends State<_TrendPanel> {
     final total = source.fold<int>(0, (sum, d) => sum + d.profit);
     return GlassPanel(
       padding: const EdgeInsets.all(16),
-      radius: 22,
+      radius: C.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Container(
-                width: 30,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.07),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.timeline_rounded,
-                  color: C.cyan,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: 9),
               const Expanded(
-                child: Text(
-                  '毛利时间线',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: C.t1,
-                  ),
-                ),
+                child: SectionTitle('毛利时间线', icon: Icons.timeline_rounded),
               ),
               _TrendToggle(
                 weeklyMode: weeklyMode,
@@ -1171,7 +1250,7 @@ class _TrendPanelState extends State<_TrendPanel> {
             children: [
               StatusChip(
                 weeklyMode ? '本月 ${yuan(total)}' : '7日 ${yuan(total)}',
-                C.cyan,
+                C.primary,
               ),
               const SizedBox(width: 8),
               Text(
@@ -1191,7 +1270,7 @@ class _TrendPanelState extends State<_TrendPanel> {
               painter: LineChartPainter(
                 data,
                 labels,
-                lineColor: C.cyan,
+                lineColor: C.primary,
                 showPointLabels: true,
               ),
               size: Size.infinite,
@@ -1213,9 +1292,9 @@ class _TrendToggle extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(3),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.07),
-      borderRadius: BorderRadius.circular(18),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      color: C.bgSurface,
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: C.border),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -1233,8 +1312,8 @@ class _TrendToggle extends StatelessWidget {
           duration: C.fast,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: selected ? C.cyan : Colors.transparent,
-            borderRadius: BorderRadius.circular(15),
+            color: selected ? C.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(C.radiusSm),
           ),
           child: Text(
             label,
@@ -1256,11 +1335,11 @@ class _ChannelPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = channelGmv.values.fold<int>(0, (a, b) => a + b);
-    final colors = [C.cyan, C.purple, C.mint, C.orange, C.blue];
+    final colors = [C.primary, C.blue, C.green, C.orange, C.purple];
     final entries = channelGmv.entries.toList();
     return GlassPanel(
       padding: const EdgeInsets.all(16),
-      radius: 22,
+      radius: C.radiusLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1279,7 +1358,7 @@ class _ChannelPanel extends StatelessWidget {
                     height: 34,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.16),
-                      shape: BoxShape.circle,
+                      borderRadius: BorderRadius.circular(C.radiusSm),
                     ),
                     child: Icon(
                       Icons.storefront_outlined,
@@ -1323,7 +1402,7 @@ class _ChannelPanel extends StatelessWidget {
                             value: pct,
                             minHeight: 7,
                             backgroundColor: Colors.white.withValues(
-                              alpha: 0.07,
+                              alpha: 0.08,
                             ),
                             valueColor: AlwaysStoppedAnimation(color),
                           ),
@@ -1343,58 +1422,97 @@ class _ChannelPanel extends StatelessWidget {
 
 class _AiPanel extends StatelessWidget {
   final VoidCallback onTap;
+  final int openTaskCount;
+  final int criticalCount;
 
-  const _AiPanel({required this.onTap});
+  const _AiPanel({
+    required this.onTap,
+    required this.openTaskCount,
+    required this.criticalCount,
+  });
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    padding: const EdgeInsets.all(16),
-    radius: 22,
-    color: C.purple.withValues(alpha: 0.16),
-    borderColor: C.purple.withValues(alpha: 0.24),
-    onTap: onTap,
-    child: Row(
-      children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: const BoxDecoration(
-            color: C.purple,
-            shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final hasTasks = openTaskCount > 0;
+    final color = criticalCount > 0 ? C.red : (hasTasks ? C.orange : C.mint);
+    final status = hasTasks ? '$openTaskCount项' : '正常';
+    final subtitle =
+        hasTasks
+            ? '${criticalCount > 0 ? '$criticalCount项急需处理 · ' : ''}今日自动巡店已生成待办'
+            : '今日没有硬风险，可继续生成经营复盘';
+    return GlassPanel(
+      padding: const EdgeInsets.all(16),
+      radius: C.radiusLg,
+      color: C.bgCard,
+      borderColor: color.withValues(alpha: hasTasks ? 0.30 : 0.18),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(C.radiusLg),
+            ),
+            child: Icon(
+              hasTasks ? Icons.rule_rounded : Icons.verified_outlined,
+              color: color,
+              size: 23,
+            ),
           ),
-          child: const Icon(
-            Icons.auto_awesome_rounded,
-            color: Colors.black,
-            size: 23,
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '自动巡店',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: C.t1,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  subtitle,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: C.t2,
+                    fontWeight: FontWeight.w700,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 13),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'AI 经营日报',
+          const SizedBox(width: 10),
+          Container(
+            constraints: const BoxConstraints(minWidth: 42, maxWidth: 58),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.13),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: color.withValues(alpha: 0.18)),
+            ),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                status,
                 style: TextStyle(
-                  fontSize: 15,
+                  color: color,
+                  fontSize: 11,
                   fontWeight: FontWeight.w900,
-                  color: C.t1,
                 ),
               ),
-              SizedBox(height: 3),
-              Text(
-                '汇总库存、订单和利润，生成今日判断',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: C.t2,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        const Icon(Icons.chevron_right_rounded, color: C.t2),
-      ],
-    ),
-  );
+          const Icon(Icons.chevron_right_rounded, color: C.t2),
+        ],
+      ),
+    );
+  }
 }

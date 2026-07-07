@@ -30,6 +30,8 @@ build\app\outputs\flutter-apk\app-release.apk
 
 ## 环境说明
 
+当前发布构建链已验证为 Flutter 3.29.0 / Dart 3.7.0 / JDK 17 / Android SDK Platform 36。Android 最低版本保持 24，目标版本为 36。
+
 仓库包含 Android Gradle Wrapper、构建脚本、依赖锁定文件、`android/local.properties.example` 和 `tools/build_env.local.ps1.example`。
 
 仓库不包含 Flutter SDK、Android SDK、JDK、`dev_env/`、`android/local.properties` 和 `tools/build_env.local.ps1`。这些文件体积大或依赖本机路径，应按文档下载到本地相对目录，或用私有配置指定路径。

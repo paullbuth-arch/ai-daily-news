@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7,8 +7,7 @@ import '../theme/colors.dart';
 import '../components/index.dart';
 import '../utils/utils.dart';
 import '../main.dart';
-import '../ai_service.dart';
-import '../ai_prompts.dart';
+import '../services/intake_ocr_service.dart';
 import '../services/market_price_import_service.dart';
 
 class MarketPricePage extends StatefulWidget {
@@ -132,37 +131,38 @@ class _MarketPricePageState extends State<MarketPricePage> {
     }
   }
 
-  /// 图片调用 AI 识别批发价
+  /// 图片调用本地 OCR 识别批发价
   Future<void> _importImage(File file) async {
     setState(() => _importing = true);
     try {
-      final bytes = await file.readAsBytes();
-      final b64 = base64Encode(bytes);
-      final result = await AiService.chatWithImage(
-        AiService.prompt(AiPromptKeys.marketPriceImageSystem),
-        b64,
-        AiService.prompt(AiPromptKeys.marketPriceImageUser),
-        maxTokens: 8192,
-      );
-      if (result.startsWith('AI调用') || result.startsWith('AI返回')) {
-        toast(context, '❌ $result');
+      final ocr = await MobileIntakeOcrService.recognize([file.path]);
+      final result = ocr.fullText;
+      if (result.trim().isEmpty) {
+        toast(context, 'OCR没有读到可用文字，请换更清晰的行情图');
         return;
       }
       final rows = MarketPriceImportService.parseRows(result);
+      if (rows.isEmpty) {
+        toast(context, 'OCR已读到文字，但没有解析到有效行情，请导出核对或改用CSV');
+        return;
+      }
       for (final row in rows) {
         await gStorage.saveMarketPrice(row.model, row.priceYuan * 100);
       }
       setState(() {
         _lastImportedRows = rows;
-        _lastImportWarnings = MarketPriceImportService.validateRows(rows);
-        _lastImportSource = 'AI图片识别结果';
+        _lastImportWarnings = [
+          ...ocr.warnings,
+          ...MarketPriceImportService.validateRows(rows),
+        ];
+        _lastImportSource = 'OCR图片识别结果';
       });
       _reload();
       toast(
         context,
         _lastImportWarnings.isEmpty
-            ? '✅ AI识别导入完成，共导入 ${rows.length} 条行情'
-            : 'AI识别导入 ${rows.length} 条，其中 ${_lastImportWarnings.length} 项需复核',
+            ? '✅ OCR识别导入完成，共导入 ${rows.length} 条行情'
+            : 'OCR识别导入 ${rows.length} 条，其中 ${_lastImportWarnings.length} 项需复核',
       );
     } catch (e) {
       toast(context, '图片识别失败：$e');
@@ -446,7 +446,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
           children: [
             Expanded(
               child: Text(
-                '这是 AI/CSV 本次解析出的原始表格，可导出核对。下方已记录行情是保存后的结果。',
+                '这是 OCR/CSV 本次解析出的原始表格，可导出核对。下方已记录行情是保存后的结果。',
                 style: TextStyle(fontSize: 11, color: C.t2, height: 1.45),
               ),
             ),

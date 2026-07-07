@@ -6,33 +6,6 @@ class MarketPriceImportRow {
 }
 
 class MarketPriceImportService {
-  static const imageSystemPrompt = '''
-你是华强北二手 iPad 批发价表 OCR 专家，正在识别一张可能很长、很密、位置不固定的报价截图。
-
-识图方法：
-1. 先按彩色分区标题识别系列，例如 iPad 数字、iPad mini、iPad Air、iPad Pro 11、iPad Pro 12.9、Apple Pencil。只导入 iPad，跳过 Apple Pencil、键盘和其他配件。
-2. 每个系列下面通常是合并单元格：左侧是大型号，中间可能有小型号/机型码，后面是网络、内存，右侧多列是不同成色、版本、瑕疵或渠道价格。
-3. 不要把同一台 iPad 压成一个价格。只要同一型号因为容量、网络、成色、版本、外版、靓机/小花/大花/换壳/资源机等原因出现多个价格，就必须拆成多行。
-4. 每行第一列必须是唯一行情名，尽量拼完整：系列 + 年份/芯片 + 尺寸 + 容量 + 网络 + 成色/版本/备注。例：iPad Air 5 M1 64G WiFi 国行靓机。
-5. 价格列只取明确的阿拉伯数字价格。遇到“询价”、斜杠、空白、看不清、补差、扣费、外版加/减价说明，不要输出。
-6. 不要把右侧黄色“外版”备注当成批发价；只有表格主体价格格里的数字才算。
-7. 如果表头能看出价格档位，例如 99新、95新、靓机、小花、大花、国行、外版，把档位写进第一列行情名。
-8. 如果图片局部模糊，宁可少输出，不要猜价格。
-9. 如果某一行信息看得不够确定，但价格和主体型号能确认，请在行情名末尾追加【低置信】。
-
-输出格式：
-只输出 CSV，不要解释，不要 Markdown 代码块，不要表头。
-每行严格两列：行情名,价格
-价格单位为元，只写数字。
-''';
-
-  static const imageUserPrompt = '''
-请按上面的识图方法，逐区扫描这张批发价图片。
-重点检查同一型号下的每个容量、网络和成色价格，不要漏掉同一 iPad 的多个价格档位。
-先理解表头、分组、备注和跨行关系，再输出标准行。
-只返回 CSV 行：行情名,价格
-''';
-
   static List<MarketPriceImportRow> parseRows(String raw) {
     final cleaned = _stripCodeFence(raw);
     final rows = <MarketPriceImportRow>[];

@@ -55,7 +55,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.of(context).size.width >= 860;
+    final wide = MediaQuery.of(context).size.width >= AppLayout.wideBreakpoint;
     final pages = <Widget>[
       HomePage(key: _homeKey),
       StockPage(key: _stockKey),
@@ -67,15 +67,10 @@ class _MainShellState extends State<MainShell> {
     if (wide) {
       return Scaffold(
         backgroundColor: C.bgDeep,
-        body: Stack(
+        body: Row(
           children: [
-            const AppBackdrop(),
-            Row(
-              children: [
-                _SideDock(index: _index, onTap: _onTap),
-                Expanded(child: _ShellPages(index: _index, children: pages)),
-              ],
-            ),
+            _SideDock(index: _index, onTap: _onTap),
+            Expanded(child: _ShellPages(index: _index, children: pages)),
           ],
         ),
       );
@@ -109,9 +104,9 @@ class _NavItem {
 }
 
 const _items = [
-  _NavItem(Icons.home_outlined, Icons.home_rounded, '看板'),
-  _NavItem(Icons.inventory_2_outlined, Icons.inventory_2_rounded, '库存管理'),
-  _NavItem(Icons.add_rounded, Icons.add_rounded, '收货'),
+  _NavItem(Icons.space_dashboard_outlined, Icons.space_dashboard_rounded, '看板'),
+  _NavItem(Icons.inventory_2_outlined, Icons.inventory_2_rounded, '库存'),
+  _NavItem(Icons.add_business_outlined, Icons.add_business_rounded, '收货'),
   _NavItem(Icons.receipt_long_outlined, Icons.receipt_long_rounded, '订单'),
   _NavItem(Icons.person_outline_rounded, Icons.person_rounded, '我的'),
 ];
@@ -125,66 +120,46 @@ class _SideDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SafeArea(
     right: false,
-    child: SizedBox(
-      width: 104,
+    child: Container(
+      width: 96,
+      decoration: const BoxDecoration(
+        color: C.nav,
+        border: Border(right: BorderSide(color: C.navBorder)),
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 0, 18),
-        child: GlassPanel(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
-          radius: 28,
-          color: const Color(0xE60A0C12),
-          child: Column(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: C.cyan,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: C.cyan.withValues(alpha: 0.28),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.tablet_mac_rounded,
-                  color: Colors.black,
-                ),
+        padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
+        child: Column(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: C.primary,
+                borderRadius: BorderRadius.circular(C.radiusLg),
               ),
-              const SizedBox(height: 24),
-              ...List.generate(_items.length, (i) {
-                if (i == 2) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: _RoundNavButton(
-                      item: _items[i],
-                      active: false,
-                      primary: true,
-                      onTap: () => onTap(i),
-                    ),
-                  );
-                }
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _RoundNavButton(
-                    item: _items[i],
-                    active: index == i,
-                    onTap: () => onTap(i),
-                  ),
-                );
-              }),
-              const Spacer(),
-              RoundIconButton(
-                icon: Icons.search_rounded,
-                onTap: () {},
-                color: C.t2,
-                size: 44,
-              ),
-            ],
-          ),
+              child: const Icon(Icons.tablet_mac_rounded, color: Colors.black),
+            ),
+            const SizedBox(height: 22),
+            ...List.generate(_items.length, (i) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _RailButton(
+                  item: _items[i],
+                  active: index == i,
+                  primary: i == 2,
+                  onTap: () => onTap(i),
+                ),
+              );
+            }),
+            const Spacer(),
+            RoundIconButton(
+              icon: Icons.search_rounded,
+              onTap: () {},
+              color: C.t2,
+              background: C.bgSurface,
+              size: 44,
+            ),
+          ],
         ),
       ),
     ),
@@ -198,44 +173,106 @@ class _BottomDock extends StatelessWidget {
   const _BottomDock({required this.index, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-    top: false,
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-      child: GlassPanel(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        radius: 28,
-        color: const Color(0xF00C0E15),
-        child: SizedBox(
-          height: 58,
-          child: Row(
-            children: List.generate(_items.length, (i) {
-              final primary = i == 2;
-              return Expanded(
-                child: Center(
-                  child: _RoundNavButton(
-                    item: _items[i],
-                    active: index == i,
-                    primary: primary,
-                    onTap: () => onTap(i),
-                  ),
-                ),
-              );
-            }),
-          ),
+  Widget build(BuildContext context) => DecoratedBox(
+    decoration: const BoxDecoration(
+      color: C.nav,
+      border: Border(top: BorderSide(color: C.navBorder)),
+    ),
+    child: SafeArea(
+      top: false,
+      child: SizedBox(
+        height: 70,
+        child: Row(
+          children: List.generate(_items.length, (i) {
+            return Expanded(
+              child: _BottomNavButton(
+                item: _items[i],
+                active: index == i,
+                primary: i == 2,
+                onTap: () => onTap(i),
+              ),
+            );
+          }),
         ),
       ),
     ),
   );
 }
 
-class _RoundNavButton extends StatelessWidget {
+class _BottomNavButton extends StatelessWidget {
   final _NavItem item;
   final bool active;
   final bool primary;
   final VoidCallback onTap;
 
-  const _RoundNavButton({
+  const _BottomNavButton({
+    required this.item,
+    required this.active,
+    required this.primary,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = active ? C.primary : C.t3;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Center(
+          child: AnimatedContainer(
+            duration: C.fast,
+            constraints: const BoxConstraints(minWidth: 54, minHeight: 52),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  primary
+                      ? C.primary
+                      : active
+                      ? C.primary.withValues(alpha: 0.12)
+                      : Colors.transparent,
+              borderRadius: BorderRadius.circular(C.radiusMd),
+              border:
+                  active && !primary
+                      ? Border.all(color: C.primary.withValues(alpha: 0.24))
+                      : null,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  active ? item.activeIcon : item.icon,
+                  color: primary ? Colors.black : fg,
+                  size: primary ? 23 : 21,
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    item.label,
+                    style: TextStyle(
+                      color: primary ? Colors.black : fg,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RailButton extends StatelessWidget {
+  final _NavItem item;
+  final bool active;
+  final bool primary;
+  final VoidCallback onTap;
+
+  const _RailButton({
     required this.item,
     required this.active,
     required this.onTap,
@@ -244,55 +281,51 @@ class _RoundNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg =
-        primary
-            ? Colors.white
-            : active
-            ? C.cyan.withValues(alpha: 0.18)
-            : Colors.transparent;
-    final fg =
-        primary
-            ? Colors.black
-            : active
-            ? C.cyan
-            : C.t3;
+    final fg = active ? C.primary : C.t3;
     return Tooltip(
       message: item.label,
       child: Material(
-        color: Colors.transparent,
+        color:
+            primary
+                ? C.primary
+                : active
+                ? C.primary.withValues(alpha: 0.12)
+                : Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(C.radiusMd),
+          side: BorderSide(
+            color:
+                active && !primary
+                    ? C.primary.withValues(alpha: 0.24)
+                    : Colors.transparent,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(26),
-          child: AnimatedContainer(
-            duration: C.fast,
-            width: primary ? 54 : 44,
-            height: primary ? 54 : 44,
-            decoration: BoxDecoration(
-              color: bg,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color:
-                    primary
-                        ? Colors.white
-                        : active
-                        ? C.cyan.withValues(alpha: 0.24)
-                        : Colors.white.withValues(alpha: 0.03),
-              ),
-              boxShadow:
-                  primary
-                      ? [
-                        BoxShadow(
-                          color: Colors.white.withValues(alpha: 0.20),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ]
-                      : null,
-            ),
-            child: Icon(
-              active ? item.activeIcon : item.icon,
-              color: fg,
-              size: primary ? 25 : 21,
+          child: SizedBox(
+            width: double.infinity,
+            height: 58,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  active ? item.activeIcon : item.icon,
+                  color: primary ? Colors.black : fg,
+                  size: 22,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: primary ? Colors.black : fg,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

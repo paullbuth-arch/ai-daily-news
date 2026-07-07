@@ -1,15 +1,10 @@
-import 'services/market_price_import_service.dart';
-
 class AiPromptKeys {
-  static const recognizeAboutDevice = 'recognizeAboutDevice';
   static const priceAdvice = 'priceAdvice';
   static const dailyReport = 'dailyReport';
   static const customerService = 'customerService';
   static const purchaseAdvice = 'purchaseAdvice';
   static const xianyuDescription = 'xianyuDescription';
   static const purchaseDecision = 'purchaseDecision';
-  static const marketPriceImageSystem = 'marketPriceImageSystem';
-  static const marketPriceImageUser = 'marketPriceImageUser';
 }
 
 class AiPromptDefinition {
@@ -28,16 +23,6 @@ class AiPromptDefinition {
 
 class AiPrompts {
   static final List<AiPromptDefinition> definitions = [
-    const AiPromptDefinition(
-      key: AiPromptKeys.recognizeAboutDevice,
-      title: '关于本机截图识别',
-      description: '用于拍照识别序列号、型号、容量、颜色、网络、电池健康和循环次数。',
-      defaultText:
-          '你是苹果设备信息识别专家。用户会上传一张iPad"关于本机"页面的截图。'
-          '请从截图中识别出以下信息并严格以JSON格式返回：\n'
-          '{"serial":"序列号","model":"型号名称","capacity":"容量","color":"颜色","network":"网络制式","batteryHealth":"电池健康度百分比数字","cycleCount":"循环次数数字"}\n'
-          '如果某项信息无法识别，对应字段填"未知"。只返回JSON，不要返回其他文字。',
-    ),
     const AiPromptDefinition(
       key: AiPromptKeys.priceAdvice,
       title: '库存定价建议',
@@ -91,18 +76,6 @@ class AiPrompts {
           '【报价】给出一句最高可接受收货价或压价理由\n'
           '【原因】不超过3条，每条带数字\n'
           '【下一步】一句可执行动作\n中文，简洁，总字数≤260。',
-    ),
-    AiPromptDefinition(
-      key: AiPromptKeys.marketPriceImageSystem,
-      title: '行情图片识别系统规则',
-      description: '用于导入批发行情截图时，告诉 AI 如何识别分区、型号、容量、成色和价格。',
-      defaultText: MarketPriceImportService.imageSystemPrompt.trim(),
-    ),
-    AiPromptDefinition(
-      key: AiPromptKeys.marketPriceImageUser,
-      title: '行情图片识别用户指令',
-      description: '用于导入批发行情截图时，配合系统规则要求 AI 输出 CSV 行。',
-      defaultText: MarketPriceImportService.imageUserPrompt.trim(),
     ),
   ];
 

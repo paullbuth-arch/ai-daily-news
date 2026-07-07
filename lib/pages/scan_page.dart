@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -14,7 +13,7 @@ import '../serial_decoder.dart';
 import '../main.dart';
 import '../services/device_export_service.dart';
 import '../services/intake_report_service.dart';
-import '../services/intake_ai_result_normalizer.dart';
+import '../services/intake_image_recognition_service.dart';
 import '../services/ipad_model_resolver.dart';
 import '../services/xianyu_copy_service.dart';
 
@@ -44,13 +43,13 @@ class _ManualIssueOption {
   });
 }
 
-class _AiCropSpec {
+class _ColorSampleSpec {
   final double left;
   final double top;
   final double width;
   final double height;
 
-  const _AiCropSpec({
+  const _ColorSampleSpec({
     required this.left,
     required this.top,
     required this.width,
@@ -261,20 +260,15 @@ class _ScanPageState extends State<ScanPage> {
   // 多图上传（最多12张）
   List<String> imagePaths = [];
 
-  // 整机图片AI识别
-  static const int _orderedInspectionImageLimit = 3;
-  static const double _pickedImageMaxDimension = 1280;
-  static const int _pickedImageQuality = 76;
-  static const int _aiCropTargetWidth = 980;
-  static const int _aiFastCropTargetWidth = 720;
-  bool aiInspecting = false;
-  Map<String, dynamic>? aiInspection;
+  // 整机图片OCR识别
+  bool imageRecognizing = false;
+  Map<String, dynamic>? imageInspection;
   String? inspectionReportPath;
 
   // 保存
   bool saving = false;
 
-  // 步骤指引：当前步骤 0=上传图片 1=AI复核 2=成本入库
+  // 步骤指引：当前步骤 0=上传图片 1=OCR复核 2=成本入库
   int currentStep = 0;
 
   @override
@@ -307,7 +301,7 @@ class _ScanPageState extends State<ScanPage> {
     return values;
   }
 
-  /// 添加实拍图（入库保存压缩副本，降低 AI 识别上传体积）
+  /// 添加实拍图（入库保存原图，OCR 识别时只读取图片文字）
   Future<void> _addImage(bool fromCamera) async {
     if (imagePaths.length >= 12) {
       toast(context, '最多上传12张图片');
@@ -317,19 +311,15 @@ class _ScanPageState extends State<ScanPage> {
       final picker = ImagePicker();
       final x = await picker.pickImage(
         source: fromCamera ? ImageSource.camera : ImageSource.gallery,
-        maxWidth: _pickedImageMaxDimension,
-        maxHeight: _pickedImageMaxDimension,
-        imageQuality: _pickedImageQuality,
       );
       if (x != null) {
         final now = DateTime.now();
         final dest =
             '$gDocDir/dev_${now.millisecondsSinceEpoch}_${imagePaths.length}.jpg';
-        // image_picker 已按上面的尺寸和质量参数生成压缩副本。
         await File(x.path).copy(dest);
         setState(() {
           imagePaths.add(dest);
-          aiInspection = null;
+          imageInspection = null;
           inspectionReportPath = null;
         });
         toast(context, '已添加第${imagePaths.length}张图片');
@@ -348,11 +338,7 @@ class _ScanPageState extends State<ScanPage> {
     }
     try {
       final picker = ImagePicker();
-      final List<XFile> images = await picker.pickMultiImage(
-        maxWidth: _pickedImageMaxDimension,
-        maxHeight: _pickedImageMaxDimension,
-        imageQuality: _pickedImageQuality,
-      );
+      final List<XFile> images = await picker.pickMultiImage();
       if (images.isNotEmpty) {
         int added = 0;
         for (final x in images) {
@@ -365,7 +351,7 @@ class _ScanPageState extends State<ScanPage> {
           added++;
         }
         setState(() {
-          aiInspection = null;
+          imageInspection = null;
           inspectionReportPath = null;
         });
         toast(context, '已添加${added}张图片，共${imagePaths.length}张');
@@ -379,7 +365,7 @@ class _ScanPageState extends State<ScanPage> {
   void _removeImage(int index) {
     setState(() {
       imagePaths.removeAt(index);
-      aiInspection = null;
+      imageInspection = null;
       inspectionReportPath = null;
     });
   }
@@ -414,7 +400,7 @@ class _ScanPageState extends State<ScanPage> {
 
   Map<String, dynamic> _inspectionForOutput() {
     final merged = Map<String, dynamic>.from(
-      aiInspection ?? const <String, dynamic>{},
+      imageInspection ?? const <String, dynamic>{},
     );
     final appearanceDefects = <Map<String, dynamic>>[];
     final screenDefects = <Map<String, dynamic>>[];
@@ -470,68 +456,6 @@ class _ScanPageState extends State<ScanPage> {
     'evidence': '人工补充',
   };
 
-  Future<String> _imageDataUriForAi(String path) async {
-    final bytes = await File(path).readAsBytes();
-    final mime = _mimeFromBytes(bytes);
-    if (mime != null) return 'data:$mime;base64,${base64Encode(bytes)}';
-    try {
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 1024);
-      final frame = await codec.getNextFrame();
-      final data = await frame.image.toByteData(format: ui.ImageByteFormat.png);
-      frame.image.dispose();
-      if (data != null) {
-        return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List())}';
-      }
-    } catch (_) {}
-    return 'data:image/jpeg;base64,${base64Encode(bytes)}';
-  }
-
-  Future<String> _croppedImageDataUriForAi(
-    String path,
-    _AiCropSpec spec, {
-    int targetWidth = _aiCropTargetWidth,
-  }) async {
-    final bytes = await File(path).readAsBytes();
-    final codec = await ui.instantiateImageCodec(bytes);
-    final frame = await codec.getNextFrame();
-    final image = frame.image;
-    try {
-      final left = (image.width * spec.left).clamp(0.0, image.width - 1.0);
-      final top = (image.height * spec.top).clamp(0.0, image.height - 1.0);
-      final cropWidth = (image.width * spec.width).clamp(
-        1.0,
-        image.width - left,
-      );
-      final cropHeight = (image.height * spec.height).clamp(
-        1.0,
-        image.height - top,
-      );
-      final src = Rect.fromLTWH(left, top, cropWidth, cropHeight);
-
-      final scale = cropWidth > targetWidth ? targetWidth / cropWidth : 1.0;
-      final outWidth = math.max(1, (cropWidth * scale).round());
-      final outHeight = math.max(1, (cropHeight * scale).round());
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      final paint = Paint()..filterQuality = FilterQuality.medium;
-      canvas.drawImageRect(
-        image,
-        src,
-        Rect.fromLTWH(0, 0, outWidth.toDouble(), outHeight.toDouble()),
-        paint,
-      );
-      final picture = recorder.endRecording();
-      final cropped = await picture.toImage(outWidth, outHeight);
-      picture.dispose();
-      final data = await cropped.toByteData(format: ui.ImageByteFormat.png);
-      cropped.dispose();
-      if (data == null) return _imageDataUriForAi(path);
-      return 'data:image/png;base64,${base64Encode(data.buffer.asUint8List())}';
-    } finally {
-      image.dispose();
-    }
-  }
-
   Future<Map<String, dynamic>> _withBackColorFallback(
     Map<String, dynamic> result,
   ) async {
@@ -576,8 +500,8 @@ class _ScanPageState extends State<ScanPage> {
 
   List<double>? _averageBackColorRgb(Uint8List bytes, int width, int height) {
     const specs = [
-      _AiCropSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
-      _AiCropSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
+      _ColorSampleSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
+      _ColorSampleSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
     ];
     var rSum = 0.0;
     var gSum = 0.0;
@@ -676,172 +600,45 @@ class _ScanPageState extends State<ScanPage> {
     result['fieldConfidence'] = fields;
   }
 
-  String? _mimeFromBytes(List<int> bytes) {
-    if (bytes.length >= 3 &&
-        bytes[0] == 0xFF &&
-        bytes[1] == 0xD8 &&
-        bytes[2] == 0xFF) {
-      return 'image/jpeg';
-    }
-    if (bytes.length >= 8 &&
-        bytes[0] == 0x89 &&
-        bytes[1] == 0x50 &&
-        bytes[2] == 0x4E &&
-        bytes[3] == 0x47) {
-      return 'image/png';
-    }
-    if (bytes.length >= 12 &&
-        bytes[0] == 0x52 &&
-        bytes[1] == 0x49 &&
-        bytes[2] == 0x46 &&
-        bytes[3] == 0x46 &&
-        bytes[8] == 0x57 &&
-        bytes[9] == 0x45 &&
-        bytes[10] == 0x42 &&
-        bytes[11] == 0x50) {
-      return 'image/webp';
-    }
-    return null;
-  }
-
-  Future<void> _runFullAiInspection() async {
+  Future<void> _runImageRecognition() async {
     if (imagePaths.isEmpty) {
       toast(context, '请先上传设备图片');
       return;
     }
-    if (imagePaths.length < _orderedInspectionImageLimit) {
-      toast(context, '请按顺序上传3张关键图：背面、关于本机、爱思/沙漏报告');
-      return;
-    }
-    if (aiInspecting) return;
-    setState(() => aiInspecting = true);
+    if (imageRecognizing) return;
+    setState(() => imageRecognizing = true);
     try {
-      final recognizedPaths = <String>{};
-      var result = <String, dynamic>{};
-      var hasAiResult = false;
-
-      final primaryPaths =
-          imagePaths.take(_orderedInspectionImageLimit).toList();
-      if (primaryPaths.isNotEmpty) {
-        final primaryImages = await _encodeOrderedInspectionImages(
-          primaryPaths,
-        );
-        final primary = await AiService.recognizeIpadIntake(
-          primaryImages,
-          croppedRegions: true,
-          totalImageCount: imagePaths.length,
-        );
-        recognizedPaths.addAll(primaryPaths);
-        if (primary['error'] == null) {
-          hasAiResult = true;
-          result = _normalizeInspectionResult(primary);
-        } else {
-          result = _withInspectionWarning(
-            result,
-            '图1-3主识别失败：${primary['error']}',
-          );
-        }
-      }
-
-      if (!hasAiResult) {
+      final service = IntakeImageRecognitionService(
+        modelOptions: iPadModels.map((m) => m['name']!).toList(),
+        capacityOptions: iPadCapacities,
+      );
+      var result = await service.recognize(imagePaths);
+      if (result['error'] != null) {
         if (!mounted) return;
-        final warning = _inspectionWarnings(result['warnings']).join('；');
-        toast(context, warning.isEmpty ? 'AI识别失败，请换一张清晰图片再试' : warning);
+        toast(context, result['error'].toString());
         return;
       }
-      result['recognitionStrategy'] =
-          '三张关键图识别：图1取背面颜色点，图2取关于本机区域，图3取爱思底部区域；第4张以后不上传AI';
-      result['recognizedImageCount'] = recognizedPaths.length;
-      result = _normalizeInspectionResult(result);
       result = await _withBackColorFallback(result);
       if (!mounted) return;
       final appliedCount = _applyInspection(result);
       setState(() {
-        aiInspection = result;
+        imageInspection = result;
         inspectionReportPath = null;
       });
       final missing = _missingReviewFields();
       toast(
         context,
         missing.isEmpty
-            ? '三张关键图已补全可信设备信息，请复核后入库'
+            ? 'OCR已补全可信设备信息，请复核后入库'
             : appliedCount > 0
-            ? 'AI已读取，仍需补：${missing.join('、')}'
-            : 'AI未读到关键字段，请按顺序重拍或手动补全',
+            ? 'OCR已读取，仍需补：${missing.join('、')}'
+            : 'OCR未读到关键字段，请换清晰图或手动补全',
       );
     } catch (e) {
-      if (mounted) toast(context, 'AI整机识别失败：$e');
+      if (mounted) toast(context, 'OCR整机识别失败：$e');
     } finally {
-      if (mounted) setState(() => aiInspecting = false);
+      if (mounted) setState(() => imageRecognizing = false);
     }
-  }
-
-  Future<List<String>> _encodeOrderedInspectionImages(
-    List<String> paths,
-  ) async {
-    final encoded = <String>[];
-    for (var i = 0; i < paths.length; i++) {
-      final path = paths[i];
-      final specs = switch (i) {
-        0 => const [
-          // 图1：背面颜色采样点，避开右上贴纸文字。
-          _AiCropSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
-          _AiCropSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
-        ],
-        1 => const [
-          // 图2：关于本机右侧信息区域。
-          _AiCropSpec(left: 0.43, top: 0.14, width: 0.50, height: 0.48),
-        ],
-        _ => const [
-          // 图3：爱思报告中下方电池/锁/匹配信息区域。
-          _AiCropSpec(left: 0.18, top: 0.64, width: 0.64, height: 0.28),
-        ],
-      };
-      for (final spec in specs) {
-        try {
-          encoded.add(
-            await _croppedImageDataUriForAi(
-              path,
-              spec,
-              targetWidth: _aiFastCropTargetWidth,
-            ),
-          );
-        } catch (_) {
-          encoded.add(await _imageDataUriForAi(path));
-        }
-      }
-    }
-    return encoded;
-  }
-
-  Map<String, dynamic> _normalizeInspectionResult(Map<String, dynamic> result) {
-    return IntakeAiResultNormalizer.normalize(
-      result,
-      modelOptions: iPadModels.map((m) => m['name']!).toList(),
-      capacityOptions: iPadCapacities,
-    );
-  }
-
-  Map<String, dynamic> _withInspectionWarning(
-    Map<String, dynamic> result,
-    String warning,
-  ) {
-    final merged = Map<String, dynamic>.from(result);
-    final warnings = <String>{..._inspectionWarnings(merged['warnings'])};
-    warnings.add(warning);
-    merged['warnings'] = warnings.toList();
-    return merged;
-  }
-
-  List<String> _inspectionWarnings(dynamic raw) {
-    if (raw is List) {
-      return raw
-          .map((item) => item.toString().trim())
-          .where((item) => item.isNotEmpty)
-          .toList();
-    }
-    final text = raw?.toString().trim() ?? '';
-    return text.isEmpty ? const <String>[] : <String>[text];
   }
 
   int _applyInspection(Map<String, dynamic> result) {
@@ -1000,14 +797,15 @@ class _ScanPageState extends State<ScanPage> {
     final sourceMatch = _matchModel(source);
     if (sourceMatch.isNotEmpty) return sourceMatch;
 
-    final aiModel = (result['model'] ?? '').toString().trim();
-    if (!_usable(aiModel) || !_aiModelAllowedBySource(aiModel, source)) {
+    final recognizedModel = (result['model'] ?? '').toString().trim();
+    if (!_usable(recognizedModel) ||
+        !_recognizedModelAllowedBySource(recognizedModel, source)) {
       return '';
     }
-    return _matchModel(aiModel);
+    return _matchModel(recognizedModel);
   }
 
-  bool _aiModelAllowedBySource(String model, String source) {
+  bool _recognizedModelAllowedBySource(String model, String source) {
     final m = model.toLowerCase();
     final s = source.toLowerCase();
     if ((m.contains('2024') || m.contains('m4')) &&
@@ -1207,7 +1005,7 @@ class _ScanPageState extends State<ScanPage> {
     if (!RegExp(r'^\d+$').hasMatch(text)) return true;
 
     final previous = _intFromResult(
-      aiInspection,
+      imageInspection,
       inspectionKey,
       min: min,
       max: max,
@@ -1216,7 +1014,7 @@ class _ScanPageState extends State<ScanPage> {
   }
 
   String _inspectionText(String key, {required String fallback}) {
-    final raw = aiInspection?[key];
+    final raw = imageInspection?[key];
     if (raw == null) return fallback;
     final text = raw.toString().trim();
     if (!_usable(text)) return fallback;
@@ -1262,14 +1060,14 @@ class _ScanPageState extends State<ScanPage> {
   String _batteryReviewText() {
     final value =
         _nullableBoundedInt(_batteryCtrl.text, min: 50, max: 100) ??
-        _intFromResult(aiInspection, 'batteryHealth', min: 50, max: 100);
+        _intFromResult(imageInspection, 'batteryHealth', min: 50, max: 100);
     return value == null ? '未识别' : '$value%';
   }
 
   String _cycleReviewText() {
     final value =
         _nullableBoundedInt(_cycleCtrl.text, min: 0, max: 3000) ??
-        _intFromResult(aiInspection, 'cycleCount', min: 0, max: 3000);
+        _intFromResult(imageInspection, 'cycleCount', min: 0, max: 3000);
     return value == null ? '未识别' : '$value次';
   }
 
@@ -1389,8 +1187,8 @@ class _ScanPageState extends State<ScanPage> {
 
   void _handleStepContinue() {
     if (currentStep == 0) {
-      if (imagePaths.length < _orderedInspectionImageLimit) {
-        toast(context, '请按顺序上传3张关键图：背面、关于本机、爱思/沙漏报告');
+      if (imagePaths.isEmpty) {
+        toast(context, '请先上传至少1张设备图片');
         return;
       }
     }
@@ -1407,7 +1205,7 @@ class _ScanPageState extends State<ScanPage> {
   @override
   Widget build(BuildContext context) => appScaffold(
     context,
-    'AI入库',
+    '图片入库',
     Stepper(
       type: StepperType.vertical,
       currentStep: currentStep,
@@ -1440,8 +1238,8 @@ class _ScanPageState extends State<ScanPage> {
                     child: ElevatedButton(
                       onPressed: details.onStepContinue,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: C.t3,
-                        foregroundColor: Colors.white,
+                        backgroundColor: C.primary,
+                        foregroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(11),
                         ),
@@ -1471,7 +1269,7 @@ class _ScanPageState extends State<ScanPage> {
   Step _uploadImagesStep() => Step(
     title: _stepTitle('上传验机图片'),
     subtitle: const Text(
-      '上传图片，并手动记录外观',
+      '上传图片，本机OCR提取文字',
       style: TextStyle(color: C.t3, fontSize: 11),
     ),
     state: currentStep > 0 ? StepState.complete : StepState.indexed,
@@ -1485,13 +1283,13 @@ class _ScanPageState extends State<ScanPage> {
         const SizedBox(height: 8),
         _manualAppearanceCard(),
         const SizedBox(height: 8),
-        _aiInspectionActionCard(),
+        _imageRecognitionActionCard(),
       ],
     ),
   );
 
   Step _reviewStep() => Step(
-    title: _stepTitle('AI补全与复核'),
+    title: _stepTitle('OCR识别与复核'),
     subtitle: const Text(
       '型号、容量、颜色等可信字段自动填',
       style: TextStyle(color: C.t3, fontSize: 11),
@@ -1501,7 +1299,7 @@ class _ScanPageState extends State<ScanPage> {
     content: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (aiInspection != null) ...[
+        if (imageInspection != null) ...[
           _inspectionSummary(),
           const SizedBox(height: 8),
         ] else ...[
@@ -1543,11 +1341,11 @@ class _ScanPageState extends State<ScanPage> {
     child: const Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.fact_check_outlined, color: C.cyan, size: 20),
+        Icon(Icons.fact_check_outlined, color: C.primary, size: 20),
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            '请按顺序上传：第1张背面颜色图、第2张关于本机、第3张爱思/沙漏报告。AI只识别前三张的指定区域；后续外观、屏幕、边框和瑕疵图仅供人工复核。',
+            '建议上传“关于本机”、爱思/沙漏报告、电池页和清晰实拍图。本机OCR只读取图片文字；外观问题仍以人工勾选为准。',
             style: TextStyle(
               color: C.t2,
               fontSize: 12,
@@ -1709,8 +1507,8 @@ class _ScanPageState extends State<ScanPage> {
               child: ElevatedButton(
                 onPressed: () => _addImage(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: C.t3,
-                  foregroundColor: Colors.white,
+                  backgroundColor: C.primary,
+                  foregroundColor: Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -1815,47 +1613,92 @@ class _ScanPageState extends State<ScanPage> {
   Widget _manualIssuePill(_ManualIssueOption issue) => AppChoicePill(
     label: issue.label,
     selected: selectedManualIssueIds.contains(issue.id),
-    color: issue.isScreen ? C.orange : C.cyan,
+    color: issue.isScreen ? C.orange : C.primary,
     onTap: () => _toggleManualIssue(issue.id),
   );
 
-  Widget _aiInspectionActionCard() => CardBox(
+  Widget _imageRecognitionActionCard() => GlassPanel(
+    padding: const EdgeInsets.all(14),
+    radius: C.radiusLg,
+    color: C.bgCard,
+    borderColor:
+        imagePaths.isEmpty ? C.border : C.primary.withValues(alpha: 0.36),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
-            Icon(Icons.auto_awesome_rounded, color: C.purple, size: 18),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'AI入库识别',
-                style: TextStyle(
-                  color: C.t1,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
-                ),
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: C.primary.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(C.radiusSm),
+              ),
+              child: const Icon(
+                Icons.document_scanner_outlined,
+                color: C.primary,
+                size: 20,
               ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '本机OCR识别',
+                    style: TextStyle(
+                      color: C.t1,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    imagePaths.isEmpty
+                        ? '等待上传图片'
+                        : '${imagePaths.length} 张图片待读取',
+                    style: const TextStyle(
+                      color: C.t3,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            StatusChip('离线', C.primary),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Text(
           imagePaths.isEmpty
-              ? '按顺序上传：1背面颜色图、2关于本机、3爱思报告；AI只看前三张关键区域。'
-              : '已准备 ${imagePaths.length} 张图片，AI只上传前三张裁剪区域；第4张以后留给人工复核。',
+              ? '上传关于本机、爱思/沙漏报告或电池页截图后，再读取文字并自动填入可信字段。'
+              : '将读取截图里的型号、容量、序列号、电池健康和循环次数；低置信字段会留给你复核。',
           style: const TextStyle(color: C.t3, fontSize: 11, height: 1.4),
         ),
-        const SizedBox(height: 10),
+        if (imageRecognizing) ...[
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(C.radiusSm),
+            child: const LinearProgressIndicator(
+              minHeight: 4,
+              color: C.primary,
+              backgroundColor: C.bgSurface,
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
         SizedBox(
           width: double.infinity,
           child: FilledButton.icon(
             onPressed:
-                imagePaths.length < _orderedInspectionImageLimit || aiInspecting
+                imagePaths.isEmpty || imageRecognizing
                     ? null
-                    : _runFullAiInspection,
+                    : _runImageRecognition,
             icon:
-                aiInspecting
+                imageRecognizing
                     ? const SizedBox(
                       width: 16,
                       height: 16,
@@ -1864,27 +1707,21 @@ class _ScanPageState extends State<ScanPage> {
                         color: Colors.black,
                       ),
                     )
-                    : const Icon(Icons.filter_3_rounded),
+                    : const Icon(Icons.document_scanner_outlined),
             style: FilledButton.styleFrom(
-              backgroundColor:
-                  imagePaths.length < _orderedInspectionImageLimit
-                      ? C.bgElevated
-                      : C.purple,
-              foregroundColor:
-                  imagePaths.length < _orderedInspectionImageLimit
-                      ? C.t3
-                      : Colors.black,
+              backgroundColor: imagePaths.isEmpty ? C.bgElevated : C.primary,
+              foregroundColor: imagePaths.isEmpty ? C.t3 : Colors.black,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(11),
+                borderRadius: BorderRadius.circular(C.radiusMd),
               ),
             ),
             label: Text(
-              imagePaths.length < _orderedInspectionImageLimit
-                  ? '请先上传3张关键图'
-                  : aiInspecting
-                  ? 'AI识别中'
-                  : '识别前三张关键图',
+              imagePaths.isEmpty
+                  ? '请先上传设备图片'
+                  : imageRecognizing
+                  ? 'OCR读取中'
+                  : '开始本机OCR',
               style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
@@ -1905,7 +1742,7 @@ class _ScanPageState extends State<ScanPage> {
         SizedBox(width: 8),
         Expanded(
           child: Text(
-            '还没有AI补全结果。你可以返回上传图片识别；外观问题已按上一页手动勾选记录。',
+            '还没有OCR识别结果。你可以返回上传清晰截图识别；外观问题已按上一页手动勾选记录。',
             style: TextStyle(
               color: C.t2,
               fontSize: 11,
@@ -2230,9 +2067,9 @@ class _ScanPageState extends State<ScanPage> {
           '验货报告',
           imagePaths.isEmpty
               ? '未上传图片'
-              : aiInspection == null
+              : imageInspection == null
               ? '将按人工外观记录生成报告'
-              : '将生成AI信息+人工外观报告',
+              : '将生成OCR信息+人工外观报告',
         ),
         const SizedBox(height: 14),
         saving
@@ -2254,7 +2091,7 @@ class _ScanPageState extends State<ScanPage> {
       );
 
   Widget _inspectionSummary() {
-    final data = aiInspection ?? {};
+    final data = imageInspection ?? {};
     final confidence = _inspectionConfidence(data);
     final warnings = data['warnings'];
     final missing = _missingReviewFields();
@@ -2282,7 +2119,7 @@ class _ScanPageState extends State<ScanPage> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  isComplete ? 'AI设备信息已补全' : 'AI已识别，仍需补全',
+                  isComplete ? 'OCR设备信息已补全' : 'OCR已识别，仍需补全',
                   style: const TextStyle(
                     color: C.t1,
                     fontSize: 13,
@@ -2323,7 +2160,7 @@ class _ScanPageState extends State<ScanPage> {
           if (warnings is List && warnings.isNotEmpty) ...[
             const SizedBox(height: 6),
             Text(
-              'AI提醒：${warnings.take(3).join('、')}',
+              'OCR提醒：${warnings.take(3).join('、')}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
