@@ -30,8 +30,8 @@ Future<T?> showAppFormSheet<T>({
                 margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 padding: EdgeInsets.zero,
                 radius: 18,
-                color: C.isLight ? null : C.bgCard,
-                borderColor: C.border,
+                color: C.isLight ? C.hudDark2 : C.bgCard,
+                borderColor: C.isLight ? C.hudLine : C.border,
                 child: Column(
                   children: [
                     const SizedBox(height: 10),
@@ -129,8 +129,8 @@ Future<T?> showAppFormDialog<T>({
               child: GlassPanel(
                 padding: EdgeInsets.zero,
                 radius: 18,
-                color: C.isLight ? null : C.bgCard,
-                borderColor: C.border,
+                color: C.isLight ? C.hudDark2 : C.bgCard,
+                borderColor: C.isLight ? C.hudLine : C.border,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -236,10 +236,13 @@ class AppFormField extends StatelessWidget {
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
-      prefixIcon: icon == null ? null : Icon(icon, color: C.t3, size: 18),
+      prefixIcon:
+          icon == null
+              ? null
+              : Icon(icon, color: C.isLight ? C.purple : C.t3, size: 18),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgDeep,
+      fillColor: C.isLight ? C.hudDark2 : C.bgDeep,
       labelStyle: TextStyle(color: C.t2, fontSize: 12),
       hintStyle: TextStyle(color: C.t3, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -285,7 +288,7 @@ class AppDropdownField<T> extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 12),
     constraints: const BoxConstraints(minHeight: 48),
     decoration: BoxDecoration(
-      color: C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgDeep,
+      color: C.isLight ? C.hudDark2 : C.bgDeep,
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: C.border),
     ),
@@ -293,7 +296,7 @@ class AppDropdownField<T> extends StatelessWidget {
       value: value,
       isExpanded: true,
       underline: const SizedBox(),
-      dropdownColor: C.bgCard,
+      dropdownColor: C.isLight ? C.hudDark2 : C.bgCard,
       icon: Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
       hint: Text(hint, style: TextStyle(color: C.t3, fontSize: fontSize)),
       style: TextStyle(color: C.t1, fontSize: fontSize),
@@ -340,6 +343,9 @@ class AppSheetActions extends StatelessWidget {
         child: OutlinedButton(
           onPressed: onSecondary ?? () => Navigator.pop(context),
           style: OutlinedButton.styleFrom(
+            foregroundColor: C.t2,
+            backgroundColor: C.isLight ? C.hudDark2 : Colors.transparent,
+            side: BorderSide(color: C.isLight ? C.hudLine : C.border),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -353,10 +359,13 @@ class AppSheetActions extends StatelessWidget {
         child: FilledButton(
           onPressed: onPrimary,
           style: FilledButton.styleFrom(
-            backgroundColor: C.isLight ? C.hudDark : primaryColor,
-            foregroundColor: C.isLight ? C.purple : Colors.black,
+            backgroundColor: C.isLight ? C.primaryButtonBg : primaryColor,
+            foregroundColor: C.isLight ? C.primaryButtonFg : Colors.black,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
+              side: BorderSide(
+                color: C.isLight ? C.primaryButtonBorder : Colors.transparent,
+              ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 13),
           ),
@@ -389,14 +398,22 @@ class AppChoicePill extends StatelessWidget {
       duration: C.fast,
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       decoration: BoxDecoration(
-        color: selected ? color : C.bgDeep,
+        color:
+            selected
+                ? (C.isLight ? C.hudDark : color)
+                : (C.isLight ? C.hudDark2 : C.bgDeep),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: selected ? color : C.border),
+        border: Border.all(
+          color:
+              selected
+                  ? (C.isLight ? C.purple.withValues(alpha: 0.58) : color)
+                  : (C.isLight ? C.hudLine : C.border),
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
-          color: selected ? (C.isLight ? Colors.white : Colors.black) : C.t2,
+          color: selected ? (C.isLight ? C.purple : Colors.black) : C.t2,
           fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
@@ -434,12 +451,17 @@ class AppSelectionTile extends StatelessWidget {
       decoration: BoxDecoration(
         color:
             selected
-                ? color.withValues(alpha: C.isLight ? 0.12 : 0.16)
+                ? (C.isLight ? C.hudDark : color.withValues(alpha: 0.16))
                 : C.isLight
-                ? C.bgCard.withValues(alpha: 0.86)
+                ? C.hudDark2
                 : C.bgDeep,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: selected ? color : C.border),
+        border: Border.all(
+          color:
+              selected
+                  ? (C.isLight ? C.purple.withValues(alpha: 0.58) : color)
+                  : (C.isLight ? C.hudLine : C.border),
+        ),
       ),
       child: Row(
         children: [
@@ -449,16 +471,15 @@ class AppSelectionTile extends StatelessWidget {
             decoration: BoxDecoration(
               color:
                   selected
-                      ? color
+                      ? (C.isLight ? C.purple.withValues(alpha: 0.18) : color)
                       : C.isLight
-                      ? C.bgCardMuted
+                      ? C.bgSurface
                       : C.bgSurface,
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(
               icon,
-              color:
-                  selected ? (C.isLight ? Colors.white : Colors.black) : C.t2,
+              color: selected ? (C.isLight ? C.purple : Colors.black) : C.t2,
               size: 18,
             ),
           ),

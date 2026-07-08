@@ -853,7 +853,7 @@ class _FilterPill extends StatelessWidget {
               selected
                   ? (C.isLight ? C.hudDark : C.cyan)
                   : C.isLight
-                  ? C.bgCard.withValues(alpha: 0.86)
+                  ? C.hudDark2
                   : Colors.white.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(22),
           border: Border.all(
@@ -861,7 +861,7 @@ class _FilterPill extends StatelessWidget {
                 selected
                     ? (C.isLight ? C.purple.withValues(alpha: 0.48) : C.cyan)
                     : C.isLight
-                    ? C.border
+                    ? C.hudLine
                     : Colors.white.withValues(alpha: 0.08),
           ),
         ),
@@ -1547,11 +1547,13 @@ class _CardActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final bg =
         filled
-            ? (C.isLight ? C.purple : C.cyan)
-            : Colors.white.withValues(alpha: C.isLight ? 0.10 : 0.09);
+            ? (C.isLight ? C.hudDark : C.cyan)
+            : C.isLight
+            ? C.hudDark2
+            : Colors.white.withValues(alpha: 0.09);
     final fg =
         filled
-            ? (C.isLight ? C.hudDark : Colors.black)
+            ? (C.isLight ? C.purple : Colors.black)
             : (C.isLight ? C.hudText : C.t1);
     return SizedBox(
       height: 34,
@@ -1570,7 +1572,7 @@ class _CardActionButton extends StatelessWidget {
                   : BorderSide(
                     color:
                         C.isLight
-                            ? C.purple.withValues(alpha: 0.24)
+                            ? C.hudLine
                             : Colors.white.withValues(alpha: 0.12),
                   ),
         ),

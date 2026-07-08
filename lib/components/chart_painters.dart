@@ -92,7 +92,7 @@ class LineChartPainter extends CustomPainter {
 
     // Data points
     final dotPaint = Paint()..color = lineColor;
-    final dotBg = Paint()..color = C.bgCard;
+    final dotBg = Paint()..color = C.isLight ? C.hudDark2 : C.bgCard;
     for (final p in points) {
       canvas.drawCircle(p, 5, dotBg);
       canvas.drawCircle(p, 3, dotPaint);
@@ -105,7 +105,11 @@ class LineChartPainter extends CustomPainter {
         color: lineColor,
         fontWeight: FontWeight.w900,
       );
-      final bgPaint = Paint()..color = C.bgCard.withValues(alpha: 0.92);
+      final bgPaint =
+          Paint()
+            ..color = (C.isLight ? C.hudDark2 : C.bgCard).withValues(
+              alpha: 0.92,
+            );
       final borderPaint =
           Paint()
             ..color = lineColor.withValues(alpha: 0.26)

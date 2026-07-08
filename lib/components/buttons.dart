@@ -36,16 +36,13 @@ Widget ghostBtn(String label, VoidCallback onTap, {IconData? icon}) => SizedBox(
     onPressed: onTap,
     style: OutlinedButton.styleFrom(
       foregroundColor: C.t1,
-      side: BorderSide(
-        color: C.isLight ? C.purple.withValues(alpha: 0.26) : C.border,
-      ),
+      side: BorderSide(color: C.isLight ? C.hudLine : C.border),
       minimumSize: const Size.fromHeight(48),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
       ),
-      backgroundColor:
-          C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgSurface,
+      backgroundColor: C.isLight ? C.hudDark2 : C.bgSurface,
       textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
     ),
     child: Row(
@@ -76,7 +73,7 @@ Widget smallBtn(
       borderRadius: BorderRadius.circular(C.radiusSm),
     ),
     backgroundColor: (color ?? C.primary).withValues(
-      alpha: C.isLight ? 0.10 : 0.12,
+      alpha: C.isLight ? 0.16 : 0.12,
     ),
     textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
   ),
@@ -99,13 +96,14 @@ Widget iconBtn(
   height: size,
   child: Material(
     color:
-        C.isLight
-            ? C.bgCard.withValues(alpha: 0.88)
-            : (color ?? C.primary).withValues(alpha: 0.12),
+        C.isLight ? C.hudDark2 : (color ?? C.primary).withValues(alpha: 0.12),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(C.radiusMd),
       side: BorderSide(
-        color: (color ?? C.primary).withValues(alpha: C.isLight ? 0.30 : 0.20),
+        color:
+            C.isLight
+                ? C.hudLine
+                : (color ?? C.primary).withValues(alpha: 0.20),
       ),
     ),
     clipBehavior: Clip.antiAlias,

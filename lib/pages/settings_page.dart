@@ -251,10 +251,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final selected = gThemeMode == mode;
     return Expanded(
       child: Material(
-        color: selected ? C.primaryLight : C.bgSurface,
+        color: selected ? C.hudDark : C.hudDark2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusMd),
-          side: BorderSide(color: selected ? C.primary : C.border),
+          side: BorderSide(color: selected ? C.primaryButtonBorder : C.hudLine),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
@@ -264,12 +264,12 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, color: selected ? C.primary : C.t3, size: 18),
+                Icon(icon, color: selected ? C.purple : C.t3, size: 18),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: selected ? C.primary : C.t2,
+                    color: selected ? C.purple : C.t2,
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),

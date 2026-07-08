@@ -162,7 +162,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: C.bgCard,
+        fillColor: C.hudDark2,
         hintStyle: TextStyle(color: C.t3, fontSize: 13),
         labelStyle: TextStyle(color: C.t2, fontSize: 13),
         contentPadding: const EdgeInsets.symmetric(
@@ -175,7 +175,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: BorderSide(color: C.border),
+          borderSide: BorderSide(color: C.hudLine),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(C.radiusMd)),
@@ -184,10 +184,10 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       cardTheme: CardTheme(
         elevation: 0,
-        color: C.bgCard,
+        color: C.hudDark2,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusLg),
-          side: BorderSide(color: C.border),
+          side: BorderSide(color: C.hudLine),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -218,8 +218,8 @@ class _IpadBossAppState extends State<IpadBossApp> {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: C.t1,
-          backgroundColor: C.bgCard.withValues(alpha: 0.86),
-          side: BorderSide(color: C.purple.withValues(alpha: 0.26)),
+          backgroundColor: C.hudDark2,
+          side: BorderSide(color: C.hudLine),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
           ),

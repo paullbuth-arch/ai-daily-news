@@ -240,11 +240,12 @@ class _DetailPageState extends State<DetailPage> {
             data: Theme.of(context).copyWith(
               colorScheme:
                   C.isLight
-                      ? ColorScheme.light(
-                        primary: C.primaryButtonBg,
-                        onPrimary: C.primaryButtonFg,
-                        surface: C.bgCard,
+                      ? ColorScheme.dark(
+                        primary: C.purple,
+                        onPrimary: C.hudDark,
+                        surface: C.hudDark2,
                         onSurface: C.t1,
+                        outline: C.hudLine,
                       )
                       : ColorScheme.dark(
                         primary: C.cyan,
@@ -988,13 +989,10 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
       constraints: const BoxConstraints(minHeight: 58),
       padding: const EdgeInsets.fromLTRB(11, 8, 10, 8),
       decoration: BoxDecoration(
-        color:
-            C.isLight
-                ? C.bgCard.withValues(alpha: 0.88)
-                : const Color(0xB5161B24),
+        color: C.isLight ? C.hudDark2 : const Color(0xB5161B24),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: C.isLight ? C.border : Colors.white.withValues(alpha: 0.08),
+          color: C.isLight ? C.hudLine : Colors.white.withValues(alpha: 0.08),
         ),
       ),
       child: Row(
@@ -1005,11 +1003,11 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             decoration: BoxDecoration(
               color:
                   C.isLight
-                      ? C.selected.withValues(alpha: 0.72)
+                      ? C.purple.withValues(alpha: 0.16)
                       : Colors.white.withValues(alpha: 0.055),
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, color: C.t3, size: 17),
+            child: Icon(icon, color: C.isLight ? C.purple : C.t3, size: 17),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -1257,11 +1255,10 @@ class _EditToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedBg = C.isLight ? C.hudDark : color;
-    final idleBg =
-        C.isLight ? C.bgCard.withValues(alpha: 0.88) : const Color(0xB5161B24);
-    final selectedBorder = C.isLight ? C.purple.withValues(alpha: 0.42) : color;
+    final idleBg = C.isLight ? C.hudDark2 : const Color(0xB5161B24);
+    final selectedBorder = C.isLight ? C.purple.withValues(alpha: 0.58) : color;
     final idleBorder =
-        C.isLight ? C.border : Colors.white.withValues(alpha: 0.08);
+        C.isLight ? C.hudLine : Colors.white.withValues(alpha: 0.08);
     final selectedText = C.isLight ? C.purple : Colors.black;
     final body = AnimatedContainer(
       duration: C.fast,
