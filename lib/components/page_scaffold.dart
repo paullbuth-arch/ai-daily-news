@@ -5,7 +5,7 @@ class AppBackdrop extends StatelessWidget {
   const AppBackdrop({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => const DecoratedBox(
+  Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
         colors: [Color(0xFF081018), C.bgDeep, Color(0xFF05070A)],
@@ -39,7 +39,7 @@ class _OpsBackdropPainter extends CustomPainter {
 
     final horizon =
         Paint()
-          ..shader = const LinearGradient(
+          ..shader = LinearGradient(
             colors: [Colors.transparent, C.primary, Colors.transparent],
           ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
           ..strokeWidth = 1;
@@ -139,7 +139,7 @@ class RoundIconButton extends StatelessWidget {
       color: background ?? C.bgSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
-        side: const BorderSide(color: C.border),
+        side: BorderSide(color: C.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -271,7 +271,7 @@ Widget appScaffold(
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                         color: C.t1,

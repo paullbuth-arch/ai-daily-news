@@ -82,7 +82,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             (sheetContext, setS) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '售后原因',
                   style: TextStyle(
                     color: C.t2,
@@ -106,7 +106,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                           .toList(),
                 ),
                 const SizedBox(height: 14),
-                const Text(
+                Text(
                   '处理进度',
                   style: TextStyle(
                     color: C.t2,

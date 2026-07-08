@@ -130,7 +130,7 @@ class DeviceExportService {
             ..shader = ui.Gradient.linear(
               Offset.zero,
               const Offset(width, height),
-              const [C.bgSurface, C.bgDeep],
+              [C.bgSurface, C.bgDeep],
             );
       canvas.drawRect(rect, bg);
 
@@ -157,13 +157,13 @@ class DeviceExportService {
         canvas,
         '货脉',
         const Offset(168, 92),
-        const TextStyle(color: C.t1, fontSize: 34, fontWeight: FontWeight.w900),
+        TextStyle(color: C.t1, fontSize: 34, fontWeight: FontWeight.w900),
       );
       _drawText(
         canvas,
         '闲鱼上架素材',
         const Offset(168, 134),
-        const TextStyle(color: C.t3, fontSize: 18, fontWeight: FontWeight.w700),
+        TextStyle(color: C.t3, fontSize: 18, fontWeight: FontWeight.w700),
       );
 
       final cleanColor = device.idLockClean ? C.green : C.red;
@@ -186,7 +186,7 @@ class DeviceExportService {
         canvas,
         device.model,
         const Offset(80, 218),
-        const TextStyle(
+        TextStyle(
           color: C.t1,
           fontSize: 48,
           fontWeight: FontWeight.w900,
@@ -199,7 +199,7 @@ class DeviceExportService {
         canvas,
         '${device.capacity} · ${device.color} · ${device.network}',
         const Offset(82, 330),
-        const TextStyle(color: C.t3, fontSize: 26, fontWeight: FontWeight.w800),
+        TextStyle(color: C.t3, fontSize: 26, fontWeight: FontWeight.w800),
         maxWidth: 560,
       );
 
@@ -225,18 +225,14 @@ class DeviceExportService {
         canvas,
         '售价',
         const Offset(110, 770),
-        const TextStyle(color: C.t2, fontSize: 22, fontWeight: FontWeight.w800),
+        TextStyle(color: C.t2, fontSize: 22, fontWeight: FontWeight.w800),
       );
       final price = device.sellPrice > 0 ? yuan(device.sellPrice) : '未定价';
       _drawText(
         canvas,
         price,
         const Offset(398, 758),
-        const TextStyle(
-          color: C.cyan,
-          fontSize: 38,
-          fontWeight: FontWeight.w900,
-        ),
+        TextStyle(color: C.cyan, fontSize: 38, fontWeight: FontWeight.w900),
         maxWidth: 220,
       );
 
@@ -244,7 +240,7 @@ class DeviceExportService {
         canvas,
         '${device.purchaseDate} · 实拍图见后续',
         const Offset(226, 858),
-        const TextStyle(color: C.t3, fontSize: 18, fontWeight: FontWeight.w700),
+        TextStyle(color: C.t3, fontSize: 18, fontWeight: FontWeight.w700),
       );
 
       final picture = recorder.endRecording();
@@ -269,13 +265,13 @@ class DeviceExportService {
       canvas,
       label,
       Offset(82, y),
-      const TextStyle(color: C.t2, fontSize: 22, fontWeight: FontWeight.w700),
+      TextStyle(color: C.t2, fontSize: 22, fontWeight: FontWeight.w700),
     );
     _drawText(
       canvas,
       value,
       Offset(244, y - 2),
-      const TextStyle(color: C.t1, fontSize: 24, fontWeight: FontWeight.w900),
+      TextStyle(color: C.t1, fontSize: 24, fontWeight: FontWeight.w900),
       maxWidth: 380,
     );
     return y + 58;

@@ -97,7 +97,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
           ),
           const SizedBox(height: 16),
           if (_testing)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
                 child: CircularProgressIndicator(color: C.t3),
@@ -110,7 +110,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
                 onPressed: _testConnection,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t3,
-                  side: const BorderSide(color: C.t3),
+                  side: BorderSide(color: C.t3),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
@@ -124,7 +124,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
             ),
           const SizedBox(height: 10),
           if (_syncing)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
                 child: CircularProgressIndicator(color: C.t3),
@@ -408,7 +408,7 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
       builder:
           (ctx) => AlertDialog(
             backgroundColor: C.bgCard,
-            title: const Text(
+            title: Text(
               '发现同步冲突',
               style: TextStyle(
                 color: C.orange,
@@ -418,19 +418,16 @@ class _WebDavConfigPageState extends State<WebDavConfigPage> {
             ),
             content: Text(
               '云端和本机都在上次同步后更新过。\n\n云端：${_fmtSyncTime(remoteUpdated)}\n本机：${_fmtSyncTime(localModified)}\n\n继续$action会覆盖另一端数据，建议先确认哪一端更新。',
-              style: const TextStyle(color: C.t2, fontSize: 13, height: 1.45),
+              style: TextStyle(color: C.t2, fontSize: 13, height: 1.45),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('取消', style: TextStyle(color: C.t2)),
+                child: Text('取消', style: TextStyle(color: C.t2)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: Text(
-                  '继续$action',
-                  style: const TextStyle(color: C.orange),
-                ),
+                child: Text('继续$action', style: TextStyle(color: C.orange)),
               ),
             ],
           ),

@@ -290,7 +290,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
                     ),
                     const Spacer(),
                     if (_importing)
-                      const SizedBox(
+                      SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
@@ -311,10 +311,10 @@ class _MarketPricePageState extends State<MarketPricePage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: _importing ? null : _importFromFile,
-                        icon: const Icon(Icons.file_upload_outlined, size: 18),
+                        icon: Icon(Icons.file_upload_outlined, size: 18),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: C.t3,
-                          side: const BorderSide(color: C.t3),
+                          side: BorderSide(color: C.t3),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(10),
@@ -374,7 +374,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
                                 model,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 11,
                                   color: C.cyan,
                                   fontWeight: FontWeight.w600,
@@ -424,7 +424,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
             Expanded(
               child: Text(
                 _lastImportSource.isEmpty ? '最近识别表格' : _lastImportSource,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
                   color: C.t1,
@@ -433,7 +433,7 @@ class _MarketPricePageState extends State<MarketPricePage> {
             ),
             Text(
               '${_lastImportedRows.length}条',
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t3,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
@@ -455,14 +455,14 @@ class _MarketPricePageState extends State<MarketPricePage> {
               height: 36,
               child: OutlinedButton.icon(
                 onPressed: _exportLastImportedRows,
-                icon: const Icon(Icons.ios_share_rounded, size: 16),
+                icon: Icon(Icons.ios_share_rounded, size: 16),
                 label: const Text('导出CSV'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.cyan,
                   side: BorderSide(color: C.cyan.withValues(alpha: 0.45)),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: const StadiumBorder(),
-                  textStyle: const TextStyle(
+                  textStyle: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                   ),
@@ -519,7 +519,7 @@ class _RecognitionWarnings extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Row(
+        Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: C.orange, size: 17),
             SizedBox(width: 6),
@@ -539,7 +539,7 @@ class _RecognitionWarnings extends StatelessWidget {
             padding: const EdgeInsets.only(top: 3),
             child: Text(
               warning,
-              style: const TextStyle(color: C.t2, fontSize: 11, height: 1.35),
+              style: TextStyle(color: C.t2, fontSize: 11, height: 1.35),
             ),
           ),
         ),
@@ -559,7 +559,7 @@ class _RecognitionHeader extends StatelessWidget {
       borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
       border: Border(bottom: BorderSide(color: C.border)),
     ),
-    child: const Row(
+    child: Row(
       children: [
         Expanded(
           child: Text(
@@ -610,7 +610,7 @@ class _RecognitionRow extends StatelessWidget {
             row.model,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 11.5,
               height: 1.35,
@@ -624,7 +624,7 @@ class _RecognitionRow extends StatelessWidget {
           child: Text(
             '¥${row.priceYuan}',
             textAlign: TextAlign.right,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.mint,
               fontSize: 12,
               fontWeight: FontWeight.w900,

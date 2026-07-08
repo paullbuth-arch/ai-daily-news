@@ -17,7 +17,7 @@ Widget primaryBtn(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
       ),
-      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+      textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -35,14 +35,14 @@ Widget ghostBtn(String label, VoidCallback onTap, {IconData? icon}) => SizedBox(
     onPressed: onTap,
     style: OutlinedButton.styleFrom(
       foregroundColor: C.t1,
-      side: const BorderSide(color: C.border),
+      side: BorderSide(color: C.border),
       minimumSize: const Size.fromHeight(48),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
       ),
       backgroundColor: C.bgSurface,
-      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+      textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -72,7 +72,7 @@ Widget smallBtn(
       borderRadius: BorderRadius.circular(C.radiusSm),
     ),
     backgroundColor: (color ?? C.primary).withValues(alpha: 0.12),
-    textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+    textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
   ),
   child: Row(
     mainAxisSize: MainAxisSize.min,

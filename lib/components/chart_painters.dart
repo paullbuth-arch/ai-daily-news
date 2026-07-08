@@ -15,11 +15,11 @@ class LineChartPainter extends CustomPainter {
   LineChartPainter(
     this.data,
     this.labels, {
-    this.lineColor = C.cyan,
+    Color? lineColor,
     this.showArea = true,
     this.showPointLabels = false,
     this.pointLabelBuilder,
-  });
+  }) : lineColor = lineColor ?? C.cyan;
 
   @override
   void paint(Canvas canvas, Size size) {

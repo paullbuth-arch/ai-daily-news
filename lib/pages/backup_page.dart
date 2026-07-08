@@ -78,7 +78,7 @@ class _BackupPageState extends State<BackupPage> {
           ),
           const SizedBox(height: 16),
           if (_busy)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: CircularProgressIndicator(color: C.t3),
@@ -96,7 +96,7 @@ class _BackupPageState extends State<BackupPage> {
                   onPressed: _restoreBak,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: C.orange,
-                    side: const BorderSide(color: C.orange),
+                    side: BorderSide(color: C.orange),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(13),

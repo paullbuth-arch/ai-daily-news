@@ -101,7 +101,7 @@ class OrderPageState extends State<OrderPage> {
                                   const SizedBox(height: 5),
                                   Text(
                                     '累计 $total 单 · 当前 ${orders.length} 单',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: C.t2,
                                       fontWeight: FontWeight.w700,
@@ -158,10 +158,7 @@ class OrderPageState extends State<OrderPage> {
                                   builder: (_) => const SellPage(),
                                 ),
                               ).then((_) => refresh()),
-                          icon: const Icon(
-                            Icons.point_of_sale_outlined,
-                            size: 18,
-                          ),
+                          icon: Icon(Icons.point_of_sale_outlined, size: 18),
                           label: const Text('售出设备并生成订单'),
                         ),
                       ),
@@ -268,7 +265,7 @@ class _SummaryItem extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             color: C.t3,
             fontWeight: FontWeight.w800,
@@ -360,18 +357,18 @@ class _OrderSearchField extends StatelessWidget {
     borderColor: C.border,
     child: Row(
       children: [
-        const Icon(Icons.search_rounded, color: C.t2, size: 24),
+        Icon(Icons.search_rounded, color: C.t2, size: 24),
         const SizedBox(width: 12),
         Expanded(
           child: TextField(
             controller: controller,
             onChanged: onChanged,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -387,7 +384,7 @@ class _OrderSearchField extends StatelessWidget {
         if (value.isNotEmpty)
           IconButton(
             onPressed: onClear,
-            icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
+            icon: Icon(Icons.close_rounded, color: C.t3, size: 18),
           ),
       ],
     ),
@@ -434,11 +431,7 @@ class _OrderTimelineCard extends StatelessWidget {
                   color: C.cyan.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.tablet_mac_rounded,
-                  color: C.cyan,
-                  size: 21,
-                ),
+                child: Icon(Icons.tablet_mac_rounded, color: C.cyan, size: 21),
               ),
               const SizedBox(height: 8),
               Container(
@@ -460,7 +453,7 @@ class _OrderTimelineCard extends StatelessWidget {
                         order.deviceName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t1,
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
@@ -481,7 +474,7 @@ class _OrderTimelineCard extends StatelessWidget {
                     deviceMeta,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: C.t3,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -493,7 +486,7 @@ class _OrderTimelineCard extends StatelessWidget {
                   '${order.buyer} · ${order.channel} · ${order.createdAt}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t2,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -518,7 +511,7 @@ class _OrderTimelineCard extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: C.t3),
+          Icon(Icons.chevron_right_rounded, color: C.t3),
         ],
       ),
     );
@@ -606,7 +599,7 @@ class _EmptyOrders extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(24),
     radius: 24,
-    child: const Column(
+    child: Column(
       children: [
         Icon(Icons.receipt_long_outlined, color: C.t3, size: 36),
         SizedBox(height: 12),

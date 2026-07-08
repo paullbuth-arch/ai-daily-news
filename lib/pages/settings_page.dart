@@ -73,6 +73,31 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SectionTitle('主题'),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _themeChoice(Icons.dark_mode_rounded, '深色', ThemeMode.dark),
+                    const SizedBox(width: 8),
+                    _themeChoice(
+                      Icons.light_mode_rounded,
+                      '浅色',
+                      ThemeMode.light,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '浅色主题使用浅灰绿背景、白色信息面板和酸橙强调色，适合白天核对库存与订单。',
+                  style: TextStyle(fontSize: 11, color: C.t3, height: 1.45),
+                ),
+              ],
+            ),
+          ),
+          CardBox(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 const SectionTitle('关于'),
                 const SizedBox(height: 10),
                 _row('应用名称', '货脉'),
@@ -135,13 +160,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Text(
                         protectionError == null ? '后台保护正常' : '后台保护自动重试中',
-                        style: const TextStyle(fontSize: 12, color: C.t1),
+                        style: TextStyle(fontSize: 12, color: C.t1),
                       ),
                       Text(
                         protectionError == null
                             ? '数据会先保存到本机，并在后台完成服务器保护。'
                             : '本机数据不受影响，后台会在下次数据变化或重启后继续尝试。',
-                        style: const TextStyle(fontSize: 10, color: C.t3),
+                        style: TextStyle(fontSize: 10, color: C.t3),
                       ),
                     ],
                   ),
@@ -155,7 +180,7 @@ class _SettingsPageState extends State<SettingsPage> {
               child: Center(
                 child: Column(
                   children: [
-                    const SizedBox(
+                    SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
@@ -211,6 +236,52 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  Future<void> _setThemeMode(ThemeMode mode) async {
+    if (gThemeMode == mode) return;
+    final settings = gStorage.getSettings();
+    settings['themeMode'] = mode == ThemeMode.light ? 'light' : 'dark';
+    await gStorage.saveSettings(settings);
+    gThemeMode = mode;
+    C.useLightTheme(mode == ThemeMode.light);
+    gOnThemeChange?.call();
+    if (mounted) setState(() {});
+  }
+
+  Widget _themeChoice(IconData icon, String label, ThemeMode mode) {
+    final selected = gThemeMode == mode;
+    return Expanded(
+      child: Material(
+        color: selected ? C.primaryLight : C.bgSurface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(C.radiusMd),
+          side: BorderSide(color: selected ? C.primary : C.border),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _setThemeMode(mode),
+          child: SizedBox(
+            height: 44,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: selected ? C.primary : C.t3, size: 18),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: selected ? C.primary : C.t2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _row(String k, String v, {bool small = false}) => Padding(
     padding: EdgeInsets.only(bottom: 8),
     child: Row(
@@ -243,10 +314,7 @@ class _SettingsPageState extends State<SettingsPage> {
       builder:
           (ctx) => AlertDialog(
             backgroundColor: C.bgCard,
-            title: const Text(
-              '确认清空',
-              style: TextStyle(color: C.red, fontSize: 16),
-            ),
+            title: Text('确认清空', style: TextStyle(color: C.red, fontSize: 16)),
             content: Text(
               '将清空 ${devices.length} 台设备、${orders.length} 单订单和 $imageCount 个本地素材文件，并恢复默认设置。\n\n执行前会先在本机生成一份 zip 自动备份；如果备份失败，将不会清空。',
               style: TextStyle(color: C.t2, fontSize: 13),

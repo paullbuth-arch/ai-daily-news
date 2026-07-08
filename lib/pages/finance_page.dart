@@ -51,7 +51,7 @@ class _FinancePageState extends State<FinancePage> {
                 ),
                 Text(
                   yuan(totalProfit),
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: Colors.white,
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
@@ -69,7 +69,7 @@ class _FinancePageState extends State<FinancePage> {
                         ),
                         Text(
                           yuan(totalRevenue),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -87,7 +87,7 @@ class _FinancePageState extends State<FinancePage> {
                         ),
                         Text(
                           yuan(totalCost),
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
@@ -105,7 +105,7 @@ class _FinancePageState extends State<FinancePage> {
                         ),
                         Text(
                           '${soldDevices.length}台',
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w700,

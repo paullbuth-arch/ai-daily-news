@@ -107,7 +107,7 @@ class _AiReportPageState extends State<AiReportPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
                   '经营快照',
                   style: TextStyle(
@@ -119,7 +119,7 @@ class _AiReportPageState extends State<AiReportPage> {
               ),
               Text(
                 _clockText(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: C.t3,
                   fontWeight: FontWeight.w700,
@@ -363,7 +363,7 @@ class _AiReportPageState extends State<AiReportPage> {
               color: C.mint.withValues(alpha: 0.16),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle_outline_rounded,
               color: C.mint,
               size: 20,
@@ -373,7 +373,7 @@ class _AiReportPageState extends State<AiReportPage> {
           Expanded(
             child: Text(
               plan.completedCount > 0 ? '今日巡店任务已处理完' : '今天没有硬风险',
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t1,
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
@@ -424,7 +424,7 @@ class _AiReportPageState extends State<AiReportPage> {
                     children: [
                       Text(
                         task.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t1,
                           fontSize: 14,
                           fontWeight: FontWeight.w900,
@@ -433,7 +433,7 @@ class _AiReportPageState extends State<AiReportPage> {
                       const SizedBox(height: 4),
                       Text(
                         task.reason,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t2,
                           fontSize: 12,
                           height: 1.45,
@@ -464,7 +464,7 @@ class _AiReportPageState extends State<AiReportPage> {
                     const SizedBox(height: 2),
                     Text(
                       task.detail,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: C.t3,
                         fontSize: 10,
                         fontWeight: FontWeight.w700,
@@ -477,7 +477,7 @@ class _AiReportPageState extends State<AiReportPage> {
             const SizedBox(height: 8),
             Text(
               task.summary,
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t3,
                 fontSize: 11.5,
                 height: 1.35,
@@ -505,7 +505,7 @@ class _AiReportPageState extends State<AiReportPage> {
                       Expanded(
                         child: Text(
                           line,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: C.t2,
                             fontSize: 11.5,
                             height: 1.35,
@@ -630,7 +630,7 @@ class _AiReportPageState extends State<AiReportPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '型号观察',
             style: TextStyle(
               color: C.t1,
@@ -667,7 +667,7 @@ class _AiReportPageState extends State<AiReportPage> {
             ),
           ],
           if (stale.isEmpty && profitModels.isEmpty)
-            const Text(
+            Text(
               '暂时没有足够的型号数据。先完成几单销售记录，这里会自动变成型号雷达。',
               style: TextStyle(color: C.t2, fontSize: 12, height: 1.5),
             ),
@@ -694,14 +694,14 @@ class _AiReportPageState extends State<AiReportPage> {
                   color: C.purple.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome_rounded,
                   color: C.purple,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -725,14 +725,14 @@ class _AiReportPageState extends State<AiReportPage> {
           ),
           const SizedBox(height: 12),
           if (loading)
-            const Padding(
+            Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
               child: LinearProgressIndicator(minHeight: 3, color: C.purple),
             )
           else if (report != null)
             Text(
               report!,
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t2,
                 fontSize: 12.5,
                 height: 1.65,
@@ -744,14 +744,14 @@ class _AiReportPageState extends State<AiReportPage> {
               s.orderCount == 0 && s.inStockCount == 0
                   ? '先录入库存或订单，AI复盘才会有真实上下文。'
                   : '需要更像老板口吻的复盘时再点这里，不影响上面的本地行动清单。',
-              style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+              style: TextStyle(color: C.t2, fontSize: 12, height: 1.5),
             ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: loading ? null : _gen,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
+              icon: Icon(Icons.refresh_rounded, size: 18),
               label: Text(report == null ? '生成AI复盘' : '重新复盘'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: C.purple,
@@ -841,7 +841,7 @@ class _SectionHeader extends StatelessWidget {
       Expanded(
         child: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t1,
             fontSize: 15,
             fontWeight: FontWeight.w900,
@@ -850,7 +850,7 @@ class _SectionHeader extends StatelessWidget {
       ),
       Text(
         subtitle,
-        style: const TextStyle(
+        style: TextStyle(
           color: C.t3,
           fontSize: 11,
           fontWeight: FontWeight.w700,
@@ -875,7 +875,7 @@ class _MetricBlock extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t3,
             fontSize: 10.5,
             fontWeight: FontWeight.w800,
@@ -978,7 +978,7 @@ class _ModelLine extends StatelessWidget {
                 name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.t1,
                   fontSize: 12.5,
                   fontWeight: FontWeight.w900,
@@ -989,7 +989,7 @@ class _ModelLine extends StatelessWidget {
                 meta,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: C.t3, fontSize: 10.5),
+                style: TextStyle(color: C.t3, fontSize: 10.5),
               ),
             ],
           ),

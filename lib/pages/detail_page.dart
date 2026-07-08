@@ -142,9 +142,9 @@ class _DetailPageState extends State<DetailPage> {
             backgroundColor: C.bgCard,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
-              side: const BorderSide(color: C.border),
+              side: BorderSide(color: C.border),
             ),
-            title: const Text(
+            title: Text(
               '保存修改？',
               style: TextStyle(
                 color: C.t1,
@@ -152,22 +152,22 @@ class _DetailPageState extends State<DetailPage> {
                 fontWeight: FontWeight.w900,
               ),
             ),
-            content: const Text(
+            content: Text(
               '这台设备有未保存的修改，离开前可以先保存，或放弃本次修改。',
               style: TextStyle(color: C.t2, fontSize: 13, height: 1.45),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, 'discard'),
-                child: const Text('放弃修改', style: TextStyle(color: C.red)),
+                child: Text('放弃修改', style: TextStyle(color: C.red)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, 'cancel'),
-                child: const Text('继续编辑', style: TextStyle(color: C.t2)),
+                child: Text('继续编辑', style: TextStyle(color: C.t2)),
               ),
               TextButton(
                 onPressed: () => Navigator.pop(ctx, 'save'),
-                child: const Text('保存后离开', style: TextStyle(color: C.cyan)),
+                child: Text('保存后离开', style: TextStyle(color: C.cyan)),
               ),
             ],
           ),
@@ -238,7 +238,7 @@ class _DetailPageState extends State<DetailPage> {
       builder:
           (context, child) => Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: const ColorScheme.dark(
+              colorScheme: ColorScheme.dark(
                 primary: C.cyan,
                 onPrimary: Colors.black,
                 surface: C.bgCard,
@@ -432,7 +432,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.chevron_left_rounded,
                               color: Colors.white,
                               size: 28,
@@ -454,7 +454,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         ),
                       ),
                       if (device.isStagnant)
-                        const Positioned(
+                        Positioned(
                           bottom: 12,
                           right: 14,
                           child: StatusChip('滞销', C.red),
@@ -570,18 +570,13 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                           ),
                         const SizedBox(height: 12),
                         if (loading)
-                          const Center(
-                            child: CircularProgressIndicator(color: C.t3),
-                          )
+                          Center(child: CircularProgressIndicator(color: C.t3))
                         else
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: _askAi,
-                              icon: const Icon(
-                                Icons.auto_awesome_rounded,
-                                size: 18,
-                              ),
+                              icon: Icon(Icons.auto_awesome_rounded, size: 18),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: C.purple,
                                 foregroundColor: Colors.white,
@@ -875,7 +870,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         color: Colors.black,
                       ),
                     )
-                    : const Icon(Icons.save_rounded, size: 18),
+                    : Icon(Icons.save_rounded, size: 18),
             style: FilledButton.styleFrom(
               backgroundColor: C.cyan,
               foregroundColor: Colors.black,
@@ -886,7 +881,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             ),
             label: Text(
               savingInfo ? '保存中' : '保存修改',
-              style: const TextStyle(fontWeight: FontWeight.w900),
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
         ),
@@ -911,7 +906,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: savingInfo ? null : () => _saveInlineInfo(),
-                icon: const Icon(Icons.save_outlined, size: 17),
+                icon: Icon(Icons.save_outlined, size: 17),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t1,
                   side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
@@ -939,7 +934,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                             color: Colors.black,
                           ),
                         )
-                        : const Icon(Icons.auto_awesome_rounded, size: 17),
+                        : Icon(Icons.auto_awesome_rounded, size: 17),
                 style: FilledButton.styleFrom(
                   backgroundColor: C.purple,
                   foregroundColor: Colors.white,
@@ -948,7 +943,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                 ),
                 label: Text(
                   regeneratingDescription ? '生成中' : 'AI重新生成',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -960,11 +955,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
 
   Widget _formGroupLabel(String label) => Text(
     label,
-    style: const TextStyle(
-      color: C.t3,
-      fontSize: 11,
-      fontWeight: FontWeight.w900,
-    ),
+    style: TextStyle(color: C.t3, fontSize: 11, fontWeight: FontWeight.w900),
   );
 
   Widget _softDivider() =>
@@ -1006,7 +997,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t3,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
@@ -1046,7 +1037,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
       keyboardType: keyboardType,
       maxLines: 1,
       textInputAction: TextInputAction.next,
-      style: const TextStyle(
+      style: TextStyle(
         color: C.t1,
         fontSize: 15,
         fontWeight: FontWeight.w900,
@@ -1059,7 +1050,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
         enabledBorder: InputBorder.none,
         focusedBorder: InputBorder.none,
         hintText: hint ?? '未填写',
-        hintStyle: const TextStyle(
+        hintStyle: TextStyle(
           color: C.tMuted,
           fontSize: 14,
           fontWeight: FontWeight.w700,
@@ -1087,8 +1078,8 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
           isDense: true,
           dropdownColor: C.bgCard,
           menuMaxHeight: 320,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
-          hint: const Text(
+          icon: Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
+          hint: Text(
             '未选择',
             style: TextStyle(
               color: C.tMuted,
@@ -1096,7 +1087,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
               fontWeight: FontWeight.w700,
             ),
           ),
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t1,
             fontSize: 15,
             fontWeight: FontWeight.w900,
@@ -1111,7 +1102,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         item,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
                         ),
@@ -1154,7 +1145,7 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             ),
           ),
         ),
-        const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3, size: 20),
+        Icon(Icons.keyboard_arrow_down_rounded, color: C.t3, size: 20),
       ],
     ),
   );

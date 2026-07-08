@@ -82,11 +82,16 @@ class _IpadBossAppState extends State<IpadBossApp> {
   void _loadTheme() {
     if (gStorageReady && !_themeLoaded) {
       _themeLoaded = true;
-      gThemeMode = ThemeMode.dark;
       final settings = gStorage.getSettings();
-      if (settings['themeMode'] != 'dark') {
-        settings['themeMode'] = 'dark';
-        gStorage.saveSettings(settings);
+      final saved = settings['themeMode'] as String?;
+      if (saved == 'light') {
+        gThemeMode = ThemeMode.light;
+      } else {
+        gThemeMode = ThemeMode.dark;
+        if (saved != 'dark') {
+          settings['themeMode'] = 'dark';
+          gStorage.saveSettings(settings);
+        }
       }
       setState(() {});
     } else if (!gStorageReady) {
@@ -96,17 +101,115 @@ class _IpadBossAppState extends State<IpadBossApp> {
 
   @override
   Widget build(BuildContext context) {
+    C.useLightTheme(gThemeMode == ThemeMode.light);
     return MaterialApp(
       title: '货脉',
       debugShowCheckedModeBanner: false,
-      themeMode: ThemeMode.dark,
+      themeMode: gThemeMode,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
       home: const MainShell(),
     );
   }
 
-  ThemeData _buildLightTheme() => _buildDarkTheme();
+  ThemeData _buildLightTheme() {
+    final base = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      scaffoldBackgroundColor: C.bgDeep,
+      fontFamily: null,
+      colorScheme: ColorScheme.light(
+        primary: C.primary,
+        secondary: C.blue,
+        tertiary: C.green,
+        surface: C.bgCard,
+        onPrimary: const Color(0xFF111B0F),
+        onSurface: C.t1,
+        outline: C.border,
+      ),
+    );
+    final radius = BorderRadius.circular(C.radiusMd);
+    return base.copyWith(
+      visualDensity: VisualDensity.standard,
+      splashColor: C.primary.withValues(alpha: 0.10),
+      highlightColor: C.t1.withValues(alpha: 0.04),
+      dividerColor: C.divider,
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        foregroundColor: C.t1,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        titleTextStyle: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w900,
+          color: C.t1,
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: C.bgCard,
+        hintStyle: TextStyle(color: C.t3, fontSize: 13),
+        labelStyle: TextStyle(color: C.t2, fontSize: 13),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: C.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: C.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(C.radiusMd)),
+          borderSide: BorderSide(color: C.primary, width: 1.4),
+        ),
+      ),
+      cardTheme: CardTheme(
+        elevation: 0,
+        color: C.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(C.radiusLg),
+          side: BorderSide(color: C.border),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: C.primary,
+          foregroundColor: const Color(0xFF111B0F),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
+          textStyle: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: C.primary,
+          foregroundColor: const Color(0xFF111B0F),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
+          textStyle: TextStyle(fontWeight: FontWeight.w900),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: C.t1,
+          side: BorderSide(color: C.border),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusMd),
+          ),
+        ),
+      ),
+    );
+  }
 
   ThemeData _buildDarkTheme() {
     final base = ThemeData(
@@ -114,7 +217,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: C.bgDeep,
       fontFamily: null,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.dark(
         primary: C.primary,
         secondary: C.blue,
         tertiary: C.green,
@@ -129,7 +232,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
       splashColor: C.cyan.withValues(alpha: 0.08),
       highlightColor: C.t1.withValues(alpha: 0.04),
       dividerColor: C.divider,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         foregroundColor: C.t1,
         elevation: 0,
@@ -144,21 +247,21 @@ class _IpadBossAppState extends State<IpadBossApp> {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: C.bgSurface,
-        hintStyle: const TextStyle(color: C.t3, fontSize: 13),
-        labelStyle: const TextStyle(color: C.t2, fontSize: 13),
+        hintStyle: TextStyle(color: C.t3, fontSize: 13),
+        labelStyle: TextStyle(color: C.t2, fontSize: 13),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
         border: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: const BorderSide(color: C.border),
+          borderSide: BorderSide(color: C.border),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: radius,
-          borderSide: const BorderSide(color: C.border),
+          borderSide: BorderSide(color: C.border),
         ),
-        focusedBorder: const OutlineInputBorder(
+        focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.all(Radius.circular(C.radiusMd)),
           borderSide: BorderSide(color: C.primary, width: 1.4),
         ),
@@ -168,7 +271,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
         color: C.bgCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusLg),
-          side: const BorderSide(color: C.border),
+          side: BorderSide(color: C.border),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -180,7 +283,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          textStyle: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
@@ -191,13 +294,13 @@ class _IpadBossAppState extends State<IpadBossApp> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
           ),
-          textStyle: const TextStyle(fontWeight: FontWeight.w900),
+          textStyle: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: C.t1,
-          side: const BorderSide(color: C.border),
+          side: BorderSide(color: C.border),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
           ),

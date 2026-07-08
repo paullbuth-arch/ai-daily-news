@@ -17,7 +17,7 @@ class SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(bottom: C.sp8),
+    padding: EdgeInsets.only(bottom: C.sp8),
     child: Row(
       children: [
         if (icon != null) ...[
@@ -36,7 +36,7 @@ class SectionTitle extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w900,
               color: C.t1,
@@ -58,13 +58,10 @@ class SectionTitle extends StatelessWidget {
               children: [
                 Text(
                   trailing!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(width: 2),
-                const Icon(Icons.chevron_right_rounded, size: 16),
+                Icon(Icons.chevron_right_rounded, size: 16),
               ],
             ),
           ),

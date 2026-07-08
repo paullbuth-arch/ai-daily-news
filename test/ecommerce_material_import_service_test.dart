@@ -224,6 +224,82 @@ void main() {
 </body>
 </html>
 ''');
+      } else if (path == '/douyin-watermark-choice') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        final watermarked =
+            'http://$host:$port/aweme/v1/playwm/?video_id=douyin_choice&ratio=720p&watermark=1';
+        final clean =
+            'http://$host:$port/aweme/v1/play/?video_id=douyin_choice&ratio=720p';
+        final renderData = Uri.encodeComponent(
+          json.encode({
+            'aweme': {
+              'detail': {
+                'desc': 'Douyin clean choice body',
+                'video': {
+                  'download_addr': {
+                    'url_list': [watermarked],
+                  },
+                  'play_addr': {
+                    'url_list': [clean],
+                  },
+                  'bit_rate': [
+                    {
+                      'play_addr': {
+                        'url_list': [clean],
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          }),
+        );
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Douyin clean choice</title>
+  <meta property="og:video" content="$watermarked">
+</head>
+<body>
+  <script id="RENDER_DATA" type="application/json">$renderData</script>
+</body>
+</html>
+''');
+      } else if (path == '/douyin-playwm-only') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        final watermarked =
+            'http://$host:$port/aweme/v1/playwm/?video_id=douyin_wm_only&ratio=720p&watermark=1';
+        final renderData = Uri.encodeComponent(
+          json.encode({
+            'aweme': {
+              'detail': {
+                'desc': 'Douyin playwm only body',
+                'video': {
+                  'download_addr': {
+                    'url_list': [watermarked],
+                  },
+                },
+              },
+            },
+          }),
+        );
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Douyin playwm only</title>
+  <meta property="og:video" content="$watermarked">
+</head>
+<body>
+  <script id="RENDER_DATA" type="application/json">$renderData</script>
+</body>
+</html>
+''');
       } else if (path == '/video/7651960984093110778') {
         request.response.headers.contentType = ContentType.html;
         request.response.write('''
@@ -290,6 +366,9 @@ void main() {
         request.response.add(
           List<int>.filled(isHigh ? 32 : 12, isHigh ? 10 : 3),
         );
+      } else if (path.startsWith('/aweme/v1/playwm')) {
+        request.response.headers.contentType = ContentType.binary;
+        request.response.add(List<int>.filled(9, 1));
       } else if (path.startsWith('/aweme/v1/play')) {
         request.response.headers.contentType = ContentType.binary;
         request.response.add(List<int>.filled(20, 9));
@@ -527,6 +606,63 @@ void main() {
     expect(result.candidateVideoCount, 1);
     expect(File(result.images.single.savedPath).existsSync(), true);
     expect(File(result.videos.single.savedPath).existsSync(), true);
+  });
+
+  test(
+    'prefers douyin play_addr over playwm or watermark candidates',
+    () async {
+      final url = Uri(
+        scheme: 'http',
+        host: InternetAddress.loopbackIPv4.host,
+        port: server.port,
+        path: '/douyin-watermark-choice',
+      );
+
+      final result = await EcommerceMaterialImportService.importFromText(
+        'douyin share $url',
+        docDir: tmp.path,
+        maxVideos: 1,
+      );
+
+      expect(result.videos, hasLength(1));
+      expect(result.videos.single.downloadedUrl.path, '/aweme/v1/play/');
+      expect(
+        result.videos.single.downloadedUrl.toString(),
+        isNot(contains('playwm')),
+      );
+      expect(
+        result.videos.single.downloadedUrl.toString(),
+        isNot(contains('watermark')),
+      );
+      expect(await File(result.videos.single.savedPath).length(), 20);
+    },
+  );
+
+  test('rewrites douyin playwm endpoint before downloading', () async {
+    final url = Uri(
+      scheme: 'http',
+      host: InternetAddress.loopbackIPv4.host,
+      port: server.port,
+      path: '/douyin-playwm-only',
+    );
+
+    final result = await EcommerceMaterialImportService.importFromText(
+      'douyin share $url',
+      docDir: tmp.path,
+      maxVideos: 1,
+    );
+
+    expect(result.videos, hasLength(1));
+    expect(result.videos.single.downloadedUrl.path, '/aweme/v1/play/');
+    expect(
+      result.videos.single.downloadedUrl.toString(),
+      isNot(contains('playwm')),
+    );
+    expect(
+      result.videos.single.downloadedUrl.toString(),
+      isNot(contains('watermark')),
+    );
+    expect(await File(result.videos.single.savedPath).length(), 20);
   });
 
   test(

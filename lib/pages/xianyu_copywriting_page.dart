@@ -95,7 +95,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                 ],
               ),
               const SizedBox(height: 10),
-              const Text(
+              Text(
                 '生成闲鱼描述时会自动参考内置 100 条素材提炼规则、手工样本和已售文案，只学习表达方式，设备参数仍以当前商品为准。',
                 style: TextStyle(
                   color: C.t2,
@@ -129,7 +129,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                       onPressed: _resetRules,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: C.t2,
-                        side: const BorderSide(color: C.border),
+                        side: BorderSide(color: C.border),
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
@@ -212,10 +212,10 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: _importingMaterial ? null : _pasteLinkFromClipboard,
-                icon: const Icon(Icons.paste_rounded, size: 17),
+                icon: Icon(Icons.paste_rounded, size: 17),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t1,
-                  side: const BorderSide(color: C.border),
+                  side: BorderSide(color: C.border),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -241,7 +241,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                             color: Colors.black,
                           ),
                         )
-                        : const Icon(Icons.download_rounded, size: 17),
+                        : Icon(Icons.download_rounded, size: 17),
                 style: FilledButton.styleFrom(
                   backgroundColor: C.mint,
                   foregroundColor: Colors.black,
@@ -252,7 +252,7 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                 ),
                 label: Text(
                   _importingMaterial ? '导入中' : '解析下载',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -568,7 +568,7 @@ class _StatPill extends StatelessWidget {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t2,
               fontSize: 12,
               fontWeight: FontWeight.w800,
@@ -610,7 +610,7 @@ class _ExampleTile extends StatelessWidget {
                   example.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t1,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
@@ -619,7 +619,7 @@ class _ExampleTile extends StatelessWidget {
               ),
               Text(
                 '${example.score.clamp(1, 5)}星',
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.mint,
                   fontSize: 11,
                   fontWeight: FontWeight.w900,
@@ -643,7 +643,7 @@ class _ExampleTile extends StatelessWidget {
             ].join(' · '),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t3,
               fontSize: 11,
               fontWeight: FontWeight.w700,
@@ -654,7 +654,7 @@ class _ExampleTile extends StatelessWidget {
             example.text,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t2,
               fontSize: 12,
               height: 1.5,
@@ -723,7 +723,7 @@ class _ImportedMaterialPreview extends StatelessWidget {
             result.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 13,
               fontWeight: FontWeight.w900,
@@ -737,7 +737,7 @@ class _ImportedMaterialPreview extends StatelessWidget {
             result.description,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t2,
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -769,7 +769,7 @@ class _ImportedMaterialPreview extends StatelessWidget {
                               width: 78,
                               height: 78,
                               color: C.bgCard,
-                              child: const Icon(
+                              child: Icon(
                                 Icons.broken_image_outlined,
                                 color: C.t3,
                               ),
@@ -783,11 +783,11 @@ class _ImportedMaterialPreview extends StatelessWidget {
                         child: Container(
                           width: 18,
                           height: 18,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: C.orange,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.auto_fix_high_rounded,
                             size: 12,
                             color: Colors.black,
@@ -809,18 +809,14 @@ class _ImportedMaterialPreview extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 15,
-                      color: C.t3,
-                    ),
+                    Icon(Icons.info_outline_rounded, size: 15, color: C.t3),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         warning,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t3,
                           fontSize: 11,
                           height: 1.35,
@@ -838,10 +834,10 @@ class _ImportedMaterialPreview extends StatelessWidget {
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: onCopy,
-                icon: const Icon(Icons.copy_rounded, size: 16),
+                icon: Icon(Icons.copy_rounded, size: 16),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t1,
-                  side: const BorderSide(color: C.border),
+                  side: BorderSide(color: C.border),
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -857,7 +853,7 @@ class _ImportedMaterialPreview extends StatelessWidget {
             Expanded(
               child: FilledButton.icon(
                 onPressed: onSaveExample,
-                icon: const Icon(Icons.library_add_rounded, size: 16),
+                icon: Icon(Icons.library_add_rounded, size: 16),
                 style: FilledButton.styleFrom(
                   backgroundColor: C.cyan,
                   foregroundColor: Colors.black,
@@ -928,7 +924,7 @@ class _EmptyCopyState extends StatelessWidget {
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: C.border),
     ),
-    child: const Text(
+    child: Text(
       '还没有手工样本。可以先导入已售设备文案，或者新增几条你觉得成交效果好的描述。',
       style: TextStyle(
         color: C.t2,

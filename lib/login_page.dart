@@ -162,17 +162,14 @@ class _LoginPageState extends State<LoginPage> {
             Container(
               width: 42,
               height: 42,
-              decoration: const BoxDecoration(
-                color: C.cyan,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.tablet_mac_rounded, color: Colors.black),
+              decoration: BoxDecoration(color: C.cyan, shape: BoxShape.circle),
+              child: Icon(Icons.tablet_mac_rounded, color: Colors.black),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Text(
                 _isRegister ? '创建账号' : '欢迎回来',
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.t1,
                   fontSize: 23,
                   fontWeight: FontWeight.w900,
@@ -184,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
         const SizedBox(height: 8),
         Text(
           _isRegister ? '填写邮箱、密码与验证码' : '登录后继续管理库存、订单和利润',
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t2,
             fontSize: 12,
             fontWeight: FontWeight.w700,
@@ -257,7 +254,7 @@ class _LoginPageState extends State<LoginPage> {
           children: [
             Text(
               _isRegister ? '已有账号？' : '没有账号？',
-              style: const TextStyle(color: C.t2, fontSize: 12),
+              style: TextStyle(color: C.t2, fontSize: 12),
             ),
             TextButton(
               onPressed:
@@ -276,7 +273,7 @@ class _LoginPageState extends State<LoginPage> {
                   context,
                   MaterialPageRoute(builder: (_) => const MainShell()),
                 ),
-            child: const Text(
+            child: Text(
               '离线使用',
               style: TextStyle(color: C.t3, fontWeight: FontWeight.w900),
             ),
@@ -295,11 +292,7 @@ class _LoginPageState extends State<LoginPage> {
   }) => TextField(
     controller: controller,
     obscureText: obscure,
-    style: const TextStyle(
-      color: C.t1,
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-    ),
+    style: TextStyle(color: C.t1, fontSize: 14, fontWeight: FontWeight.w700),
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
@@ -343,7 +336,7 @@ class _BrandStage extends StatelessWidget {
                   ],
                 ),
                 const Spacer(),
-                const Text(
+                Text(
                   '二手 iPad\n经营舱',
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -354,7 +347,7 @@ class _BrandStage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
+                Text(
                   '库存、订单、利润，一屏判断下一步',
                   style: TextStyle(
                     color: C.t2,
@@ -364,7 +357,7 @@ class _BrandStage extends StatelessWidget {
                 ),
                 const Spacer(),
                 Row(
-                  children: const [
+                  children: [
                     Expanded(
                       child: _StagePill(
                         label: '收货',
@@ -445,10 +438,7 @@ class _StagePill extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900),
           ),
         ),
         Container(
@@ -507,7 +497,7 @@ class _FloatingBadge extends StatelessWidget {
               ),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.black,
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -523,7 +513,7 @@ class _FloatingBadge extends StatelessWidget {
             color: Colors.black,
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check_rounded, color: Colors.white, size: 20),
+          child: Icon(Icons.check_rounded, color: Colors.white, size: 20),
         ),
       ],
     ),

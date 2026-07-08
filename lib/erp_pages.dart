@@ -43,7 +43,7 @@ class _ReportPageState extends State<ReportPage>
         backgroundColor: C.bgCard,
         elevation: 0.5,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, size: 18),
+          icon: Icon(Icons.arrow_back_ios, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
         bottom: TabBar(
@@ -51,10 +51,7 @@ class _ReportPageState extends State<ReportPage>
           indicatorColor: C.t3,
           labelColor: C.t3,
           unselectedLabelColor: C.t2,
-          labelStyle: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-          ),
+          labelStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           tabs: _tabs.map((t) => Tab(text: t)).toList(),
         ),
       ),
@@ -103,12 +100,7 @@ class _OpsReport extends StatelessWidget {
               '昨日${yuan(yesterdayProfit)}',
               s.grossProfit >= yesterdayProfit ? C.green : C.red,
             ),
-            _kpiItem(
-              '今日订单',
-              '${s.orderCount}',
-              '昨日$yesterdayOrders',
-              C.t3,
-            ),
+            _kpiItem('今日订单', '${s.orderCount}', '昨日$yesterdayOrders', C.t3),
             _kpiItem(
               '平均单台利',
               yuan(avgProfit),
@@ -146,7 +138,7 @@ class _OpsReport extends StatelessWidget {
           _kpiRow('待质检', '${s.pendingQcCount} 台', '未定价需处理'),
         ]),
         const SizedBox(height: 20),
-        const Text(
+        Text(
           '数据说明：GMV为成交总额，毛利已扣除售后费用、佣金、物流等成本',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 10, color: C.t3),
@@ -225,10 +217,7 @@ class _StockReport extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        e.key,
-                        style: TextStyle(fontSize: 12, color: C.t2),
-                      ),
+                      Text(e.key, style: TextStyle(fontSize: 12, color: C.t2)),
                       Text(
                         '${e.value}台',
                         style: TextStyle(
@@ -250,9 +239,7 @@ class _StockReport extends StatelessWidget {
                             ? C.red
                             : (e.key.contains('16')
                                 ? C.orange
-                                : (e.key.contains('8')
-                                    ? C.t3
-                                    : C.green)),
+                                : (e.key.contains('8') ? C.t3 : C.green)),
                       ),
                       minHeight: 6,
                     ),
@@ -635,9 +622,7 @@ class _RepairReport extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: pct,
                         backgroundColor: C.bgDeep,
-                        valueColor: const AlwaysStoppedAnimation(
-                          C.neonOrange,
-                        ),
+                        valueColor: AlwaysStoppedAnimation(C.neonOrange),
                         minHeight: 6,
                       ),
                     ),
@@ -671,10 +656,7 @@ class _RepairReport extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      e.key,
-                      style: TextStyle(fontSize: 12, color: C.t1),
-                    ),
+                    Text(e.key, style: TextStyle(fontSize: 12, color: C.t1)),
                     const Spacer(),
                     Text(
                       '${e.value} (${(pct * 100).toStringAsFixed(0)}%)',
@@ -718,12 +700,7 @@ class _SalesReport extends StatelessWidget {
       children: [
         _reportSection('💰 销售总览', [
           _kpiGrid([
-            _kpiItem(
-              '累计售出',
-              '$sold 台',
-              '营收${yuan(totalRevenue)}',
-              C.t3,
-            ),
+            _kpiItem('累计售出', '$sold 台', '营收${yuan(totalRevenue)}', C.t3),
             _kpiItem(
               '累计毛利',
               yuan(totalProfit),
@@ -790,9 +767,7 @@ class _SalesReport extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: pct,
                               backgroundColor: C.bgDeep,
-                              valueColor: const AlwaysStoppedAnimation(
-                                C.neonGreen,
-                              ),
+                              valueColor: AlwaysStoppedAnimation(C.neonGreen),
                               minHeight: 6,
                             ),
                           ),
@@ -864,8 +839,7 @@ class _SalesReport extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color:
-                            (m['profit'] as int) >= 0 ? C.green : C.red,
+                        color: (m['profit'] as int) >= 0 ? C.green : C.red,
                       ),
                     ),
                   ],
@@ -898,12 +872,7 @@ class _PurchaseReport extends StatelessWidget {
       children: [
         _reportSection('📥 采购总览', [
           _kpiGrid([
-            _kpiItem(
-              '采购单',
-              '${pos.length}',
-              '总额${yuan(totalCost)}',
-              C.t3,
-            ),
+            _kpiItem('采购单', '${pos.length}', '总额${yuan(totalCost)}', C.t3),
             _kpiItem(
               '退货',
               '$totalReturned 件',
@@ -969,9 +938,7 @@ class _PurchaseReport extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: pct,
                         backgroundColor: C.bgDeep,
-                        valueColor: const AlwaysStoppedAnimation(
-                          C.purple,
-                        ),
+                        valueColor: AlwaysStoppedAnimation(C.purple),
                         minHeight: 6,
                       ),
                     ),
@@ -992,10 +959,7 @@ class _PurchaseReport extends StatelessWidget {
                             const SizedBox(width: 12),
                             Text(
                               '议价${yuan(c['afterSale'] as int)}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: C.orange,
-                              ),
+                              style: TextStyle(fontSize: 10, color: C.orange),
                             ),
                           ],
                         ],
@@ -1138,9 +1102,7 @@ Widget _kpiRow(String label, String value, String sub) => Padding(
   padding: const EdgeInsets.only(bottom: 8),
   child: Row(
     children: [
-      Expanded(
-        child: Text(label, style: TextStyle(fontSize: 13, color: C.t1)),
-      ),
+      Expanded(child: Text(label, style: TextStyle(fontSize: 13, color: C.t1))),
       Text(
         value,
         style: TextStyle(

@@ -26,7 +26,7 @@ void toast(BuildContext ctx, String m) {
               color: C.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.info_rounded, color: C.primary, size: 16),
+            child: Icon(Icons.info_rounded, color: C.primary, size: 16),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -64,8 +64,9 @@ Future<bool> confirmAction(
   required String title,
   required String message,
   String confirmText = '确定',
-  Color confirmColor = C.red,
+  Color? confirmColor,
 }) async {
+  final effectiveConfirmColor = confirmColor ?? C.red;
   final ok = await showDialog<bool>(
     context: context,
     builder:
@@ -99,10 +100,12 @@ Future<bool> confirmAction(
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              style: TextButton.styleFrom(foregroundColor: confirmColor),
+              style: TextButton.styleFrom(
+                foregroundColor: effectiveConfirmColor,
+              ),
               child: Text(
                 confirmText,
-                style: const TextStyle(fontWeight: FontWeight.w700),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],

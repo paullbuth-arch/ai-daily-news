@@ -5,7 +5,7 @@ import 'theme/colors.dart';
 String yuan(int fen) => '¥${(fen / 100).toStringAsFixed(0)}';
 void toast(BuildContext c, String m) => ScaffoldMessenger.of(c).showSnackBar(
   SnackBar(
-    content: Text(m, style: const TextStyle(fontSize: 13)),
+    content: Text(m, style: TextStyle(fontSize: 13)),
     duration: const Duration(seconds: 2),
   ),
 );
@@ -116,7 +116,7 @@ class _ErpShellState extends State<ErpShell> {
           ),
           child: Row(
             children: [
-              Text(icon, style: const TextStyle(fontSize: 14)),
+              Text(icon, style: TextStyle(fontSize: 14)),
               const SizedBox(width: 10),
               Text(
                 title,

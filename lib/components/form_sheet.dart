@@ -54,7 +54,7 @@ Future<T?> showAppFormSheet<T>({
                               children: [
                                 Text(
                                   title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: C.t1,
                                     fontSize: 20,
                                     fontWeight: FontWeight.w900,
@@ -64,7 +64,7 @@ Future<T?> showAppFormSheet<T>({
                                   const SizedBox(height: 5),
                                   Text(
                                     subtitle,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: C.t2,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -145,7 +145,7 @@ Future<T?> showAppFormDialog<T>({
                               children: [
                                 Text(
                                   title,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: C.t1,
                                     fontSize: 19,
                                     fontWeight: FontWeight.w900,
@@ -155,7 +155,7 @@ Future<T?> showAppFormDialog<T>({
                                   const SizedBox(height: 5),
                                   Text(
                                     subtitle,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: C.t2,
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
@@ -232,11 +232,7 @@ class AppFormField extends StatelessWidget {
     readOnly: readOnly,
     obscureText: obscureText,
     onChanged: onChanged,
-    style: const TextStyle(
-      color: C.t1,
-      fontSize: 14,
-      fontWeight: FontWeight.w700,
-    ),
+    style: TextStyle(color: C.t1, fontSize: 14, fontWeight: FontWeight.w700),
     decoration: InputDecoration(
       labelText: label,
       hintText: hint,
@@ -244,20 +240,20 @@ class AppFormField extends StatelessWidget {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: C.bgDeep,
-      labelStyle: const TextStyle(color: C.t2, fontSize: 12),
-      hintStyle: const TextStyle(color: C.t3, fontSize: 13),
+      labelStyle: TextStyle(color: C.t2, fontSize: 12),
+      hintStyle: TextStyle(color: C.t3, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: C.border),
+        borderSide: BorderSide(color: C.border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: C.cyan, width: 1.2),
+        borderSide: BorderSide(color: C.cyan, width: 1.2),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: C.border),
+        borderSide: BorderSide(color: C.border),
       ),
     ),
   );
@@ -295,7 +291,7 @@ class AppDropdownField<T> extends StatelessWidget {
       isExpanded: true,
       underline: const SizedBox(),
       dropdownColor: C.bgCard,
-      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
+      icon: Icon(Icons.keyboard_arrow_down_rounded, color: C.t3),
       hint: Text(hint, style: TextStyle(color: C.t3, fontSize: fontSize)),
       style: TextStyle(color: C.t1, fontSize: fontSize),
       items:
@@ -324,14 +320,15 @@ class AppSheetActions extends StatelessWidget {
   final VoidCallback? onSecondary;
   final Color primaryColor;
 
-  const AppSheetActions({
+  AppSheetActions({
     Key? key,
     required this.primaryLabel,
     required this.onPrimary,
     this.secondaryLabel = '取消',
     this.onSecondary,
-    this.primaryColor = C.cyan,
-  }) : super(key: key);
+    Color? primaryColor,
+  }) : primaryColor = primaryColor ?? C.cyan,
+       super(key: key);
 
   @override
   Widget build(BuildContext context) => Row(
@@ -373,13 +370,14 @@ class AppChoicePill extends StatelessWidget {
   final VoidCallback onTap;
   final Color color;
 
-  const AppChoicePill({
+  AppChoicePill({
     Key? key,
     required this.label,
     required this.selected,
     required this.onTap,
-    this.color = C.cyan,
-  }) : super(key: key);
+    Color? color,
+  }) : color = color ?? C.cyan,
+       super(key: key);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -412,15 +410,16 @@ class AppSelectionTile extends StatelessWidget {
   final VoidCallback onTap;
   final Color color;
 
-  const AppSelectionTile({
+  AppSelectionTile({
     Key? key,
     required this.title,
     this.subtitle,
     required this.icon,
     required this.selected,
     required this.onTap,
-    this.color = C.cyan,
-  }) : super(key: key);
+    Color? color,
+  }) : color = color ?? C.cyan,
+       super(key: key);
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -454,7 +453,7 @@ class AppSelectionTile extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t1,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
@@ -466,7 +465,7 @@ class AppSelectionTile extends StatelessWidget {
                     subtitle!,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: C.t3,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,

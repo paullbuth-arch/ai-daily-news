@@ -1224,7 +1224,7 @@ class _ScanPageState extends State<ScanPage> {
                       onPressed: details.onStepCancel,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: C.t2,
-                        side: const BorderSide(color: C.border),
+                        side: BorderSide(color: C.border),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(11),
                         ),
@@ -1246,7 +1246,7 @@ class _ScanPageState extends State<ScanPage> {
                       ),
                       child: Text(
                         currentStep == 0 ? '下一步：复核信息' : '下一步：成本入库',
-                        style: const TextStyle(fontSize: 13),
+                        style: TextStyle(fontSize: 13),
                       ),
                     ),
                   ),
@@ -1259,16 +1259,12 @@ class _ScanPageState extends State<ScanPage> {
 
   Text _stepTitle(String text) => Text(
     text,
-    style: const TextStyle(
-      fontSize: 14,
-      fontWeight: FontWeight.w800,
-      color: C.t1,
-    ),
+    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: C.t1),
   );
 
   Step _uploadImagesStep() => Step(
     title: _stepTitle('上传验机图片'),
-    subtitle: const Text(
+    subtitle: Text(
       '上传图片，本机OCR提取文字',
       style: TextStyle(color: C.t3, fontSize: 11),
     ),
@@ -1290,7 +1286,7 @@ class _ScanPageState extends State<ScanPage> {
 
   Step _reviewStep() => Step(
     title: _stepTitle('OCR识别与复核'),
-    subtitle: const Text(
+    subtitle: Text(
       '型号、容量、颜色等可信字段自动填',
       style: TextStyle(color: C.t3, fontSize: 11),
     ),
@@ -1317,10 +1313,7 @@ class _ScanPageState extends State<ScanPage> {
 
   Step _finishStep() => Step(
     title: _stepTitle('成本与确认'),
-    subtitle: const Text(
-      '补业务信息后入库',
-      style: TextStyle(color: C.t3, fontSize: 11),
-    ),
+    subtitle: Text('补业务信息后入库', style: TextStyle(color: C.t3, fontSize: 11)),
     state: currentStep == 2 ? StepState.indexed : StepState.disabled,
     isActive: currentStep >= 2,
     content: Column(
@@ -1338,7 +1331,7 @@ class _ScanPageState extends State<ScanPage> {
     radius: 14,
     color: C.bgCardMuted,
     borderColor: C.border,
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(Icons.fact_check_outlined, color: C.primary, size: 20),
@@ -1364,7 +1357,7 @@ class _ScanPageState extends State<ScanPage> {
       children: [
         Row(
           children: [
-            const Text(
+            Text(
               '验机实拍',
               style: TextStyle(
                 fontSize: 12,
@@ -1375,7 +1368,7 @@ class _ScanPageState extends State<ScanPage> {
             const Spacer(),
             Text(
               '${imagePaths.length}/12张',
-              style: const TextStyle(fontSize: 11, color: C.t3),
+              style: TextStyle(fontSize: 11, color: C.t3),
             ),
           ],
         ),
@@ -1399,7 +1392,7 @@ class _ScanPageState extends State<ScanPage> {
                         borderRadius: BorderRadius.circular(11),
                         border: Border.all(color: C.border),
                       ),
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           Icons.add_photo_alternate,
                           color: C.t3,
@@ -1427,11 +1420,11 @@ class _ScanPageState extends State<ScanPage> {
                         onTap: () => _removeImage(i),
                         child: Container(
                           padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: C.t2,
                             shape: BoxShape.circle,
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.close,
                             color: Colors.white,
                             size: 14,
@@ -1453,10 +1446,7 @@ class _ScanPageState extends State<ScanPage> {
                         ),
                         child: Text(
                           '#${i + 1}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                          ),
+                          style: TextStyle(color: Colors.white, fontSize: 9),
                         ),
                       ),
                     ),
@@ -1474,7 +1464,7 @@ class _ScanPageState extends State<ScanPage> {
               borderRadius: BorderRadius.circular(11),
               border: Border.all(color: C.border),
             ),
-            child: const Center(
+            child: Center(
               child: Text(
                 '还没有上传验机图片',
                 style: TextStyle(color: C.t3, fontSize: 12),
@@ -1533,9 +1523,9 @@ class _ScanPageState extends State<ScanPage> {
       children: [
         Row(
           children: [
-            const Icon(Icons.rule_rounded, color: C.orange, size: 18),
+            Icon(Icons.rule_rounded, color: C.orange, size: 18),
             const SizedBox(width: 8),
-            const Expanded(
+            Expanded(
               child: Text(
                 '外观问题（手动勾选）',
                 style: TextStyle(
@@ -1549,7 +1539,7 @@ class _ScanPageState extends State<ScanPage> {
               selectedManualIssueIds.isEmpty
                   ? '未记录'
                   : '${selectedManualIssueIds.length}项',
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t3,
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
@@ -1558,7 +1548,7 @@ class _ScanPageState extends State<ScanPage> {
           ],
         ),
         const SizedBox(height: 7),
-        const Text(
+        Text(
           '未勾选会按“无明显外观/屏幕问题”写入验货报告；有问题就直接点选，位置不在列表里可写补充。',
           style: TextStyle(
             color: C.t3,
@@ -1594,7 +1584,7 @@ class _ScanPageState extends State<ScanPage> {
       children: [
         Text(
           group,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t2,
             fontSize: 11,
             fontWeight: FontWeight.w900,
@@ -1635,7 +1625,7 @@ class _ScanPageState extends State<ScanPage> {
                 color: C.primary.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(C.radiusSm),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.document_scanner_outlined,
                 color: C.primary,
                 size: 20,
@@ -1646,7 +1636,7 @@ class _ScanPageState extends State<ScanPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     '本机OCR识别',
                     style: TextStyle(
                       color: C.t1,
@@ -1659,7 +1649,7 @@ class _ScanPageState extends State<ScanPage> {
                     imagePaths.isEmpty
                         ? '等待上传图片'
                         : '${imagePaths.length} 张图片待读取',
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: C.t3,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -1676,13 +1666,13 @@ class _ScanPageState extends State<ScanPage> {
           imagePaths.isEmpty
               ? '上传关于本机、爱思/沙漏报告或电池页截图后，再读取文字并自动填入可信字段。'
               : '将读取截图里的型号、容量、序列号、电池健康和循环次数；低置信字段会留给你复核。',
-          style: const TextStyle(color: C.t3, fontSize: 11, height: 1.4),
+          style: TextStyle(color: C.t3, fontSize: 11, height: 1.4),
         ),
         if (imageRecognizing) ...[
           const SizedBox(height: 12),
           ClipRRect(
             borderRadius: BorderRadius.circular(C.radiusSm),
-            child: const LinearProgressIndicator(
+            child: LinearProgressIndicator(
               minHeight: 4,
               color: C.primary,
               backgroundColor: C.bgSurface,
@@ -1707,7 +1697,7 @@ class _ScanPageState extends State<ScanPage> {
                         color: Colors.black,
                       ),
                     )
-                    : const Icon(Icons.document_scanner_outlined),
+                    : Icon(Icons.document_scanner_outlined),
             style: FilledButton.styleFrom(
               backgroundColor: imagePaths.isEmpty ? C.bgElevated : C.primary,
               foregroundColor: imagePaths.isEmpty ? C.t3 : Colors.black,
@@ -1722,7 +1712,7 @@ class _ScanPageState extends State<ScanPage> {
                   : imageRecognizing
                   ? 'OCR读取中'
                   : '开始本机OCR',
-              style: const TextStyle(fontWeight: FontWeight.w900),
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
         ),
@@ -1735,7 +1725,7 @@ class _ScanPageState extends State<ScanPage> {
     radius: 12,
     color: C.bgCardMuted,
     borderColor: C.border,
-    child: const Row(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(Icons.info_outline_rounded, color: C.orange, size: 18),
@@ -1796,7 +1786,7 @@ class _ScanPageState extends State<ScanPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '设备信息复核',
           style: TextStyle(
             fontSize: 12,
@@ -1884,7 +1874,7 @@ class _ScanPageState extends State<ScanPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '成色复核',
           style: TextStyle(
             fontSize: 12,
@@ -1908,7 +1898,7 @@ class _ScanPageState extends State<ScanPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'ID锁安全检测',
           style: TextStyle(
             fontSize: 12,
@@ -1946,16 +1936,12 @@ class _ScanPageState extends State<ScanPage> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 18,
-                  color: C.neonRed,
-                ),
+                Icon(Icons.warning_amber_rounded, size: 18, color: C.neonRed),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     '${idCheck!["risk"]}：${(idCheck!["issues"] as List).join("、")}',
-                    style: const TextStyle(fontSize: 12, color: C.neonRed),
+                    style: TextStyle(fontSize: 12, color: C.neonRed),
                   ),
                 ),
               ],
@@ -1970,7 +1956,7 @@ class _ScanPageState extends State<ScanPage> {
               borderRadius: BorderRadius.circular(11),
               border: Border.all(color: C.green.withValues(alpha: 0.40)),
             ),
-            child: const Row(
+            child: Row(
               children: [
                 Icon(Icons.check_circle_outline, size: 18, color: C.green),
                 SizedBox(width: 8),
@@ -1991,7 +1977,7 @@ class _ScanPageState extends State<ScanPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '采购信息',
           style: TextStyle(
             fontSize: 12,
@@ -2039,7 +2025,7 @@ class _ScanPageState extends State<ScanPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '入库确认',
           style: TextStyle(
             fontSize: 14,
@@ -2073,7 +2059,7 @@ class _ScanPageState extends State<ScanPage> {
         ),
         const SizedBox(height: 14),
         saving
-            ? const Center(child: CircularProgressIndicator(color: C.t3))
+            ? Center(child: CircularProgressIndicator(color: C.t3))
             : primaryBtn('确认入库', _save),
       ],
     ),
@@ -2120,7 +2106,7 @@ class _ScanPageState extends State<ScanPage> {
               Expanded(
                 child: Text(
                   isComplete ? 'OCR设备信息已补全' : 'OCR已识别，仍需补全',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t1,
                     fontSize: 13,
                     fontWeight: FontWeight.w900,
@@ -2147,7 +2133,7 @@ class _ScanPageState extends State<ScanPage> {
           _inspectionLine('外观记录', _manualDefectSummary(maxItems: 6)),
           if (confidence > 0 && confidence < 0.72) ...[
             const SizedBox(height: 6),
-            const Text(
+            Text(
               '图片信息不足，关键字段已保守处理，请人工复核后再入库。',
               style: TextStyle(
                 color: C.orange,
@@ -2163,7 +2149,7 @@ class _ScanPageState extends State<ScanPage> {
               'OCR提醒：${warnings.take(3).join('、')}',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.orange,
                 fontSize: 11,
                 height: 1.35,
@@ -2172,7 +2158,7 @@ class _ScanPageState extends State<ScanPage> {
             ),
           ],
           const SizedBox(height: 6),
-          const Text(
+          Text(
             '确认入库后会自动生成验货报告图并保存到相册；外观结论以人工勾选为准。',
             style: TextStyle(color: C.t3, fontSize: 11),
           ),
@@ -2190,7 +2176,7 @@ class _ScanPageState extends State<ScanPage> {
         '$label：$text',
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
+        style: TextStyle(
           color: C.t2,
           fontSize: 11,
           height: 1.35,

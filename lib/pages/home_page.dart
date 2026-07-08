@@ -50,7 +50,7 @@ class HomePageState extends State<HomePage> {
     final margin = stats.gmv > 0 ? stats.grossProfit / stats.gmv * 100 : 0.0;
     final automationPlan = AutomationService.buildPlan(gStorage);
     return PageScaffold(
-      title: const Text(
+      title: Text(
         '货脉',
         style: TextStyle(
           fontSize: 26,
@@ -60,7 +60,7 @@ class HomePageState extends State<HomePage> {
       ),
       subtitle: Text(
         '今日 ${stats.orderCount} 单 · 在售 ${stats.inStockCount} 台 · ${fmtDate(DateTime.now())}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           color: C.t2,
           fontWeight: FontWeight.w700,
@@ -174,7 +174,7 @@ class _HeroPhoneCard extends StatelessWidget {
                           ],
                         ),
                         const SizedBox(height: 12),
-                        const Text(
+                        Text(
                           '今日经营',
                           style: TextStyle(
                             fontSize: 13,
@@ -188,7 +188,7 @@ class _HeroPhoneCard extends StatelessWidget {
                           fit: BoxFit.scaleDown,
                           child: Text(
                             yuan(stats.gmv),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 44,
                               height: 1,
                               fontWeight: FontWeight.w900,
@@ -201,7 +201,7 @@ class _HeroPhoneCard extends StatelessWidget {
                           '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             color: C.t2,
                             fontWeight: FontWeight.w700,
@@ -226,7 +226,7 @@ class _HeroPhoneCard extends StatelessWidget {
                             color: C.primary.withValues(alpha: 0.24),
                           ),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.tablet_mac_rounded,
                           color: C.primary,
                           size: 22,
@@ -433,7 +433,7 @@ class _LinkMaterialImportPage extends StatelessWidget {
         AppLayout.scrollBottomPadding(context),
       ),
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      children: const [
+      children: [
         _LinkMaterialIntro(),
         SizedBox(height: 14),
         _LinkMaterialImportSheet(),
@@ -453,7 +453,7 @@ class _LinkMaterialIntro extends StatelessWidget {
     borderColor: C.border,
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Icon(Icons.download_for_offline_rounded, color: C.primary, size: 22),
         SizedBox(width: 10),
         Expanded(
@@ -633,7 +633,7 @@ class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
           Expanded(
             child: OutlinedButton.icon(
               onPressed: _busy ? null : _clearInput,
-              icon: const Icon(Icons.clear_rounded, size: 17),
+              icon: Icon(Icons.clear_rounded, size: 17),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
@@ -657,7 +657,7 @@ class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
                           color: Colors.black,
                         ),
                       )
-                      : const Icon(Icons.download_rounded, size: 17),
+                      : Icon(Icons.download_rounded, size: 17),
               style: FilledButton.styleFrom(
                 backgroundColor: C.primary,
                 foregroundColor: Colors.black,
@@ -746,7 +746,7 @@ class _LinkImportResultCard extends StatelessWidget {
             result.title,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 13,
               fontWeight: FontWeight.w900,
@@ -784,10 +784,7 @@ class _LinkImportResultCard extends StatelessWidget {
                           width: 72,
                           height: 72,
                           color: C.bgCard,
-                          child: const Icon(
-                            Icons.broken_image_outlined,
-                            color: C.t3,
-                          ),
+                          child: Icon(Icons.broken_image_outlined, color: C.t3),
                         ),
                   ),
                 );
@@ -834,7 +831,7 @@ class _VideoPreviewTile extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.play_circle_fill_rounded, color: C.orange, size: 26),
+          Icon(Icons.play_circle_fill_rounded, color: C.orange, size: 26),
           const SizedBox(height: 4),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -842,7 +839,7 @@ class _VideoPreviewTile extends StatelessWidget {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t3,
                 fontSize: 9,
                 fontWeight: FontWeight.w800,
@@ -909,7 +906,7 @@ class _ImportNote extends StatelessWidget {
           text,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t3,
             fontSize: 11,
             height: 1.35,
@@ -945,7 +942,7 @@ class _MiniMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             color: C.t3,
             fontWeight: FontWeight.w800,
@@ -1018,7 +1015,7 @@ class _PastelPill extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
                         color: C.t1,
                         fontWeight: FontWeight.w900,
@@ -1170,7 +1167,7 @@ class _AlertTile extends StatelessWidget {
                 fit: BoxFit.scaleDown,
                 child: Text(
                   value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     color: C.t1,
                     fontWeight: FontWeight.w900,
@@ -1179,7 +1176,7 @@ class _AlertTile extends StatelessWidget {
               ),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   color: C.t2,
                   fontWeight: FontWeight.w800,
@@ -1191,7 +1188,7 @@ class _AlertTile extends StatelessWidget {
                   subtitle!,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 10,
                     color: C.t3,
                     fontWeight: FontWeight.w700,
@@ -1255,7 +1252,7 @@ class _TrendPanelState extends State<_TrendPanel> {
               const SizedBox(width: 8),
               Text(
                 weeklyMode ? '按月内自然周聚合' : '最近 7 天净利',
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.t3,
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
@@ -1378,7 +1375,7 @@ class _ChannelPanel extends StatelessWidget {
                                 e.value.key,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: C.t1,
                                   fontWeight: FontWeight.w800,
                                   fontSize: 12,
@@ -1387,7 +1384,7 @@ class _ChannelPanel extends StatelessWidget {
                             ),
                             Text(
                               '${(pct * 100).toStringAsFixed(0)}%',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 color: C.t2,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 12,
@@ -1466,7 +1463,7 @@ class _AiPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '自动巡店',
                   style: TextStyle(
                     fontSize: 15,
@@ -1479,7 +1476,7 @@ class _AiPanel extends StatelessWidget {
                   subtitle,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: C.t2,
                     fontWeight: FontWeight.w700,
@@ -1510,7 +1507,7 @@ class _AiPanel extends StatelessWidget {
               ),
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: C.t2),
+          Icon(Icons.chevron_right_rounded, color: C.t2),
         ],
       ),
     );

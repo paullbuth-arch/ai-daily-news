@@ -46,7 +46,7 @@ class _AiPromptRulesPageState extends State<AiPromptRulesPage> {
         CardBox(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
+            children: [
               SectionTitle('规则用途', icon: Icons.tune_rounded),
               Text(
                 '这里管理 AI 在各个功能里的系统规则。保存后会立即生效；设备、订单、库存等真实数据仍由页面自动传入，不需要写进规则里。',
@@ -89,7 +89,7 @@ class _AiPromptRulesPageState extends State<AiPromptRulesPage> {
         ),
         Text(
           definition.description,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t2,
             fontSize: 12,
             height: 1.45,

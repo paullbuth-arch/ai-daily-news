@@ -143,7 +143,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                                       height: 56,
                                     ),
                                   )
-                                  : const Center(
+                                  : Center(
                                     child: Icon(
                                       Icons.tablet_mac_rounded,
                                       color: C.t2,
@@ -200,7 +200,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                           ),
                           child: Text(
                             '库${d.stockDays}天',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: C.red,
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
@@ -225,7 +225,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Icons.auto_awesome_rounded,
                               color: C.orange,
                               size: 17,
@@ -234,7 +234,7 @@ class _StagnantListPageState extends State<StagnantListPage> {
                             Expanded(
                               child: Text(
                                 '建议调到 ${yuan(suggested)}',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   color: C.t2,
                                   fontSize: 11.5,
                                   fontWeight: FontWeight.w800,

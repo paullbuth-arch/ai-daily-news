@@ -41,7 +41,7 @@ class _RepairPageState extends State<RepairPage> {
             (sheetContext, setS) => Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   '选择设备',
                   style: TextStyle(
                     color: C.t2,
@@ -61,7 +61,7 @@ class _RepairPageState extends State<RepairPage> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   '维修类型',
                   style: TextStyle(
                     color: C.t2,
@@ -227,7 +227,7 @@ class _RepairPageState extends State<RepairPage> {
                         _refresh();
                         toast(context, '已删除');
                       },
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(8),
                         child: Icon(
                           Icons.delete_outline_rounded,

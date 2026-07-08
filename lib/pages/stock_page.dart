@@ -522,7 +522,7 @@ class StockPageState extends State<StockPage> {
                                 const SizedBox(height: 5),
                                 Text(
                                   '在售 ${all.length} 台 · 成本占用 ${yuan(cost)}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
                                     color: C.t2,
                                     fontWeight: FontWeight.w700,
@@ -752,7 +752,7 @@ class _StockStat extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
             color: C.t2,
             fontWeight: FontWeight.w800,
@@ -793,18 +793,18 @@ class _SearchField extends StatelessWidget {
     borderColor: C.border,
     child: Row(
       children: [
-        const Icon(Icons.search_rounded, color: C.t2, size: 24),
+        Icon(Icons.search_rounded, color: C.t2, size: 24),
         const SizedBox(width: 12),
         Expanded(
           child: TextField(
             controller: controller,
             onChanged: onChanged,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 14,
               fontWeight: FontWeight.w800,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               isCollapsed: true,
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
@@ -820,7 +820,7 @@ class _SearchField extends StatelessWidget {
         if (value.isNotEmpty)
           IconButton(
             onPressed: onClear,
-            icon: const Icon(Icons.close_rounded, color: C.t3, size: 18),
+            icon: Icon(Icons.close_rounded, color: C.t3, size: 18),
           ),
       ],
     ),
@@ -892,7 +892,7 @@ class _StockToolButton extends StatelessWidget {
         side: BorderSide(color: selected ? C.cyan : C.border),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+        textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
       ),
     ),
   );
@@ -931,7 +931,7 @@ class _BatchActionBar extends StatelessWidget {
             Expanded(
               child: Text(
                 '已选 $count 台',
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.cyan,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
@@ -939,7 +939,7 @@ class _BatchActionBar extends StatelessWidget {
               ),
             ),
             if (busy)
-              const SizedBox(
+              SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(strokeWidth: 2, color: C.cyan),
@@ -947,7 +947,7 @@ class _BatchActionBar extends StatelessWidget {
             else
               GestureDetector(
                 onTap: onCancel,
-                child: const Icon(Icons.close_rounded, color: C.t3, size: 20),
+                child: Icon(Icons.close_rounded, color: C.t3, size: 20),
               ),
           ],
         ),
@@ -1006,7 +1006,7 @@ class _BatchActionButton extends StatelessWidget {
         side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
         padding: const EdgeInsets.symmetric(horizontal: 11),
         shape: const StadiumBorder(),
-        textStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+        textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
       ),
     ),
   );
@@ -1151,7 +1151,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                     '${device.model} ${device.capacity}',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: C.t1,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
@@ -1172,7 +1172,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                     '${device.condition} · ${device.color} · ${device.stockDays}天',
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       color: C.t2,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
@@ -1183,7 +1183,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                   device.sellPrice > 0
                                       ? yuan(device.sellPrice)
                                       : '待定价',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     color: C.cyan,
                                     fontSize: 14,
                                     fontWeight: FontWeight.w900,
@@ -1367,7 +1367,7 @@ class _InfoPill extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 10,
               fontWeight: FontWeight.w800,
@@ -1432,7 +1432,7 @@ class _MiniMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t3,
             fontSize: 10,
             fontWeight: FontWeight.w800,
@@ -1508,7 +1508,7 @@ class _CardActionButton extends StatelessWidget {
                       const SizedBox(width: 5),
                       Text(
                         label,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
                         ),
@@ -1571,18 +1571,15 @@ class _EmptyStock extends StatelessWidget {
         Container(
           width: 58,
           height: 58,
-          decoration: const BoxDecoration(
-            color: C.cyan,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
+          decoration: BoxDecoration(color: C.cyan, shape: BoxShape.circle),
+          child: Icon(
             Icons.qr_code_scanner_rounded,
             color: Colors.black,
             size: 28,
           ),
         ),
         const SizedBox(height: 14),
-        const Text(
+        Text(
           '暂无库存设备',
           style: TextStyle(
             color: C.t1,
@@ -1591,10 +1588,7 @@ class _EmptyStock extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        const Text(
-          '先收一台设备，库存卡片会出现在这里',
-          style: TextStyle(color: C.t2, fontSize: 12),
-        ),
+        Text('先收一台设备，库存卡片会出现在这里', style: TextStyle(color: C.t2, fontSize: 12)),
         const SizedBox(height: 16),
         primaryBtn('扫码收货', onScan, icon: Icons.add_rounded),
       ],

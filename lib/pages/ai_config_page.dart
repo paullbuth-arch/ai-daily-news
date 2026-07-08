@@ -178,7 +178,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
               child: CardBox(
                 child: Row(
                   children: [
-                    const SizedBox(
+                    SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
@@ -348,7 +348,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
           ),
           const SizedBox(height: 16),
           if (_testing)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
                 child: CircularProgressIndicator(color: C.t3),
@@ -361,7 +361,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
                 onPressed: _testConnection,
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t3,
-                  side: const BorderSide(color: C.t3),
+                  side: BorderSide(color: C.t3),
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(13),
@@ -375,7 +375,7 @@ class _AiConfigPageState extends State<AiConfigPage> {
             ),
           const SizedBox(height: 10),
           if (_saving)
-            const Center(
+            Center(
               child: Padding(
                 padding: EdgeInsets.all(8),
                 child: CircularProgressIndicator(color: C.t3),

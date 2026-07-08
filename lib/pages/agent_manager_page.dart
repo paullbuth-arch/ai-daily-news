@@ -128,7 +128,7 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
                         color: C.pink.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.person_outline_rounded,
                         color: C.pink,
                         size: 20,
@@ -173,7 +173,7 @@ class _AgentManagerPageState extends State<AgentManagerPage> {
                         _refresh();
                         toast(context, '已删除');
                       },
-                      child: const Padding(
+                      child: Padding(
                         padding: EdgeInsets.all(8),
                         child: Icon(
                           Icons.delete_outline_rounded,

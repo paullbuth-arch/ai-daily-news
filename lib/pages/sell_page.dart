@@ -373,7 +373,7 @@ class _SellPageState extends State<SellPage> {
                         children: [
                           Text(
                             computedProfit! >= 0 ? '💰' : '📉',
-                            style: const TextStyle(fontSize: 20),
+                            style: TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 8),
                           Text(
@@ -418,11 +418,11 @@ class _SellPageState extends State<SellPage> {
     children: [
       Row(
         children: [
-          const Text('选择型号系列', style: TextStyle(fontSize: 12, color: C.t2)),
+          Text('选择型号系列', style: TextStyle(fontSize: 12, color: C.t2)),
           const Spacer(),
           Text(
             '${sellable.length}台',
-            style: const TextStyle(fontSize: 11, color: C.t3),
+            style: TextStyle(fontSize: 11, color: C.t3),
           ),
         ],
       ),
@@ -436,10 +436,7 @@ class _SellPageState extends State<SellPage> {
             borderRadius: BorderRadius.circular(10),
             border: Border.all(color: C.border),
           ),
-          child: const Text(
-            '暂无可售库存',
-            style: TextStyle(color: C.t2, fontSize: 12),
-          ),
+          child: Text('暂无可售库存', style: TextStyle(color: C.t2, fontSize: 12)),
         )
       else
         ...groups.map(_seriesTile),
@@ -473,11 +470,7 @@ class _SellPageState extends State<SellPage> {
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(color: C.border),
                   ),
-                  child: const Icon(
-                    Icons.folder_outlined,
-                    color: C.t2,
-                    size: 18,
-                  ),
+                  child: Icon(Icons.folder_outlined, color: C.t2, size: 18),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -488,7 +481,7 @@ class _SellPageState extends State<SellPage> {
                         group.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
                           color: C.t1,
@@ -499,12 +492,12 @@ class _SellPageState extends State<SellPage> {
                         '${group.devices.length}台 · ${_seriesPriceRange(group)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10.5, color: C.t3),
+                        style: TextStyle(fontSize: 10.5, color: C.t3),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.chevron_right_rounded, color: C.t3, size: 20),
+                Icon(Icons.chevron_right_rounded, color: C.t3, size: 20),
               ],
             ),
           ),
@@ -521,7 +514,7 @@ class _SellPageState extends State<SellPage> {
           InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () => setState(() => selectedSeriesKey = null),
-            child: const Padding(
+            child: Padding(
               padding: EdgeInsets.symmetric(horizontal: 2, vertical: 4),
               child: Icon(Icons.arrow_back_rounded, color: C.t2, size: 18),
             ),
@@ -532,14 +525,14 @@ class _SellPageState extends State<SellPage> {
               group.label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 color: C.t1,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
-          const Text('按价格低到高', style: TextStyle(fontSize: 10.5, color: C.t3)),
+          Text('按价格低到高', style: TextStyle(fontSize: 10.5, color: C.t3)),
         ],
       ),
       const SizedBox(height: 8),
@@ -573,7 +566,7 @@ class _SellPageState extends State<SellPage> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.tablet_mac_rounded, color: C.t2, size: 20),
+                Icon(Icons.tablet_mac_rounded, color: C.t2, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -583,7 +576,7 @@ class _SellPageState extends State<SellPage> {
                         '${d.model} ${d.capacity} ${d.color}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12.5,
                           fontWeight: FontWeight.w700,
                           color: C.t1,
@@ -594,7 +587,7 @@ class _SellPageState extends State<SellPage> {
                         '${_serialText(d)} · 采购${yuan(d.purchaseCost)} · 库${d.stockDays}天',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10, color: C.t2),
+                        style: TextStyle(fontSize: 10, color: C.t2),
                       ),
                     ],
                   ),
@@ -612,11 +605,7 @@ class _SellPageState extends State<SellPage> {
                       ),
                     ),
                     if (isSelected)
-                      const Icon(
-                        Icons.check_circle_rounded,
-                        color: C.cyan,
-                        size: 16,
-                      ),
+                      Icon(Icons.check_circle_rounded, color: C.cyan, size: 16),
                   ],
                 ),
               ],

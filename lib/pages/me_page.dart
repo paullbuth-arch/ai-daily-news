@@ -38,7 +38,7 @@ class _MePageState extends State<MePage> {
     final shopName = (settings['userShopName'] as String?) ?? '二手 iPad 工作台';
 
     return PageScaffold(
-      title: const Text(
+      title: Text(
         '工作区',
         style: TextStyle(
           fontSize: 25,
@@ -48,7 +48,7 @@ class _MePageState extends State<MePage> {
       ),
       subtitle: Text(
         '货脉 v${UpdateService.currentVersion}',
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 12,
           color: C.t2,
           fontWeight: FontWeight.w700,
@@ -81,7 +81,7 @@ class _MePageState extends State<MePage> {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.storefront_rounded,
                     color: Colors.black,
                     size: 30,
@@ -96,7 +96,7 @@ class _MePageState extends State<MePage> {
                         displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t1,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
@@ -107,7 +107,7 @@ class _MePageState extends State<MePage> {
                         shopName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.t2,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
@@ -244,7 +244,7 @@ class _MePageState extends State<MePage> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             '数据本机保存 · 后台保护 · 手动备份',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -282,7 +282,7 @@ class _ProfileStat extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t2,
             fontSize: 11,
             fontWeight: FontWeight.w800,
@@ -340,7 +340,7 @@ class _MenuGroup extends StatelessWidget {
               const SizedBox(width: 10),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.t1,
                   fontSize: 15,
                   fontWeight: FontWeight.w900,
@@ -384,14 +384,14 @@ class _MenuRow extends StatelessWidget {
             Expanded(
               child: Text(
                 item.label,
-                style: const TextStyle(
+                style: TextStyle(
                   color: C.t1,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: C.t3, size: 20),
+            Icon(Icons.chevron_right_rounded, color: C.t3, size: 20),
           ],
         ),
       ),

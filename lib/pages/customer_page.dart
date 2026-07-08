@@ -55,7 +55,7 @@ class _CustomerPageState extends State<CustomerPage> {
                         color: C.orange.withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(9),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.person_outline_rounded,
                         color: C.orange,
                         size: 20,
@@ -97,7 +97,7 @@ class _CustomerPageState extends State<CustomerPage> {
                           color: C.green.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(5),
                         ),
-                        child: const Text(
+                        child: Text(
                           '复购',
                           style: TextStyle(
                             fontSize: 9,

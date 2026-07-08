@@ -397,7 +397,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
     }
     if (avgSell <= 0) {
       list.add(
-        const _RiskItem(
+        _RiskItem(
           color: C.orange,
           title: '缺少售价历史',
           text: '没有同型号成交价，建议先看今日批发价和同行售价。',
@@ -406,11 +406,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
     }
     if (sales30 == 0) {
       list.add(
-        const _RiskItem(
-          color: C.orange,
-          title: '近30天无成交',
-          text: '动销不足时不要按常规利润模型重仓。',
-        ),
+        _RiskItem(color: C.orange, title: '近30天无成交', text: '动销不足时不要按常规利润模型重仓。'),
       );
     }
     if (sales30 > 0 && inStock > sales30 * 2) {
@@ -451,11 +447,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
     }
     if (list.isEmpty) {
       list.add(
-        const _RiskItem(
-          color: C.mint,
-          title: '没有明显硬伤',
-          text: '重点盯住成色、电池和是否有隐藏维修成本。',
-        ),
+        _RiskItem(color: C.mint, title: '没有明显硬伤', text: '重点盯住成色、电池和是否有隐藏维修成本。'),
       );
     }
     return list.take(4).toList();
@@ -509,7 +501,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '按报价实时判断',
             style: TextStyle(
               color: C.t1,
@@ -518,7 +510,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             '结论来自历史成交、库存、周转和今日批发价。',
             style: TextStyle(color: C.t3, fontSize: 11.5, height: 1.45),
           ),
@@ -665,7 +657,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                     const SizedBox(height: 4),
                     Text(
                       plan.summary,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: C.t2,
                         fontSize: 12.5,
                         height: 1.45,
@@ -742,7 +734,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '三档报价',
             style: TextStyle(
               color: C.t1,
@@ -785,7 +777,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '不收原因 / 风险',
             style: TextStyle(
               color: C.t1,
@@ -830,7 +822,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                         const SizedBox(height: 2),
                         Text(
                           risk.text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: C.t2,
                             fontSize: 11.5,
                             height: 1.4,
@@ -858,7 +850,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '模型事实',
             style: TextStyle(
               color: C.t1,
@@ -916,7 +908,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '历史采购渠道',
             style: TextStyle(
               color: C.t1,
@@ -937,7 +929,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                           s['channel'] as String,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: C.t1,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w800,
@@ -946,12 +938,12 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                       ),
                       Text(
                         '${s['count']}台',
-                        style: const TextStyle(color: C.t3, fontSize: 11),
+                        style: TextStyle(color: C.t3, fontSize: 11),
                       ),
                       const SizedBox(width: 12),
                       Text(
                         '均利 ${yuan((s['profit'] as int) ~/ (s['count'] as int))}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: C.mint,
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
@@ -984,14 +976,14 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
                   color: C.purple.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome_rounded,
                   color: C.purple,
                   size: 18,
                 ),
               ),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1015,11 +1007,11 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           ),
           const SizedBox(height: 12),
           if (_loading)
-            const LinearProgressIndicator(minHeight: 3, color: C.purple)
+            LinearProgressIndicator(minHeight: 3, color: C.purple)
           else if (_aiResult != null)
             Text(
               _aiResult!,
-              style: const TextStyle(
+              style: TextStyle(
                 color: C.t2,
                 fontSize: 12.5,
                 height: 1.65,
@@ -1029,14 +1021,14 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           else
             Text(
               '本地结论是「${plan.decision}」。如果你要和供应商谈价，可以让AI把压价理由整理成一句话。',
-              style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+              style: TextStyle(color: C.t2, fontSize: 12, height: 1.5),
             ),
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: _loading ? null : _askAi,
-              icon: const Icon(Icons.psychology_alt_outlined, size: 18),
+              icon: Icon(Icons.psychology_alt_outlined, size: 18),
               label: Text(_aiResult == null ? '让AI复核本次报价' : '重新复核'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: C.purple,
@@ -1066,7 +1058,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           const SizedBox(height: 12),
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: C.t1,
               fontSize: 16,
               fontWeight: FontWeight.w900,
@@ -1076,7 +1068,7 @@ class _PurchaseDecisionPageState extends State<PurchaseDecisionPage> {
           Text(
             text,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: C.t2, fontSize: 12, height: 1.5),
+            style: TextStyle(color: C.t2, fontSize: 12, height: 1.5),
           ),
         ],
       ),
@@ -1203,7 +1195,7 @@ class _InlineButton extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
         ),
       ),
       style: OutlinedButton.styleFrom(
@@ -1235,7 +1227,7 @@ class _DecisionMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t3,
             fontSize: 10.5,
             fontWeight: FontWeight.w800,
@@ -1309,17 +1301,14 @@ class _ScenarioLine extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: C.t1,
                     fontSize: 12.5,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
                 const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: const TextStyle(color: C.t3, fontSize: 10.5),
-                ),
+                Text(subtitle, style: TextStyle(color: C.t3, fontSize: 10.5)),
               ],
             ),
           ),
@@ -1369,7 +1358,7 @@ class _FactTile extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             color: C.t3,
             fontSize: 10.5,
             fontWeight: FontWeight.w800,

@@ -1172,6 +1172,9 @@ class EcommerceMaterialImportService {
     Uri base, {
     String? html,
   }) {
+    final structured = _collectDouyinStructuredVideoUrls(html, base);
+    if (structured.isNotEmpty) return structured;
+
     final urls = <Uri>[];
     final seen = <String>{};
 
@@ -1180,7 +1183,9 @@ class EcommerceMaterialImportService {
       final uri = _resolveImageUri(raw, base);
       if (uri == null || !_looksLikeUsefulVideo(uri)) return;
       if (!_looksLikeDouyinVideo(uri, base)) return;
-      if (seen.add(_dedupeKey(uri))) urls.add(uri);
+      for (final candidate in _douyinVideoDownloadCandidates(uri)) {
+        if (seen.add(_dedupeKey(candidate))) urls.add(candidate);
+      }
     }
 
     for (final key in [
@@ -1205,6 +1210,121 @@ class EcommerceMaterialImportService {
       }
     }
     return _sortVideoUrlsForQuality(urls);
+  }
+
+  static List<Uri> _collectDouyinStructuredVideoUrls(String? html, Uri base) {
+    if (html == null || html.isEmpty) return const <Uri>[];
+
+    final scored = <_ScoredUri>[];
+    final seenOccurrence = <String>{};
+    var index = 0;
+    final urlPattern = RegExp(r"""https?://[^\s"'<>\\]+""");
+
+    for (final normalized in _decodedTextVariants(html)) {
+      for (final match in urlPattern.allMatches(normalized)) {
+        var raw = match.group(0) ?? '';
+        raw = raw.replaceFirst(RegExp(r'[\]\)},.;]+$'), '');
+        final uri = _resolveImageUri(raw, base);
+        if (uri == null || !_looksLikeUsefulVideo(uri)) continue;
+        if (!_looksLikeDouyinVideo(uri, base)) continue;
+
+        final contextStart = match.start > 320 ? match.start - 320 : 0;
+        final context = normalized.substring(contextStart, match.start);
+        for (final candidate in _douyinVideoDownloadCandidates(uri)) {
+          final occurrenceKey = _dedupeKey(candidate);
+          if (!seenOccurrence.add(occurrenceKey)) continue;
+          final score =
+              _videoQualityScore(candidate) +
+              _douyinVideoContextScore(context, candidate);
+          scored.add(_ScoredUri(candidate, score, index++));
+        }
+      }
+    }
+
+    if (scored.isEmpty) return const <Uri>[];
+    scored.sort((a, b) {
+      final scoreCompare = b.score.compareTo(a.score);
+      if (scoreCompare != 0) return scoreCompare;
+      return a.index.compareTo(b.index);
+    });
+
+    final urls = <Uri>[];
+    final seenVideo = <String>{};
+    for (final candidate in scored) {
+      if (seenVideo.add(_videoDedupeKey(candidate.uri))) {
+        urls.add(candidate.uri);
+      }
+    }
+    return urls;
+  }
+
+  static Iterable<Uri> _douyinVideoDownloadCandidates(Uri uri) sync* {
+    final clean = _douyinNoWatermarkPlayUri(uri);
+    if (clean != null) yield clean;
+    yield uri;
+  }
+
+  static Uri? _douyinNoWatermarkPlayUri(Uri uri) {
+    var changed = false;
+    final segments = <String>[];
+    for (final segment in uri.pathSegments) {
+      if (segment.toLowerCase() == 'playwm') {
+        segments.add('play');
+        changed = true;
+      } else {
+        segments.add(segment);
+      }
+    }
+    if (!changed) return null;
+
+    final query = <String, List<String>>{};
+    for (final entry in uri.queryParametersAll.entries) {
+      final key = entry.key.toLowerCase();
+      if (key == 'wm' ||
+          key == 'wmark' ||
+          key == 'watermark' ||
+          key == 'is_watermark' ||
+          key == 'water_mark') {
+        continue;
+      }
+      query[entry.key] = entry.value;
+    }
+
+    final path = '/${segments.map(Uri.encodeComponent).join('/')}';
+    return uri.replace(
+      path: path,
+      queryParameters: query.isEmpty ? null : query,
+    );
+  }
+
+  static int _douyinVideoContextScore(String context, Uri uri) {
+    final lower = context.toLowerCase();
+    var score = 0;
+
+    if (lower.contains('bit_rate') || lower.contains('bitrate')) {
+      score += 1000;
+    }
+    if (lower.contains('play_addr') || lower.contains('playaddr')) {
+      score += 900;
+    }
+    if (lower.contains('url_list') || lower.contains('urllist')) {
+      score += 120;
+    }
+    if (lower.contains('download_addr') || lower.contains('downloadaddr')) {
+      score += 80;
+    }
+    if (lower.contains('origin') || lower.contains('source')) {
+      score += 500;
+    }
+    if (lower.contains('playwm') ||
+        lower.contains('watermark') ||
+        lower.contains('water_mark') ||
+        lower.contains('downloadwm')) {
+      score -= 5000;
+    }
+    if (_isLikelyWatermarkedVideoUrl(uri)) score -= 8000;
+
+    return score;
   }
 
   static bool _looksLikeDouyinImage(Uri uri, Uri base) {
@@ -1368,6 +1488,8 @@ class EcommerceMaterialImportService {
     final lower = uri.toString().toLowerCase();
     var score = 0;
 
+    if (_isLikelyWatermarkedVideoUrl(uri)) score -= 8000;
+
     final ratio = uri.queryParameters['ratio']?.toLowerCase();
     score += _resolutionScore(ratio ?? '');
 
@@ -1401,6 +1523,31 @@ class EcommerceMaterialImportService {
       score -= 500;
     }
     return score;
+  }
+
+  static bool _isLikelyWatermarkedVideoUrl(Uri uri) {
+    final lower = uri.toString().toLowerCase();
+    if (lower.contains('playwm') ||
+        lower.contains('watermark') ||
+        lower.contains('water_mark') ||
+        lower.contains('/wm/') ||
+        lower.contains('/watermark/')) {
+      return true;
+    }
+    for (final entry in uri.queryParameters.entries) {
+      final key = entry.key.toLowerCase();
+      final value = entry.value.toLowerCase();
+      if (key == 'wm' ||
+          key == 'wmark' ||
+          key == 'watermark' ||
+          key == 'is_watermark' ||
+          key == 'water_mark' ||
+          value == 'watermark' ||
+          value == 'playwm') {
+        return true;
+      }
+    }
+    return false;
   }
 
   static int _resolutionScore(String value) {

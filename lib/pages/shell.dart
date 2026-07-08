@@ -122,7 +122,7 @@ class _SideDock extends StatelessWidget {
     right: false,
     child: Container(
       width: 96,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: C.nav,
         border: Border(right: BorderSide(color: C.navBorder)),
       ),
@@ -137,7 +137,7 @@ class _SideDock extends StatelessWidget {
                 color: C.primary,
                 borderRadius: BorderRadius.circular(C.radiusLg),
               ),
-              child: const Icon(Icons.tablet_mac_rounded, color: Colors.black),
+              child: Icon(Icons.tablet_mac_rounded, color: Colors.black),
             ),
             const SizedBox(height: 22),
             ...List.generate(_items.length, (i) {
@@ -174,7 +174,7 @@ class _BottomDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       color: C.nav,
       border: Border(top: BorderSide(color: C.navBorder)),
     ),
