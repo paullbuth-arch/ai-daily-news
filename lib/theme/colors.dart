@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-ThemeMode gThemeMode = ThemeMode.dark;
+ThemeMode gThemeMode = ThemeMode.light;
 
 class _AppPalette {
   final Color bgDeep;
@@ -81,7 +81,7 @@ class _AppPalette {
 }
 
 class C {
-  static bool _isLight = false;
+  static bool _isLight = true;
 
   static bool get isLight => _isLight;
 

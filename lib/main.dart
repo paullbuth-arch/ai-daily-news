@@ -38,20 +38,23 @@ VoidCallback? gOnThemeChange;
 // 入口
 // ═══════════════════════════════════════════════
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  runApp(const IpadBossApp());
+}
+
+Future<void> _initializeApp() async {
+  if (gStorageReady) return;
   final dir = await getApplicationDocumentsDirectory();
   gDocDir = dir.path;
   gStorage = Storage('$gDocDir/ipad_boss_data.json');
   await gStorage.load();
   await gStorage.prepareForUserDataStartup();
   await AuthService.init(gStorage);
-  CloudSyncService.startBackgroundSync(storage: gStorage, docDir: gDocDir);
   final aiMap = gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?;
   AiService.setConfig(AiConfig.fromMap(aiMap));
   AiService.setPromptRules(gStorage.getAiPromptRules());
   gStorageReady = true;
-  runApp(const IpadBossApp());
 }
 
 // ═══════════════════════════════════════════════
@@ -65,13 +68,14 @@ class IpadBossApp extends StatefulWidget {
 }
 
 class _IpadBossAppState extends State<IpadBossApp> {
-  bool _themeLoaded = false;
+  bool _starting = false;
+  Object? _startupError;
 
   @override
   void initState() {
     super.initState();
     gOnThemeChange = () => setState(() {});
-    _loadTheme();
+    _startApp();
   }
 
   @override
@@ -80,49 +84,60 @@ class _IpadBossAppState extends State<IpadBossApp> {
     super.dispose();
   }
 
-  void _loadTheme() {
-    if (gStorageReady && !_themeLoaded) {
-      _themeLoaded = true;
-      final settings = gStorage.getSettings();
-      final saved = settings['themeMode'] as String?;
-      if (saved == 'light') {
-        gThemeMode = ThemeMode.light;
-      } else {
-        gThemeMode = ThemeMode.dark;
-        if (saved != 'dark') {
-          settings['themeMode'] = 'dark';
-          gStorage.saveSettings(settings);
-        }
-      }
-      setState(() {});
-    } else if (!gStorageReady) {
-      Future.delayed(const Duration(milliseconds: 200), _loadTheme);
+  Future<void> _startApp() async {
+    if (_starting) return;
+    _starting = true;
+    _startupError = null;
+    try {
+      await _initializeApp();
+      await _forceLightTheme();
+      CloudSyncService.startBackgroundSync(storage: gStorage, docDir: gDocDir);
+    } catch (error) {
+      _startupError = error;
+    } finally {
+      _starting = false;
+      if (mounted) setState(() {});
+    }
+  }
+
+  Future<void> _forceLightTheme() async {
+    if (!gStorageReady) return;
+    final settings = gStorage.getSettings();
+    gThemeMode = ThemeMode.light;
+    C.useLightTheme(true);
+    if (settings['themeMode'] != 'light') {
+      settings['themeMode'] = 'light';
+      await gStorage.saveSettings(settings);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    C.useLightTheme(gThemeMode == ThemeMode.light);
+    gThemeMode = ThemeMode.light;
+    C.useLightTheme(true);
     SystemChrome.setSystemUIOverlayStyle(
-      gThemeMode == ThemeMode.light
-          ? SystemUiOverlayStyle.light.copyWith(
-            statusBarColor: Colors.transparent,
-            systemNavigationBarColor: C.nav,
-            systemNavigationBarIconBrightness: Brightness.light,
-          )
-          : SystemUiOverlayStyle.light.copyWith(
-            statusBarColor: Colors.transparent,
-            systemNavigationBarColor: C.bgDeep,
-            systemNavigationBarIconBrightness: Brightness.light,
-          ),
+      SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: C.nav,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
     );
     return MaterialApp(
       title: '货脉',
       debugShowCheckedModeBanner: false,
-      themeMode: gThemeMode,
+      themeMode: ThemeMode.light,
       theme: _buildLightTheme(),
       darkTheme: _buildDarkTheme(),
-      home: const MainShell(),
+      home:
+          gStorageReady && _startupError == null
+              ? const MainShell()
+              : _StartupScreen(
+                error: _startupError,
+                onRetry: () {
+                  _startApp();
+                  setState(() {});
+                },
+              ),
     );
   }
 
@@ -330,6 +345,75 @@ class _IpadBossAppState extends State<IpadBossApp> {
 // ═══════════════════════════════════════════════
 // iPad 型号常量
 // ═══════════════════════════════════════════════
+
+class _StartupScreen extends StatelessWidget {
+  final Object? error;
+  final VoidCallback onRetry;
+
+  const _StartupScreen({required this.error, required this.onRetry});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasError = error != null;
+    return Scaffold(
+      backgroundColor: C.bgDeep,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 54,
+                  height: 54,
+                  decoration: BoxDecoration(
+                    color: C.hudDark,
+                    borderRadius: BorderRadius.circular(C.radiusLg),
+                    border: Border.all(color: C.purple.withValues(alpha: 0.32)),
+                  ),
+                  child: Icon(
+                    hasError
+                        ? Icons.error_outline_rounded
+                        : Icons.tablet_mac_rounded,
+                    color: hasError ? C.red : C.purple,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  hasError ? '启动失败' : '正在启动货脉',
+                  style: TextStyle(
+                    color: C.t1,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  hasError ? '${error ?? ''}' : '正在加载本机数据，请稍候',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: C.t3, fontSize: 12, height: 1.4),
+                ),
+                const SizedBox(height: 18),
+                if (hasError)
+                  FilledButton(onPressed: onRetry, child: const Text('重试'))
+                else
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: C.purple,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 const List<Map<String, String>> iPadModels = [
   {'name': 'iPad Pro 13 2025 (M5)', 'chip': 'M5'},

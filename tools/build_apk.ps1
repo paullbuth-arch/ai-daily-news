@@ -19,6 +19,7 @@ $DeepSellSyncPassword = ""
 $DeepSellFallbackBaseUrl = ""
 $DefaultDeepSellFallbackVersionUrl = "https://42.193.131.66/api/version"
 $DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
+$ExpectedReleaseCertSha256 = "ada83336389b563a5d4260fe76c15f601a2766187aec78c74b1242b382beadac"
 
 $LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
 if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
@@ -127,6 +128,33 @@ function To-PropertiesPath {
   return $Path.Replace("\", "/")
 }
 
+function Get-KeystoreCertSha256 {
+  param(
+    [string]$Keystore,
+    [string]$Alias,
+    [string]$StorePass
+  )
+
+  $keytool = Join-Path $env:JAVA_HOME "bin\keytool.exe"
+  if (-not (Test-Path -LiteralPath $keytool -PathType Leaf)) {
+    throw "keytool not found under JAVA_HOME."
+  }
+
+  $pem = & $keytool -exportcert -rfc -keystore $Keystore -alias $Alias -storepass $StorePass 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $pem) {
+    throw "Unable to read release signing certificate from $Keystore."
+  }
+
+  $base64 = ($pem | Where-Object { $_ -notmatch "^-+.*-+$" }) -join ""
+  $bytes = [Convert]::FromBase64String($base64)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $sha.Dispose()
+  }
+}
+
 if (-not $DevEnv) {
   $DevEnv = Resolve-FirstExistingDir @(
     (Join-Path $ProjectRoot "dev_env"),
@@ -181,11 +209,20 @@ $localProperties = @(
 Set-Content -LiteralPath (Join-Path $ProjectRoot "android\local.properties") -Value $localProperties -Encoding ASCII
 
 $Flutter = Join-Path $FlutterSdk "bin\flutter.bat"
+$ReleaseKeystore = Join-Path $ProjectRoot "android\app\release-keystore.jks"
+if (-not (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
+  throw "Release keystore not found: $ReleaseKeystore"
+}
+$ReleaseCertSha256 = Get-KeystoreCertSha256 $ReleaseKeystore "boss" "123456"
+if ($ReleaseCertSha256 -ne $ExpectedReleaseCertSha256) {
+  throw "Release keystore SHA256 mismatch. Expected $ExpectedReleaseCertSha256 but found $ReleaseCertSha256."
+}
 
 Write-Host "Project:     $ProjectRoot"
 Write-Host "Flutter SDK: $FlutterSdk"
 Write-Host "JDK:         $Jdk"
 Write-Host "Android SDK: $AndroidSdk"
+Write-Host "Release cert SHA256: $ReleaseCertSha256"
 Write-Host ""
 
 Push-Location $ProjectRoot

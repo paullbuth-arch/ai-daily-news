@@ -1,20 +1,24 @@
 import 'dart:math' as math;
 
 import 'intake_ai_result_normalizer.dart';
+import 'ipad_color_recognition_service.dart';
 import 'intake_ocr_service.dart';
 import 'ipad_model_resolver.dart';
 
 typedef IntakeOcrReader = Future<IntakeOcrResult> Function(List<String> paths);
+typedef IntakeColorEstimator = Future<String> Function(List<String> paths);
 
 class IntakeImageRecognitionService {
   final List<String> modelOptions;
   final List<String> capacityOptions;
   final IntakeOcrReader ocrReader;
+  final IntakeColorEstimator colorEstimator;
 
   const IntakeImageRecognitionService({
     required this.modelOptions,
     required this.capacityOptions,
     this.ocrReader = MobileIntakeOcrService.recognize,
+    this.colorEstimator = IpadColorRecognitionService.estimateFromImages,
   });
 
   Future<Map<String, dynamic>> recognize(List<String> imagePaths) async {
@@ -45,7 +49,10 @@ class IntakeImageRecognitionService {
       warnings.add('OCR读取失败：$e');
     }
 
-    if (!hasOcrResult) {
+    await _mergeBackColorEstimate(result, imagePaths, warnings, passes);
+    final hasColorResult = _hasColor(result);
+
+    if (!hasOcrResult && !hasColorResult) {
       return {
         'error':
             warnings.isEmpty
@@ -65,7 +72,9 @@ class IntakeImageRecognitionService {
     result['recognizedImageCount'] = recognizedPaths.length;
     result['recognitionPasses'] = passes;
     result['recognitionStrategy'] =
-        '本地OCR识别：使用 ML Kit 读取图片文字，不再调用远程AI，也不再触发 mobile_ocr 原生模型。';
+        hasOcrResult
+            ? '本地OCR识别 + 机身颜色采样：文字字段用 ML Kit，颜色缺失时用本机图片采样，不再调用远程AI。'
+            : '机身颜色采样：OCR没有读到文字时，仍可用背壳图片估算颜色，不调用远程AI。';
     final mergedWarnings = <String>{
       ..._warnings(result['warnings']),
       ...warnings,
@@ -73,6 +82,43 @@ class IntakeImageRecognitionService {
     if (mergedWarnings.isNotEmpty) result['warnings'] = mergedWarnings.toList();
     result['missingCriticalFields'] = missing;
     return result;
+  }
+
+  Future<void> _mergeBackColorEstimate(
+    Map<String, dynamic> result,
+    List<String> imagePaths,
+    Set<String> warnings,
+    List<String> passes,
+  ) async {
+    if (imagePaths.isEmpty || _hasColor(result)) return;
+    try {
+      final color = await colorEstimator(imagePaths);
+      if (!_usable(color)) return;
+      result['color'] = color;
+      _raiseFieldConfidence(result, 'color', 0.82);
+      passes.add('机身颜色采样');
+    } catch (e) {
+      warnings.add('颜色采样失败：$e');
+    }
+  }
+
+  static bool _hasColor(Map<String, dynamic> result) =>
+      _matchOption(
+        _cleanText(result['color']),
+        IpadColorRecognitionService.knownColors,
+      ).isNotEmpty;
+
+  static void _raiseFieldConfidence(
+    Map<String, dynamic> result,
+    String key,
+    double value,
+  ) {
+    final raw = result['fieldConfidence'];
+    final fields =
+        raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    final current = _readConfidence(fields[key]) ?? 0;
+    if (value > current) fields[key] = value;
+    result['fieldConfidence'] = fields;
   }
 
   Map<String, dynamic> _normalize(Map<String, dynamic> value) {
@@ -88,18 +134,12 @@ class IntakeImageRecognitionService {
     if (!_hasSerial(result)) missing.add('序列号');
     if (!_hasModel(result)) missing.add('型号');
     if (!_hasCapacity(result)) missing.add('容量');
-    if (!_hasOption(result, 'color', const [
-      '深空灰',
-      '银色',
-      '星光色',
-      '粉色',
-      '紫色',
-      '蓝色',
-      '玫瑰金',
-      '金色',
-      '绿色',
-      '黄色',
-    ], threshold: 0.74)) {
+    if (!_hasOption(
+      result,
+      'color',
+      IpadColorRecognitionService.knownColors,
+      threshold: 0.74,
+    )) {
       missing.add('颜色');
     }
     if (!_hasOption(result, 'network', const [

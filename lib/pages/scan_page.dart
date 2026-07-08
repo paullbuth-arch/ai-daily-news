@@ -1,7 +1,5 @@
 import 'dart:io';
 import 'dart:math' as math;
-import 'dart:typed_data';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../theme/colors.dart';
@@ -40,20 +38,6 @@ class _ManualIssueOption {
     this.isScreen = false,
     this.checkKey = '',
     this.checkValue = '需复核',
-  });
-}
-
-class _ColorSampleSpec {
-  final double left;
-  final double top;
-  final double width;
-  final double height;
-
-  const _ColorSampleSpec({
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.height,
   });
 }
 
@@ -456,150 +440,6 @@ class _ScanPageState extends State<ScanPage> {
     'evidence': '人工补充',
   };
 
-  Future<Map<String, dynamic>> _withBackColorFallback(
-    Map<String, dynamic> result,
-  ) async {
-    if (imagePaths.isEmpty ||
-        _matchOption(
-          (result['color'] ?? '').toString(),
-          iPadColors,
-        ).isNotEmpty) {
-      return result;
-    }
-    final color = await _estimateBackColor(imagePaths.first);
-    if (color.isEmpty) return result;
-    final merged = Map<String, dynamic>.from(result);
-    merged['color'] = color;
-    _raiseInspectionConfidence(merged, 'color', 0.82);
-    return merged;
-  }
-
-  Future<String> _estimateBackColor(String path) async {
-    try {
-      final bytes = await File(path).readAsBytes();
-      final codec = await ui.instantiateImageCodec(bytes, targetWidth: 480);
-      final frame = await codec.getNextFrame();
-      final image = frame.image;
-      try {
-        final data = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
-        if (data == null) return '';
-        final rgb = _averageBackColorRgb(
-          data.buffer.asUint8List(),
-          image.width,
-          image.height,
-        );
-        if (rgb == null) return '';
-        return _classifyBackColor(rgb);
-      } finally {
-        image.dispose();
-      }
-    } catch (_) {
-      return '';
-    }
-  }
-
-  List<double>? _averageBackColorRgb(Uint8List bytes, int width, int height) {
-    const specs = [
-      _ColorSampleSpec(left: 0.26, top: 0.32, width: 0.20, height: 0.18),
-      _ColorSampleSpec(left: 0.56, top: 0.54, width: 0.22, height: 0.20),
-    ];
-    var rSum = 0.0;
-    var gSum = 0.0;
-    var bSum = 0.0;
-    var count = 0;
-    for (final spec in specs) {
-      final left = math.max(0, (width * spec.left).round());
-      final top = math.max(0, (height * spec.top).round());
-      final right = math.min(width, (width * (spec.left + spec.width)).round());
-      final bottom = math.min(
-        height,
-        (height * (spec.top + spec.height)).round(),
-      );
-      for (var y = top; y < bottom; y += 2) {
-        for (var x = left; x < right; x += 2) {
-          final index = (y * width + x) * 4;
-          if (index + 2 >= bytes.length) continue;
-          final r = bytes[index];
-          final g = bytes[index + 1];
-          final b = bytes[index + 2];
-          if (_skipBackColorPixel(r, g, b)) continue;
-          rSum += r;
-          gSum += g;
-          bSum += b;
-          count++;
-        }
-      }
-    }
-    if (count < 40) return null;
-    return [rSum / count, gSum / count, bSum / count];
-  }
-
-  bool _skipBackColorPixel(int r, int g, int b) {
-    final maxChannel = math.max(r, math.max(g, b));
-    final minChannel = math.min(r, math.min(g, b));
-    final value = maxChannel / 255.0;
-    final saturation =
-        maxChannel == 0 ? 0.0 : (maxChannel - minChannel) / maxChannel;
-    final isRedMarkup =
-        r > 140 && g < 120 && b < 120 && r - g > 40 && r - b > 40;
-    return isRedMarkup || value < 0.25 || (value > 0.94 && saturation < 0.08);
-  }
-
-  String _classifyBackColor(List<double> rgb) {
-    final r = rgb[0];
-    final g = rgb[1];
-    final b = rgb[2];
-    final maxChannel = math.max(r, math.max(g, b));
-    final minChannel = math.min(r, math.min(g, b));
-    final value = maxChannel / 255.0;
-    final saturation =
-        maxChannel == 0 ? 0.0 : (maxChannel - minChannel) / maxChannel;
-    final hue = _rgbHue(r, g, b);
-
-    if (saturation < 0.11) return value < 0.45 ? '深空灰' : '银色';
-    if (hue >= 190 && hue <= 250) return '蓝色';
-    if (hue >= 250 && hue <= 310) return '紫色';
-    if (hue >= 85 && hue <= 165) return '绿色';
-    if (hue >= 40 && hue <= 85) {
-      if (value > 0.72 && saturation < 0.22) return '星光色';
-      return saturation > 0.28 ? '黄色' : '金色';
-    }
-    if (hue >= 330 || hue <= 20) {
-      return saturation < 0.22 ? '玫瑰金' : '粉色';
-    }
-    if (hue > 20 && hue < 40) return '玫瑰金';
-    return '';
-  }
-
-  double _rgbHue(double r, double g, double b) {
-    final maxChannel = math.max(r, math.max(g, b));
-    final minChannel = math.min(r, math.min(g, b));
-    final delta = maxChannel - minChannel;
-    if (delta == 0) return 0;
-    double hue;
-    if (maxChannel == r) {
-      hue = 60 * (((g - b) / delta) % 6);
-    } else if (maxChannel == g) {
-      hue = 60 * (((b - r) / delta) + 2);
-    } else {
-      hue = 60 * (((r - g) / delta) + 4);
-    }
-    return hue < 0 ? hue + 360 : hue;
-  }
-
-  void _raiseInspectionConfidence(
-    Map<String, dynamic> result,
-    String key,
-    double value,
-  ) {
-    final raw = result['fieldConfidence'];
-    final fields =
-        raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
-    final current = _readConfidence(fields[key]) ?? 0;
-    if (value > current) fields[key] = value;
-    result['fieldConfidence'] = fields;
-  }
-
   Future<void> _runImageRecognition() async {
     if (imagePaths.isEmpty) {
       toast(context, '请先上传设备图片');
@@ -618,7 +458,6 @@ class _ScanPageState extends State<ScanPage> {
         toast(context, result['error'].toString());
         return;
       }
-      result = await _withBackColorFallback(result);
       if (!mounted) return;
       final appliedCount = _applyInspection(result);
       setState(() {
@@ -1404,14 +1243,11 @@ class _ScanPageState extends State<ScanPage> {
                 }
                 return Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(11),
-                      child: Image.file(
-                        File(imagePaths[i]),
-                        width: 90,
-                        height: 90,
-                        fit: BoxFit.cover,
-                      ),
+                    LocalImageThumb(
+                      path: imagePaths[i],
+                      width: 90,
+                      height: 90,
+                      radius: 11,
                     ),
                     Positioned(
                       top: 4,

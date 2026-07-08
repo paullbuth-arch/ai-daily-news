@@ -562,6 +562,14 @@ class EcommerceMaterialImportService {
       }
     }
 
+    final isVideoPost =
+        videos.isNotEmpty ||
+        _looksLikeDouyinVideoPostUrl(sourceUrl) ||
+        _looksLikeDouyinVideoPostUrl(resultFinalUrl);
+    if (isVideoPost) {
+      images = <Uri>[];
+    }
+
     if (title.isEmpty &&
         description.isEmpty &&
         images.isEmpty &&
@@ -1089,6 +1097,11 @@ class EcommerceMaterialImportService {
       }
     }
     return _sortVideoUrlsForQuality(urls);
+  }
+
+  static bool _looksLikeDouyinVideoPostUrl(Uri uri) {
+    final path = uri.path.toLowerCase();
+    return path.contains('/video/') || path.contains('/share/video/');
   }
 
   static List<String> _douyinVideoIds(Uri sourceUrl, Uri finalUrl) {

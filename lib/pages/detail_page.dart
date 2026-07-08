@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/colors.dart';
@@ -418,11 +417,12 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         color: C.bgCardMuted,
                         child:
                             images.isNotEmpty
-                                ? Image.file(
-                                  File(images.first),
+                                ? LocalImageThumb(
+                                  path: images.first,
                                   fit: BoxFit.cover,
                                   width: double.infinity,
                                   height: 230,
+                                  radius: 0,
                                 )
                                 : Center(
                                   child: Icon(
@@ -483,14 +483,11 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                         itemCount: images.length,
                         separatorBuilder: (_, __) => const SizedBox(width: 6),
                         itemBuilder:
-                            (_, i) => ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                File(images[i]),
-                                width: 70,
-                                height: 70,
-                                fit: BoxFit.cover,
-                              ),
+                            (_, i) => LocalImageThumb(
+                              path: images[i],
+                              width: 70,
+                              height: 70,
+                              radius: 8,
                             ),
                       ),
                     ),

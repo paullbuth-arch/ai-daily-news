@@ -5,24 +5,30 @@ class AppBackdrop extends StatelessWidget {
   const AppBackdrop({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors:
-            C.isLight
-                ? [
-                  const Color(0xFF1F1D26),
-                  const Color(0xFF15141C),
-                  const Color(0xFF211A25),
-                ]
-                : [const Color(0xFF081018), C.bgDeep, const Color(0xFF05070A)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors:
+              C.isLight
+                  ? [
+                    const Color(0xFF1F1D26),
+                    const Color(0xFF15141C),
+                    const Color(0xFF211A25),
+                  ]
+                  : [
+                    const Color(0xFF081018),
+                    C.bgDeep,
+                    const Color(0xFF05070A),
+                  ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
       ),
-    ),
-    child: CustomPaint(
-      painter: _OpsBackdropPainter(C.isLight),
-      child: SizedBox.expand(),
+      child: CustomPaint(
+        painter: _OpsBackdropPainter(C.isLight),
+        child: SizedBox.expand(),
+      ),
     ),
   );
 }

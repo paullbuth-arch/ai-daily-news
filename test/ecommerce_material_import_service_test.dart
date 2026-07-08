@@ -224,6 +224,41 @@ void main() {
 </body>
 </html>
 ''');
+      } else if (path == '/douyin-images') {
+        final host = InternetAddress.loopbackIPv4.host;
+        final port = server.port;
+        final first = 'http://$host:$port/douyin-img/first.jpeg?sign=first';
+        final second = 'http://$host:$port/douyin-img/second.jpeg?sign=second';
+        final renderData = Uri.encodeComponent(
+          json.encode({
+            'aweme': {
+              'detail': {
+                'desc': 'Douyin image post body',
+                'images': [
+                  {
+                    'url_list': [first],
+                  },
+                  {
+                    'url_list': [second],
+                  },
+                ],
+              },
+            },
+          }),
+        );
+        request.response.headers.contentType = ContentType.html;
+        request.response.write('''
+<!doctype html>
+<html>
+<head>
+  <title>Douyin Images</title>
+  <meta property="og:title" content="Douyin image post">
+</head>
+<body>
+  <script id="RENDER_DATA" type="application/json">$renderData</script>
+</body>
+</html>
+''');
       } else if (path == '/douyin-watermark-choice') {
         final host = InternetAddress.loopbackIPv4.host;
         final port = server.port;
@@ -585,7 +620,7 @@ void main() {
     },
   );
 
-  test('extracts douyin image and video from encoded render data', () async {
+  test('downloads only video from douyin video posts', () async {
     final url = Uri(
       scheme: 'http',
       host: InternetAddress.loopbackIPv4.host,
@@ -601,11 +636,36 @@ void main() {
     expect(result.platform, '抖音');
     expect(result.title, 'Douyin iPad demo');
     expect(result.description, 'Douyin iPad demo body');
-    expect(result.images, hasLength(1));
+    expect(result.images, isEmpty);
+    expect(result.candidateImageCount, 0);
     expect(result.videos, hasLength(1));
     expect(result.candidateVideoCount, 1);
-    expect(File(result.images.single.savedPath).existsSync(), true);
     expect(File(result.videos.single.savedPath).existsSync(), true);
+  });
+
+  test('downloads only images from douyin image posts', () async {
+    final url = Uri(
+      scheme: 'http',
+      host: InternetAddress.loopbackIPv4.host,
+      port: server.port,
+      path: '/douyin-images',
+    );
+
+    final result = await EcommerceMaterialImportService.importFromText(
+      'douyin image share $url',
+      docDir: tmp.path,
+    );
+
+    expect(result.platform, '抖音');
+    expect(result.title, 'Douyin image post');
+    expect(result.description, 'Douyin image post body');
+    expect(result.images, hasLength(2));
+    expect(result.videos, isEmpty);
+    expect(result.candidateVideoCount, 0);
+    expect(
+      result.images.every((image) => File(image.savedPath).existsSync()),
+      true,
+    );
   });
 
   test(

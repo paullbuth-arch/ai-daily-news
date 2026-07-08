@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/colors.dart';
@@ -759,24 +757,11 @@ class _ImportedMaterialPreview extends StatelessWidget {
                 final image = result.images[index];
                 return Stack(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.file(
-                        File(image.savedPath),
-                        width: 78,
-                        height: 78,
-                        fit: BoxFit.cover,
-                        errorBuilder:
-                            (_, __, ___) => Container(
-                              width: 78,
-                              height: 78,
-                              color: C.bgCard,
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                color: C.t3,
-                              ),
-                            ),
-                      ),
+                    LocalImageThumb(
+                      path: image.savedPath,
+                      width: 78,
+                      height: 78,
+                      radius: 8,
                     ),
                     if (image.cleanedPlatformWatermark)
                       Positioned(

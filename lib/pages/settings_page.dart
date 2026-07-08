@@ -77,8 +77,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _themeChoice(Icons.dark_mode_rounded, '深色', ThemeMode.dark),
-                    const SizedBox(width: 8),
                     _themeChoice(
                       Icons.light_mode_rounded,
                       '浅色',
@@ -237,17 +235,18 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _setThemeMode(ThemeMode mode) async {
-    if (gThemeMode == mode) return;
+    if (gThemeMode == ThemeMode.light) return;
     final settings = gStorage.getSettings();
-    settings['themeMode'] = mode == ThemeMode.light ? 'light' : 'dark';
+    settings['themeMode'] = 'light';
     await gStorage.saveSettings(settings);
-    gThemeMode = mode;
-    C.useLightTheme(mode == ThemeMode.light);
+    gThemeMode = ThemeMode.light;
+    C.useLightTheme(true);
     gOnThemeChange?.call();
     if (mounted) setState(() {});
   }
 
   Widget _themeChoice(IconData icon, String label, ThemeMode mode) {
+    if (mode == ThemeMode.dark) return const SizedBox.shrink();
     final selected = gThemeMode == mode;
     return Expanded(
       child: Material(
@@ -350,13 +349,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await gStorage.clearAll(markInitialized: true);
     final settings = gStorage.getSettings();
     settings['initialized'] = true;
-    settings['themeMode'] = 'dark';
+    settings['themeMode'] = 'light';
     settings['aiConfig'] = AiConfig.defaultConfig().toMap();
     await gStorage.saveSettings(settings);
     AiService.setConfig(AiConfig.defaultConfig());
     AiService.setPromptRules({});
     await AuthService.logout(gStorage);
-    gThemeMode = ThemeMode.dark;
+    gThemeMode = ThemeMode.light;
     gOnThemeChange?.call();
     _calcSize();
     if (!mounted) return;

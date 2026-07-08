@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
@@ -134,14 +133,11 @@ class _StagnantListPageState extends State<StagnantListPage> {
                           ),
                           child:
                               firstImg != null
-                                  ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: Image.file(
-                                      File(firstImg),
-                                      fit: BoxFit.cover,
-                                      width: 56,
-                                      height: 56,
-                                    ),
+                                  ? LocalImageThumb(
+                                    path: firstImg,
+                                    width: 56,
+                                    height: 56,
+                                    radius: 10,
                                   )
                                   : Center(
                                     child: Icon(

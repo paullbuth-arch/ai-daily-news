@@ -2239,22 +2239,12 @@ class _LinkImportResultCard extends StatelessWidget {
                   return _VideoPreviewTile(path: video.savedPath);
                 }
                 final image = result.images[index];
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(image.savedPath),
-                    width: 72,
-                    height: 72,
-                    fit: BoxFit.cover,
-                    alignment: Alignment.center,
-                    errorBuilder:
-                        (_, __, ___) => Container(
-                          width: 72,
-                          height: 72,
-                          color: C.bgCard,
-                          child: Icon(Icons.broken_image_outlined, color: C.t3),
-                        ),
-                  ),
+                return LocalImageThumb(
+                  path: image.savedPath,
+                  width: 72,
+                  height: 72,
+                  radius: 8,
+                  alignment: Alignment.center,
                 );
               },
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:ipad_boss_app/services/ipad_color_recognition_service.dart';
 import 'package:ipad_boss_app/services/intake_image_recognition_service.dart';
 import 'package:ipad_boss_app/services/intake_ocr_service.dart';
 
@@ -81,6 +82,42 @@ void main() {
     expect(result['missingCriticalFields'], contains('型号'));
     expect(result['missingCriticalFields'], contains('容量'));
     expect(result['warnings'], contains('未识别到：型号、容量、颜色、网络、电池健康、充电次数'));
+  });
+
+  test('uses back color sampling when OCR finds no text', () async {
+    final service = IntakeImageRecognitionService(
+      modelOptions: models,
+      capacityOptions: capacities,
+      ocrReader: (_) async => const IntakeOcrResult(),
+      colorEstimator: (_) async => '\u84dd\u8272',
+    );
+
+    final result = await service.recognize(['back.jpg']);
+    final confidence = result['fieldConfidence'] as Map;
+
+    expect(result['error'], isNull);
+    expect(result['color'], '\u84dd\u8272');
+    expect(
+      result['recognitionPasses'],
+      contains('\u673a\u8eab\u989c\u8272\u91c7\u6837'),
+    );
+    expect(confidence['color'], 0.82);
+    expect(result['missingCriticalFields'], isNot(contains('\u989c\u8272')));
+  });
+
+  test('classifies sampled iPad back colors', () {
+    expect(
+      IpadColorRecognitionService.classifyRgb([88, 92, 96]),
+      '\u6df1\u7a7a\u7070',
+    );
+    expect(
+      IpadColorRecognitionService.classifyRgb([194, 196, 198]),
+      '\u94f6\u8272',
+    );
+    expect(
+      IpadColorRecognitionService.classifyRgb([112, 146, 184]),
+      '\u84dd\u8272',
+    );
   });
 
   test('keeps stronger primary evidence when incoming evidence is weaker', () {
