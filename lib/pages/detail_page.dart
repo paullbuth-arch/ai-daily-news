@@ -238,12 +238,20 @@ class _DetailPageState extends State<DetailPage> {
       builder:
           (context, child) => Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.dark(
-                primary: C.cyan,
-                onPrimary: Colors.black,
-                surface: C.bgCard,
-                onSurface: C.t1,
-              ),
+              colorScheme:
+                  C.isLight
+                      ? ColorScheme.light(
+                        primary: C.primaryButtonBg,
+                        onPrimary: C.primaryButtonFg,
+                        surface: C.bgCard,
+                        onSurface: C.t1,
+                      )
+                      : ColorScheme.dark(
+                        primary: C.cyan,
+                        onPrimary: Colors.black,
+                        surface: C.bgCard,
+                        onSurface: C.t1,
+                      ),
             ),
             child: child!,
           ),
@@ -862,21 +870,22 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             onPressed: savingInfo ? null : () => _saveInlineInfo(),
             icon:
                 savingInfo
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: C.primaryButtonFg,
                       ),
                     )
                     : Icon(Icons.save_rounded, size: 18),
             style: FilledButton.styleFrom(
-              backgroundColor: C.cyan,
-              foregroundColor: Colors.black,
+              backgroundColor: C.primaryButtonBg,
+              foregroundColor: C.primaryButtonFg,
               padding: const EdgeInsets.symmetric(vertical: 13),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: C.primaryButtonBorder),
               ),
             ),
             label: Text(
@@ -909,7 +918,12 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                 icon: Icon(Icons.save_outlined, size: 17),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: C.t1,
-                  side: BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                  side: BorderSide(
+                    color:
+                        C.isLight
+                            ? C.purple.withValues(alpha: 0.28)
+                            : Colors.white.withValues(alpha: 0.12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: const StadiumBorder(),
                 ),
@@ -926,18 +940,18 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
                     regeneratingDescription ? null : _regenerateDescription,
                 icon:
                     regeneratingDescription
-                        ? const SizedBox(
+                        ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: C.isLight ? C.primaryButtonFg : Colors.white,
                           ),
                         )
                         : Icon(Icons.auto_awesome_rounded, size: 17),
                 style: FilledButton.styleFrom(
-                  backgroundColor: C.purple,
-                  foregroundColor: Colors.white,
+                  backgroundColor: C.isLight ? C.hudDark2 : C.purple,
+                  foregroundColor: C.isLight ? C.purple : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: const StadiumBorder(),
                 ),
@@ -958,8 +972,10 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
     style: TextStyle(color: C.t3, fontSize: 11, fontWeight: FontWeight.w900),
   );
 
-  Widget _softDivider() =>
-      Container(height: 1, color: Colors.white.withValues(alpha: 0.06));
+  Widget _softDivider() => Container(
+    height: 1,
+    color: C.isLight ? C.divider : Colors.white.withValues(alpha: 0.06),
+  );
 
   Widget _fieldShell({
     required String label,
@@ -972,9 +988,14 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
       constraints: const BoxConstraints(minHeight: 58),
       padding: const EdgeInsets.fromLTRB(11, 8, 10, 8),
       decoration: BoxDecoration(
-        color: const Color(0xB5161B24),
+        color:
+            C.isLight
+                ? C.bgCard.withValues(alpha: 0.88)
+                : const Color(0xB5161B24),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(
+          color: C.isLight ? C.border : Colors.white.withValues(alpha: 0.08),
+        ),
       ),
       child: Row(
         children: [
@@ -982,7 +1003,10 @@ ${device.idLockClean ? "✅ 该设备各项检测正常，可正常交易" : "�
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.055),
+              color:
+                  C.isLight
+                      ? C.selected.withValues(alpha: 0.72)
+                      : Colors.white.withValues(alpha: 0.055),
               borderRadius: BorderRadius.circular(9),
             ),
             child: Icon(icon, color: C.t3, size: 17),
@@ -1232,24 +1256,29 @@ class _EditToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final selectedBg = C.isLight ? C.hudDark : color;
+    final idleBg =
+        C.isLight ? C.bgCard.withValues(alpha: 0.88) : const Color(0xB5161B24);
+    final selectedBorder = C.isLight ? C.purple.withValues(alpha: 0.42) : color;
+    final idleBorder =
+        C.isLight ? C.border : Colors.white.withValues(alpha: 0.08);
+    final selectedText = C.isLight ? C.purple : Colors.black;
     final body = AnimatedContainer(
       duration: C.fast,
       height: compact ? 38 : 42,
       padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 12),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: selected ? color : const Color(0xB5161B24),
+        color: selected ? selectedBg : idleBg,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(
-          color: selected ? color : Colors.white.withValues(alpha: 0.08),
-        ),
+        border: Border.all(color: selected ? selectedBorder : idleBorder),
       ),
       child: Text(
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
-          color: selected ? Colors.black : C.t2,
+          color: selected ? selectedText : C.t2,
           fontSize: compact ? 12 : 13,
           fontWeight: FontWeight.w900,
         ),

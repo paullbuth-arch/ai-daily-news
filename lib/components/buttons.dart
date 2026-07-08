@@ -10,12 +10,13 @@ Widget primaryBtn(
   child: FilledButton(
     onPressed: onTap,
     style: FilledButton.styleFrom(
-      backgroundColor: C.primary,
-      foregroundColor: Colors.black,
+      backgroundColor: C.primaryButtonBg,
+      foregroundColor: C.primaryButtonFg,
       minimumSize: const Size.fromHeight(48),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
+        side: BorderSide(color: C.primaryButtonBorder),
       ),
       textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
     ),
@@ -35,13 +36,16 @@ Widget ghostBtn(String label, VoidCallback onTap, {IconData? icon}) => SizedBox(
     onPressed: onTap,
     style: OutlinedButton.styleFrom(
       foregroundColor: C.t1,
-      side: BorderSide(color: C.border),
+      side: BorderSide(
+        color: C.isLight ? C.purple.withValues(alpha: 0.26) : C.border,
+      ),
       minimumSize: const Size.fromHeight(48),
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
       ),
-      backgroundColor: C.bgSurface,
+      backgroundColor:
+          C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgSurface,
       textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
     ),
     child: Row(
@@ -71,7 +75,9 @@ Widget smallBtn(
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(C.radiusSm),
     ),
-    backgroundColor: (color ?? C.primary).withValues(alpha: 0.12),
+    backgroundColor: (color ?? C.primary).withValues(
+      alpha: C.isLight ? 0.10 : 0.12,
+    ),
     textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
   ),
   child: Row(
@@ -92,10 +98,15 @@ Widget iconBtn(
   width: size,
   height: size,
   child: Material(
-    color: (color ?? C.primary).withValues(alpha: 0.12),
+    color:
+        C.isLight
+            ? C.bgCard.withValues(alpha: 0.88)
+            : (color ?? C.primary).withValues(alpha: 0.12),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(C.radiusMd),
-      side: BorderSide(color: (color ?? C.primary).withValues(alpha: 0.20)),
+      side: BorderSide(
+        color: (color ?? C.primary).withValues(alpha: C.isLight ? 0.30 : 0.20),
+      ),
     ),
     clipBehavior: Clip.antiAlias,
     child: InkWell(

@@ -56,15 +56,16 @@ class _MePageState extends State<MePage> {
       ),
       action: RoundIconButton(
         icon: Icons.settings_outlined,
-        color: C.t1,
+        color: C.isLight ? C.purple : C.t1,
         onTap: () => _nav(SettingsPage()),
       ),
       child: Column(
         children: [
           GlassPanel(
             padding: const EdgeInsets.all(18),
-            radius: 28,
-            color: const Color(0xEA0A0D14),
+            radius: C.isLight ? 18 : 28,
+            color: C.isLight ? C.hudDark : const Color(0xEA0A0D14),
+            borderColor: C.isLight ? C.hudLine : null,
             child: Row(
               children: [
                 Container(
@@ -83,7 +84,7 @@ class _MePageState extends State<MePage> {
                   ),
                   child: Icon(
                     Icons.storefront_rounded,
-                    color: Colors.black,
+                    color: C.isLight ? C.hudDark : Colors.black,
                     size: 30,
                   ),
                 ),
@@ -97,7 +98,7 @@ class _MePageState extends State<MePage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: C.t1,
+                          color: C.isLight ? C.hudText : C.t1,
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                         ),
@@ -108,7 +109,7 @@ class _MePageState extends State<MePage> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: C.t2,
+                          color: C.isLight ? C.hudSubtext : C.t2,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -276,7 +277,7 @@ class _ProfileStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 13),
-    radius: 18,
+    radius: C.isLight ? 14 : 18,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,7 +323,7 @@ class _MenuGroup extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: GlassPanel(
       padding: const EdgeInsets.all(14),
-      radius: 24,
+      radius: C.isLight ? 16 : 24,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -332,10 +333,18 @@ class _MenuGroup extends StatelessWidget {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: C.cyan.withValues(alpha: 0.14),
-                  shape: BoxShape.circle,
+                  color: C.isLight ? C.hudDark : C.cyan.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(C.isLight ? 9 : 16),
+                  border:
+                      C.isLight
+                          ? Border.all(color: C.purple.withValues(alpha: 0.26))
+                          : null,
                 ),
-                child: Icon(icon, color: C.cyan, size: 17),
+                child: Icon(
+                  icon,
+                  color: C.isLight ? C.purple : C.cyan,
+                  size: 17,
+                ),
               ),
               const SizedBox(width: 10),
               Text(
@@ -366,7 +375,7 @@ class _MenuRow extends StatelessWidget {
     color: Colors.transparent,
     child: InkWell(
       onTap: item.onTap,
-      borderRadius: BorderRadius.circular(18),
+      borderRadius: BorderRadius.circular(C.isLight ? 12 : 18),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 7),
         child: Row(
@@ -375,8 +384,15 @@ class _MenuRow extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: item.color.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
+                color:
+                    C.isLight
+                        ? item.color.withValues(alpha: 0.10)
+                        : item.color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(C.isLight ? 10 : 20),
+                border:
+                    C.isLight
+                        ? Border.all(color: item.color.withValues(alpha: 0.22))
+                        : null,
               ),
               child: Icon(item.icon, color: item.color, size: 20),
             ),

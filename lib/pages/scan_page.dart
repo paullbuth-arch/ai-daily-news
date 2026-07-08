@@ -1238,8 +1238,8 @@ class _ScanPageState extends State<ScanPage> {
                     child: ElevatedButton(
                       onPressed: details.onStepContinue,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: C.primary,
-                        foregroundColor: Colors.black,
+                        backgroundColor: C.isLight ? C.hudDark : C.primary,
+                        foregroundColor: C.isLight ? C.purple : Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(11),
                         ),
@@ -1329,7 +1329,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget _imageChecklistCard() => GlassPanel(
     padding: const EdgeInsets.all(14),
     radius: 14,
-    color: C.bgCardMuted,
+    color: C.isLight ? null : C.bgCardMuted,
     borderColor: C.border,
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1478,7 +1478,8 @@ class _ScanPageState extends State<ScanPage> {
               child: ElevatedButton(
                 onPressed: _addMultipleImages,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: C.bgCard,
+                  backgroundColor:
+                      C.isLight ? C.bgCard.withValues(alpha: 0.88) : C.bgCard,
                   foregroundColor: C.t1,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
@@ -1497,8 +1498,8 @@ class _ScanPageState extends State<ScanPage> {
               child: ElevatedButton(
                 onPressed: () => _addImage(true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: C.primary,
-                  foregroundColor: Colors.black,
+                  backgroundColor: C.isLight ? C.hudDark : C.primary,
+                  foregroundColor: C.isLight ? C.purple : Colors.black,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
@@ -1610,7 +1611,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget _imageRecognitionActionCard() => GlassPanel(
     padding: const EdgeInsets.all(14),
     radius: C.radiusLg,
-    color: C.bgCard,
+    color: C.isLight ? null : C.bgCard,
     borderColor:
         imagePaths.isEmpty ? C.border : C.primary.withValues(alpha: 0.36),
     child: Column(
@@ -1689,18 +1690,24 @@ class _ScanPageState extends State<ScanPage> {
                     : _runImageRecognition,
             icon:
                 imageRecognizing
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: C.isLight ? C.purple : Colors.black,
                       ),
                     )
                     : Icon(Icons.document_scanner_outlined),
             style: FilledButton.styleFrom(
-              backgroundColor: imagePaths.isEmpty ? C.bgElevated : C.primary,
-              foregroundColor: imagePaths.isEmpty ? C.t3 : Colors.black,
+              backgroundColor:
+                  imagePaths.isEmpty
+                      ? C.bgElevated
+                      : (C.isLight ? C.hudDark : C.primary),
+              foregroundColor:
+                  imagePaths.isEmpty
+                      ? C.t3
+                      : (C.isLight ? C.purple : Colors.black),
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(C.radiusMd),
@@ -1723,7 +1730,7 @@ class _ScanPageState extends State<ScanPage> {
   Widget _manualEntryHintCard() => GlassPanel(
     padding: const EdgeInsets.all(12),
     radius: 12,
-    color: C.bgCardMuted,
+    color: C.isLight ? null : C.bgCardMuted,
     borderColor: C.border,
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,

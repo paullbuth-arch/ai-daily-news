@@ -162,8 +162,11 @@ class _LoginPageState extends State<LoginPage> {
             Container(
               width: 42,
               height: 42,
-              decoration: BoxDecoration(color: C.cyan, shape: BoxShape.circle),
-              child: Icon(Icons.tablet_mac_rounded, color: Colors.black),
+              decoration: BoxDecoration(
+                color: C.primaryButtonBg,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.tablet_mac_rounded, color: C.primaryButtonFg),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -237,12 +240,12 @@ class _LoginPageState extends State<LoginPage> {
             onPressed: _loading ? null : _submit,
             child:
                 _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.black,
+                        color: C.primaryButtonFg,
                       ),
                     )
                     : Text(_isRegister ? '注册并登录' : '登录'),
@@ -427,32 +430,41 @@ class _StagePill extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900),
+  Widget build(BuildContext context) {
+    final bg = C.isLight ? C.hudDark : color;
+    final fg = C.isLight ? C.purple : Colors.black;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(color: fg, fontWeight: FontWeight.w900),
+            ),
           ),
-        ),
-        Container(
-          width: 34,
-          height: 34,
-          decoration: const BoxDecoration(
-            color: Colors.black,
-            shape: BoxShape.circle,
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color:
+                  C.isLight ? C.purple.withValues(alpha: 0.16) : Colors.black,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: C.isLight ? C.purple : Colors.white,
+              size: 18,
+            ),
           ),
-          child: Icon(icon, color: Colors.white, size: 18),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _FloatingBadge extends StatelessWidget {
@@ -467,55 +479,60 @@ class _FloatingBadge extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: 150,
-    padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
-    decoration: BoxDecoration(
-      color: color,
-      borderRadius: BorderRadius.circular(24),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withValues(alpha: 0.22),
-          blurRadius: 18,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.black.withValues(alpha: 0.52),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final bg = C.isLight ? C.hudDark : color;
+    final titleColor =
+        C.isLight ? C.hudMuted : Colors.black.withValues(alpha: 0.52);
+    final valueColor = C.isLight ? C.hudText : Colors.black;
+    final iconBg = C.isLight ? C.purple.withValues(alpha: 0.16) : Colors.black;
+    final iconFg = C.isLight ? C.purple : Colors.white;
+    return Container(
+      width: 150,
+      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-        ),
-        Container(
-          width: 38,
-          height: 38,
-          decoration: const BoxDecoration(
-            color: Colors.black,
-            shape: BoxShape.circle,
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: titleColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    color: valueColor,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
           ),
-          child: Icon(Icons.check_rounded, color: Colors.white, size: 20),
-        ),
-      ],
-    ),
-  );
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(Icons.check_rounded, color: iconFg, size: 20),
+          ),
+        ],
+      ),
+    );
+  }
 }

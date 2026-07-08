@@ -8,28 +8,39 @@ class AppBackdrop extends StatelessWidget {
   Widget build(BuildContext context) => DecoratedBox(
     decoration: BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFF081018), C.bgDeep, Color(0xFF05070A)],
+        colors:
+            C.isLight
+                ? [
+                  const Color(0xFFD4D7E4),
+                  const Color(0xFFEDEDF4),
+                  const Color(0xFFD7DAE7),
+                ]
+                : [const Color(0xFF081018), C.bgDeep, const Color(0xFF05070A)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
     ),
     child: CustomPaint(
-      painter: _OpsBackdropPainter(),
+      painter: _OpsBackdropPainter(C.isLight),
       child: SizedBox.expand(),
     ),
   );
 }
 
 class _OpsBackdropPainter extends CustomPainter {
-  const _OpsBackdropPainter();
+  final bool isLight;
+
+  const _OpsBackdropPainter(this.isLight);
 
   @override
   void paint(Canvas canvas, Size size) {
     final gridPaint =
         Paint()
-          ..color = C.primary.withValues(alpha: 0.035)
+          ..color = (isLight ? const Color(0xFF60627A) : C.primary).withValues(
+            alpha: isLight ? 0.030 : 0.035,
+          )
           ..strokeWidth = 1;
-    const gap = 28.0;
+    final gap = isLight ? 54.0 : 28.0;
     for (double x = 0; x <= size.width; x += gap) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
@@ -40,7 +51,13 @@ class _OpsBackdropPainter extends CustomPainter {
     final horizon =
         Paint()
           ..shader = LinearGradient(
-            colors: [Colors.transparent, C.primary, Colors.transparent],
+            colors: [
+              Colors.transparent,
+              (isLight ? C.selected : C.primary).withValues(
+                alpha: isLight ? 0.22 : 1,
+              ),
+              Colors.transparent,
+            ],
           ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
           ..strokeWidth = 1;
     canvas.drawLine(
@@ -49,10 +66,65 @@ class _OpsBackdropPainter extends CustomPainter {
       horizon,
     );
 
+    if (isLight) {
+      final orbit =
+          Paint()
+            ..color = const Color(0xFF5D42F0).withValues(alpha: 0.055)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1;
+      final center = Offset(size.width * 0.66, size.height * 0.18);
+      for (final scale in const [0.72, 1.0, 1.32]) {
+        final rect = Rect.fromCenter(
+          center: center,
+          width: size.shortestSide * scale,
+          height: size.shortestSide * scale * 0.62,
+        );
+        canvas.save();
+        canvas.translate(center.dx, center.dy);
+        canvas.rotate(-0.34);
+        canvas.translate(-center.dx, -center.dy);
+        canvas.drawOval(rect, orbit);
+        canvas.restore();
+      }
+      final redWash =
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFFC56B64).withValues(alpha: 0.18),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width * 0.94, size.height * 0.10),
+                radius: size.width * 0.58,
+              ),
+            );
+      canvas.drawRect(Offset.zero & size, redWash);
+      final violetWash =
+          Paint()
+            ..shader = RadialGradient(
+              colors: [
+                const Color(0xFF8F82D8).withValues(alpha: 0.16),
+                Colors.transparent,
+              ],
+            ).createShader(
+              Rect.fromCircle(
+                center: Offset(size.width * 0.06, size.height * 0.04),
+                radius: size.width * 0.56,
+              ),
+            );
+      canvas.drawRect(Offset.zero & size, violetWash);
+    }
+
     final shade =
         Paint()
           ..shader = LinearGradient(
-            colors: [Colors.transparent, Colors.black.withValues(alpha: 0.42)],
+            colors: [
+              Colors.transparent,
+              isLight
+                  ? Colors.white.withValues(alpha: 0.20)
+                  : Colors.black.withValues(alpha: 0.42),
+            ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(Offset.zero & size);
@@ -60,7 +132,8 @@ class _OpsBackdropPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _OpsBackdropPainter oldDelegate) =>
+      oldDelegate.isLight != isLight;
 }
 
 class GlassPanel extends StatelessWidget {
@@ -89,30 +162,130 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedColor =
+        C.isLight && color != null && _isLegacyDarkSurface(color!)
+            ? null
+            : color;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(radius),
       side: BorderSide(color: borderColor ?? C.border),
     );
+    final panelGradient =
+        gradient ??
+        (C.isLight && resolvedColor == null
+            ? const LinearGradient(
+              colors: [Color(0xFFFEFEFF), Color(0xFFF0F1F8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            )
+            : null);
     final surface = Material(
       color: Colors.transparent,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: Ink(
         decoration: BoxDecoration(
-          color: gradient == null ? (color ?? C.bgCard) : null,
-          gradient: gradient,
+          color: panelGradient == null ? (resolvedColor ?? C.bgCard) : null,
+          gradient: panelGradient,
           borderRadius: BorderRadius.circular(radius),
         ),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(radius),
-          child: Padding(padding: padding, child: child),
+          child: Stack(
+            children: [
+              if (C.isLight)
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _LightPanelPainter(color: borderColor ?? C.border),
+                  ),
+                ),
+              Padding(padding: padding, child: child),
+            ],
+          ),
         ),
       ),
     );
     if (margin == null) return surface;
     return Padding(padding: margin!, child: surface);
   }
+}
+
+bool _isLegacyDarkSurface(Color color) {
+  if (color == C.hudDark || color == C.hudDark2) return false;
+  return color.computeLuminance() < 0.08;
+}
+
+class _LightPanelPainter extends CustomPainter {
+  final Color color;
+
+  const _LightPanelPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width < 28 || size.height < 28) return;
+    final line =
+        Paint()
+          ..color = color.withValues(alpha: 0.55)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final accent =
+        Paint()
+          ..color = C.purple.withValues(alpha: 0.20)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    const inset = 7.0;
+    const len = 14.0;
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset + len, inset),
+      line,
+    );
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset, inset + len),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, inset),
+      Offset(size.width - inset, inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, inset),
+      Offset(size.width - inset, inset + len),
+      line,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset - len),
+      Offset(inset, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset),
+      Offset(inset + len, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, size.height - inset),
+      Offset(size.width - inset, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, size.height - inset - len),
+      Offset(size.width - inset, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.62, 0),
+      Offset(size.width * 0.92, 0),
+      accent,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _LightPanelPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class RoundIconButton extends StatelessWidget {
@@ -136,15 +309,21 @@ class RoundIconButton extends StatelessWidget {
     width: size,
     height: size,
     child: Material(
-      color: background ?? C.bgSurface,
+      color: background ?? (C.isLight ? const Color(0xFF090A13) : C.bgSurface),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
-        side: BorderSide(color: C.border),
+        side: BorderSide(
+          color: C.isLight ? C.purple.withValues(alpha: 0.28) : C.border,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Icon(icon, color: color ?? C.t1, size: size * 0.48),
+        child: Icon(
+          icon,
+          color: color ?? (C.isLight ? C.purple : C.t1),
+          size: size * 0.48,
+        ),
       ),
     ),
   );
@@ -152,9 +331,12 @@ class RoundIconButton extends StatelessWidget {
 
 class AppLayout {
   static const wideBreakpoint = 860.0;
+  static const lightWideBreakpoint = 720.0;
 
-  static bool hasSideDock(BuildContext context) =>
-      MediaQuery.of(context).size.width >= wideBreakpoint;
+  static bool hasSideDock(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    return width >= (C.isLight ? lightWideBreakpoint : wideBreakpoint);
+  }
 
   static double pageHorizontal(BuildContext context) {
     final width = MediaQuery.of(context).size.width;
@@ -263,7 +445,7 @@ Widget appScaffold(
                   RoundIconButton(
                     icon: Icons.chevron_left_rounded,
                     onTap: () => Navigator.pop(context),
-                    color: C.t1,
+                    color: C.isLight ? C.purple : C.t1,
                   ),
                   const SizedBox(width: 12),
                   Expanded(

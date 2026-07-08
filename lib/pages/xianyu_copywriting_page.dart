@@ -143,11 +143,12 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                     child: FilledButton(
                       onPressed: _saveRules,
                       style: FilledButton.styleFrom(
-                        backgroundColor: C.cyan,
-                        foregroundColor: Colors.black,
+                        backgroundColor: C.primaryButtonBg,
+                        foregroundColor: C.primaryButtonFg,
                         padding: const EdgeInsets.symmetric(vertical: 13),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
+                          side: BorderSide(color: C.primaryButtonBorder),
                         ),
                       ),
                       child: const Text('保存规则'),
@@ -233,21 +234,22 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
                 onPressed: _importingMaterial ? null : _importMaterialLink,
                 icon:
                     _importingMaterial
-                        ? const SizedBox(
+                        ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: Colors.black,
+                            color: C.primaryButtonFg,
                           ),
                         )
                         : Icon(Icons.download_rounded, size: 17),
                 style: FilledButton.styleFrom(
-                  backgroundColor: C.mint,
-                  foregroundColor: Colors.black,
+                  backgroundColor: C.primaryButtonBg,
+                  foregroundColor: C.primaryButtonFg,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: C.primaryButtonBorder),
                   ),
                 ),
                 label: Text(
@@ -790,7 +792,7 @@ class _ImportedMaterialPreview extends StatelessWidget {
                           child: Icon(
                             Icons.auto_fix_high_rounded,
                             size: 12,
-                            color: Colors.black,
+                            color: C.isLight ? Colors.white : Colors.black,
                           ),
                         ),
                       ),
@@ -855,11 +857,12 @@ class _ImportedMaterialPreview extends StatelessWidget {
                 onPressed: onSaveExample,
                 icon: Icon(Icons.library_add_rounded, size: 16),
                 style: FilledButton.styleFrom(
-                  backgroundColor: C.cyan,
-                  foregroundColor: Colors.black,
+                  backgroundColor: C.primaryButtonBg,
+                  foregroundColor: C.primaryButtonFg,
                   padding: const EdgeInsets.symmetric(vertical: 11),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
+                    side: BorderSide(color: C.primaryButtonBorder),
                   ),
                 ),
                 label: const Text(

@@ -533,8 +533,8 @@ class StockPageState extends State<StockPage> {
                           ),
                           RoundIconButton(
                             icon: Icons.add_rounded,
-                            color: Colors.black,
-                            background: Colors.white,
+                            color: C.isLight ? C.purple : Colors.black,
+                            background: C.isLight ? C.hudDark : Colors.white,
                             onTap:
                                 () => Navigator.push(
                                   context,
@@ -849,15 +849,27 @@ class _FilterPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: selected ? C.cyan : Colors.white.withValues(alpha: 0.07),
+          color:
+              selected
+                  ? (C.isLight ? C.hudDark : C.cyan)
+                  : C.isLight
+                  ? C.bgCard.withValues(alpha: 0.86)
+                  : Colors.white.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(
+            color:
+                selected
+                    ? (C.isLight ? C.purple.withValues(alpha: 0.48) : C.cyan)
+                    : C.isLight
+                    ? C.border
+                    : Colors.white.withValues(alpha: 0.08),
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 12,
-            color: selected ? Colors.black : C.t2,
+            color: selected ? (C.isLight ? C.purple : Colors.black) : C.t2,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -888,8 +900,20 @@ class _StockToolButton extends StatelessWidget {
       label: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
       style: OutlinedButton.styleFrom(
         foregroundColor: selected ? C.cyan : C.t2,
-        backgroundColor: selected ? C.cyan.withValues(alpha: 0.10) : C.bgDeep,
-        side: BorderSide(color: selected ? C.cyan : C.border),
+        backgroundColor:
+            selected
+                ? C.cyan.withValues(alpha: 0.10)
+                : C.isLight
+                ? C.bgCard.withValues(alpha: 0.86)
+                : C.bgDeep,
+        side: BorderSide(
+          color:
+              selected
+                  ? C.cyan
+                  : C.isLight
+                  ? C.purple.withValues(alpha: 0.24)
+                  : C.border,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
@@ -921,7 +945,7 @@ class _BatchActionBar extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(10),
     radius: 14,
-    color: const Color(0xEA0B0F16),
+    color: C.isLight ? C.hudDark : const Color(0xEA0B0F16),
     borderColor: C.cyan.withValues(alpha: 0.28),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1002,8 +1026,13 @@ class _BatchActionButton extends StatelessWidget {
       icon: Icon(icon, size: 16),
       label: Text(label),
       style: OutlinedButton.styleFrom(
-        foregroundColor: C.t1,
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.14)),
+        foregroundColor: C.isLight ? C.purple : C.t1,
+        side: BorderSide(
+          color:
+              C.isLight
+                  ? C.purple.withValues(alpha: 0.30)
+                  : Colors.white.withValues(alpha: 0.14),
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 11),
         shape: const StadiumBorder(),
         textStyle: TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
@@ -1039,20 +1068,29 @@ class _DeviceProjectCard extends StatelessWidget {
     final imageCount = _imageCount(device);
     final expectedProfit =
         device.sellPrice > 0 ? device.sellPrice - device.purchaseCost : null;
+    final cardRadius = C.isLight ? 18.0 : 24.0;
+    final titleColor = C.isLight ? C.hudText : C.t1;
+    final bodyColor = C.isLight ? C.hudSubtext : C.t2;
+    final mutedColor = C.isLight ? C.hudMuted : C.t3;
+    final baseColor = C.isLight ? C.hudDark : const Color(0xF00D1017);
+    final borderColor =
+        C.isLight
+            ? C.purple.withValues(alpha: 0.32)
+            : Colors.white.withValues(alpha: 0.10);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(cardRadius),
         child: Ink(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            borderRadius: BorderRadius.circular(cardRadius),
+            border: Border.all(color: borderColor),
             boxShadow: C.cardShadow,
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(cardRadius),
             child: LayoutBuilder(
               builder: (context, box) {
                 final dpr = MediaQuery.of(context).devicePixelRatio;
@@ -1066,8 +1104,8 @@ class _DeviceProjectCard extends StatelessWidget {
                     Positioned.fill(
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          color: const Color(0xF00D1017),
-                          borderRadius: BorderRadius.circular(24),
+                          color: baseColor,
+                          borderRadius: BorderRadius.circular(cardRadius),
                         ),
                       ),
                     ),
@@ -1097,7 +1135,7 @@ class _DeviceProjectCard extends StatelessWidget {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              const Color(0xF00D1017),
+                              baseColor.withValues(alpha: 0.94),
                               Colors.black.withValues(alpha: 0.64),
                               Colors.black.withValues(alpha: 0.18),
                               Colors.black.withValues(alpha: 0.86),
@@ -1119,13 +1157,13 @@ class _DeviceProjectCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             color:
                                 selected
-                                    ? C.cyan
+                                    ? (C.isLight ? C.purple : C.cyan)
                                     : Colors.black.withValues(alpha: 0.42),
                             shape: BoxShape.circle,
                             border: Border.all(
                               color:
                                   selected
-                                      ? C.cyan
+                                      ? (C.isLight ? C.purple : C.cyan)
                                       : Colors.white.withValues(alpha: 0.18),
                             ),
                           ),
@@ -1133,7 +1171,10 @@ class _DeviceProjectCard extends StatelessWidget {
                             selected
                                 ? Icons.check_rounded
                                 : Icons.circle_outlined,
-                            color: selected ? Colors.black : Colors.white,
+                            color:
+                                selected
+                                    ? (C.isLight ? C.hudDark : Colors.black)
+                                    : Colors.white,
                             size: 20,
                           ),
                         ),
@@ -1152,7 +1193,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: C.t1,
+                                      color: titleColor,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -1173,7 +1214,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: TextStyle(
-                                      color: C.t2,
+                                      color: bodyColor,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -1198,7 +1239,7 @@ class _DeviceProjectCard extends StatelessWidget {
                                   child: _MiniMetric(
                                     label: '成本',
                                     value: yuan(device.purchaseCost),
-                                    color: C.t2,
+                                    color: bodyColor,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -1223,6 +1264,8 @@ class _DeviceProjectCard extends StatelessWidget {
                             _DeviceInfoStrip(
                               device: device,
                               imageCount: imageCount,
+                              mutedColor: mutedColor,
+                              textColor: titleColor,
                             ),
                             const Spacer(),
                             if (selectionMode)
@@ -1305,8 +1348,15 @@ class _DeviceProjectCard extends StatelessWidget {
 class _DeviceInfoStrip extends StatelessWidget {
   final Device device;
   final int imageCount;
+  final Color mutedColor;
+  final Color textColor;
 
-  const _DeviceInfoStrip({required this.device, required this.imageCount});
+  const _DeviceInfoStrip({
+    required this.device,
+    required this.imageCount,
+    required this.mutedColor,
+    required this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) => Row(
@@ -1315,6 +1365,8 @@ class _DeviceInfoStrip extends StatelessWidget {
         child: _InfoPill(
           icon: Icons.confirmation_number_outlined,
           text: _serialTail(device.serial),
+          mutedColor: mutedColor,
+          textColor: textColor,
         ),
       ),
       const SizedBox(width: 6),
@@ -1322,12 +1374,16 @@ class _DeviceInfoStrip extends StatelessWidget {
         child: _InfoPill(
           icon: Icons.wifi_tethering_rounded,
           text: device.network,
+          mutedColor: mutedColor,
+          textColor: textColor,
         ),
       ),
       const SizedBox(width: 6),
       Expanded(
         child: _InfoPill(
           icon: Icons.photo_library_outlined,
+          mutedColor: mutedColor,
+          textColor: textColor,
           text: imageCount > 0 ? '$imageCount张图' : '无图',
         ),
       ),
@@ -1345,8 +1401,15 @@ class _DeviceInfoStrip extends StatelessWidget {
 class _InfoPill extends StatelessWidget {
   final IconData icon;
   final String text;
+  final Color mutedColor;
+  final Color textColor;
 
-  const _InfoPill({required this.icon, required this.text});
+  const _InfoPill({
+    required this.icon,
+    required this.text,
+    required this.mutedColor,
+    required this.textColor,
+  });
 
   @override
   Widget build(BuildContext context) => Container(
@@ -1360,7 +1423,7 @@ class _InfoPill extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Icon(icon, size: 13, color: C.t2),
+        Icon(icon, size: 13, color: mutedColor),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
@@ -1368,7 +1431,7 @@ class _InfoPill extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: C.t1,
+              color: textColor,
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
@@ -1391,17 +1454,25 @@ class _SelectionHint extends StatelessWidget {
     decoration: BoxDecoration(
       color:
           selected
-              ? C.cyan.withValues(alpha: 0.18)
+              ? (C.isLight
+                  ? C.purple.withValues(alpha: 0.22)
+                  : C.cyan.withValues(alpha: 0.18))
               : Colors.white.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(18),
       border: Border.all(
-        color: selected ? C.cyan : Colors.white.withValues(alpha: 0.12),
+        color:
+            selected
+                ? (C.isLight ? C.purple : C.cyan)
+                : Colors.white.withValues(alpha: 0.12),
       ),
     ),
     child: Text(
       selected ? '已选择' : '点按选择',
       style: TextStyle(
-        color: selected ? C.cyan : C.t2,
+        color:
+            selected
+                ? (C.isLight ? C.purple : C.cyan)
+                : (C.isLight ? C.hudSubtext : C.t2),
         fontSize: 11,
         fontWeight: FontWeight.w900,
       ),
@@ -1433,7 +1504,7 @@ class _MiniMetric extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: C.t3,
+            color: C.isLight ? C.hudMuted : C.t3,
             fontSize: 10,
             fontWeight: FontWeight.w800,
           ),
@@ -1474,8 +1545,14 @@ class _CardActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = filled ? C.cyan : Colors.white.withValues(alpha: 0.09);
-    final fg = filled ? Colors.black : C.t1;
+    final bg =
+        filled
+            ? (C.isLight ? C.purple : C.cyan)
+            : Colors.white.withValues(alpha: C.isLight ? 0.10 : 0.09);
+    final fg =
+        filled
+            ? (C.isLight ? C.hudDark : Colors.black)
+            : (C.isLight ? C.hudText : C.t1);
     return SizedBox(
       height: 34,
       child: TextButton(
@@ -1490,7 +1567,12 @@ class _CardActionButton extends StatelessWidget {
           side:
               filled
                   ? BorderSide.none
-                  : BorderSide(color: Colors.white.withValues(alpha: 0.12)),
+                  : BorderSide(
+                    color:
+                        C.isLight
+                            ? C.purple.withValues(alpha: 0.24)
+                            : Colors.white.withValues(alpha: 0.12),
+                  ),
         ),
         child:
             busy
@@ -1565,16 +1647,23 @@ class _EmptyStock extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(22),
-    radius: 24,
+    radius: C.isLight ? 16 : 24,
     child: Column(
       children: [
         Container(
           width: 58,
           height: 58,
-          decoration: BoxDecoration(color: C.cyan, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: C.isLight ? C.hudDark : C.cyan,
+            borderRadius: BorderRadius.circular(C.isLight ? 14 : 29),
+            border:
+                C.isLight
+                    ? Border.all(color: C.purple.withValues(alpha: 0.34))
+                    : null,
+          ),
           child: Icon(
             Icons.qr_code_scanner_rounded,
-            color: Colors.black,
+            color: C.isLight ? C.purple : Colors.black,
             size: 28,
           ),
         ),

@@ -25,11 +25,17 @@ class SectionTitle extends StatelessWidget {
             width: 30,
             height: 30,
             decoration: BoxDecoration(
-              color: C.bgSurface,
+              color: C.isLight ? C.hudDark : C.bgSurface,
               borderRadius: BorderRadius.circular(C.radiusSm),
-              border: Border.all(color: C.border),
+              border: Border.all(
+                color: C.isLight ? C.purple.withValues(alpha: 0.30) : C.border,
+              ),
             ),
-            child: Icon(icon, color: C.primary, size: 16),
+            child: Icon(
+              icon,
+              color: C.isLight ? C.purple : C.primary,
+              size: 16,
+            ),
           ),
           const SizedBox(width: 9),
         ],

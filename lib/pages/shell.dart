@@ -55,7 +55,7 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    final wide = MediaQuery.of(context).size.width >= AppLayout.wideBreakpoint;
+    final wide = AppLayout.hasSideDock(context);
     final pages = <Widget>[
       HomePage(key: _homeKey),
       StockPage(key: _stockKey),
@@ -134,10 +134,13 @@ class _SideDock extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: C.primary,
+                color: C.isLight ? C.hudDark : C.primary,
                 borderRadius: BorderRadius.circular(C.radiusLg),
               ),
-              child: Icon(Icons.tablet_mac_rounded, color: Colors.black),
+              child: Icon(
+                Icons.tablet_mac_rounded,
+                color: C.isLight ? C.purple : Colors.black,
+              ),
             ),
             const SizedBox(height: 22),
             ...List.generate(_items.length, (i) {
@@ -155,8 +158,8 @@ class _SideDock extends StatelessWidget {
             RoundIconButton(
               icon: Icons.search_rounded,
               onTap: () {},
-              color: C.t2,
-              background: C.bgSurface,
+              color: C.isLight ? C.purple : C.t2,
+              background: C.isLight ? C.hudDark : C.bgSurface,
               size: 44,
             ),
           ],
@@ -214,7 +217,22 @@ class _BottomNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = active ? C.primary : C.t3;
+    final selectedFg = C.isLight ? C.hudDark : C.primary;
+    final selectedBg =
+        C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
+    final primaryBg =
+        C.isLight
+            ? active
+                ? const Color(0xFF090B0A)
+                : Colors.transparent
+            : C.primary;
+    final primaryFg =
+        C.isLight
+            ? active
+                ? C.selected
+                : C.t3
+            : Colors.black;
+    final fg = active ? selectedFg : C.t3;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -227,14 +245,21 @@ class _BottomNavButton extends StatelessWidget {
             decoration: BoxDecoration(
               color:
                   primary
-                      ? C.primary
+                      ? primaryBg
                       : active
-                      ? C.primary.withValues(alpha: 0.12)
+                      ? selectedBg
                       : Colors.transparent,
               borderRadius: BorderRadius.circular(C.radiusMd),
               border:
                   active && !primary
-                      ? Border.all(color: C.primary.withValues(alpha: 0.24))
+                      ? Border.all(
+                        color:
+                            C.isLight
+                                ? C.purple.withValues(alpha: 0.32)
+                                : C.primary.withValues(alpha: 0.24),
+                      )
+                      : C.isLight && primary
+                      ? Border.all(color: Colors.transparent)
                       : null,
             ),
             child: Column(
@@ -242,7 +267,7 @@ class _BottomNavButton extends StatelessWidget {
               children: [
                 Icon(
                   active ? item.activeIcon : item.icon,
-                  color: primary ? Colors.black : fg,
+                  color: primary ? primaryFg : fg,
                   size: primary ? 23 : 21,
                 ),
                 const SizedBox(height: 3),
@@ -251,7 +276,7 @@ class _BottomNavButton extends StatelessWidget {
                   child: Text(
                     item.label,
                     style: TextStyle(
-                      color: primary ? Colors.black : fg,
+                      color: primary ? primaryFg : fg,
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                     ),
@@ -281,22 +306,39 @@ class _RailButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fg = active ? C.primary : C.t3;
+    final selectedFg = C.isLight ? C.hudDark : C.primary;
+    final selectedBg =
+        C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
+    final primaryBg =
+        C.isLight
+            ? active
+                ? const Color(0xFF090B0A)
+                : Colors.transparent
+            : C.primary;
+    final primaryFg =
+        C.isLight
+            ? active
+                ? C.selected
+                : C.t3
+            : Colors.black;
+    final fg = active ? selectedFg : C.t3;
     return Tooltip(
       message: item.label,
       child: Material(
         color:
             primary
-                ? C.primary
+                ? primaryBg
                 : active
-                ? C.primary.withValues(alpha: 0.12)
+                ? selectedBg
                 : Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(C.radiusMd),
           side: BorderSide(
             color:
                 active && !primary
-                    ? C.primary.withValues(alpha: 0.24)
+                    ? C.isLight
+                        ? C.purple.withValues(alpha: 0.32)
+                        : C.primary.withValues(alpha: 0.24)
                     : Colors.transparent,
           ),
         ),
@@ -311,7 +353,7 @@ class _RailButton extends StatelessWidget {
               children: [
                 Icon(
                   active ? item.activeIcon : item.icon,
-                  color: primary ? Colors.black : fg,
+                  color: primary ? primaryFg : fg,
                   size: 22,
                 ),
                 const SizedBox(height: 4),
@@ -320,7 +362,7 @@ class _RailButton extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: primary ? Colors.black : fg,
+                    color: primary ? primaryFg : fg,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
                   ),

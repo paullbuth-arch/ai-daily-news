@@ -30,7 +30,7 @@ Future<T?> showAppFormSheet<T>({
                 margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 padding: EdgeInsets.zero,
                 radius: 18,
-                color: C.bgCard,
+                color: C.isLight ? null : C.bgCard,
                 borderColor: C.border,
                 child: Column(
                   children: [
@@ -129,7 +129,7 @@ Future<T?> showAppFormDialog<T>({
               child: GlassPanel(
                 padding: EdgeInsets.zero,
                 radius: 18,
-                color: C.bgCard,
+                color: C.isLight ? null : C.bgCard,
                 borderColor: C.border,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -239,7 +239,7 @@ class AppFormField extends StatelessWidget {
       prefixIcon: icon == null ? null : Icon(icon, color: C.t3, size: 18),
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: C.bgDeep,
+      fillColor: C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgDeep,
       labelStyle: TextStyle(color: C.t2, fontSize: 12),
       hintStyle: TextStyle(color: C.t3, fontSize: 13),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
@@ -249,7 +249,10 @@ class AppFormField extends StatelessWidget {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: C.cyan, width: 1.2),
+        borderSide: BorderSide(
+          color: C.isLight ? C.purple : C.cyan,
+          width: 1.2,
+        ),
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
@@ -282,7 +285,7 @@ class AppDropdownField<T> extends StatelessWidget {
     padding: const EdgeInsets.symmetric(horizontal: 12),
     constraints: const BoxConstraints(minHeight: 48),
     decoration: BoxDecoration(
-      color: C.bgDeep,
+      color: C.isLight ? C.bgCard.withValues(alpha: 0.86) : C.bgDeep,
       borderRadius: BorderRadius.circular(10),
       border: Border.all(color: C.border),
     ),
@@ -350,8 +353,8 @@ class AppSheetActions extends StatelessWidget {
         child: FilledButton(
           onPressed: onPrimary,
           style: FilledButton.styleFrom(
-            backgroundColor: primaryColor,
-            foregroundColor: Colors.black,
+            backgroundColor: C.isLight ? C.hudDark : primaryColor,
+            foregroundColor: C.isLight ? C.purple : Colors.black,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -393,7 +396,7 @@ class AppChoicePill extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: selected ? Colors.black : C.t2,
+          color: selected ? (C.isLight ? Colors.white : Colors.black) : C.t2,
           fontSize: 12,
           fontWeight: FontWeight.w900,
         ),
@@ -429,7 +432,12 @@ class AppSelectionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: selected ? color.withValues(alpha: 0.16) : C.bgDeep,
+        color:
+            selected
+                ? color.withValues(alpha: C.isLight ? 0.12 : 0.16)
+                : C.isLight
+                ? C.bgCard.withValues(alpha: 0.86)
+                : C.bgDeep,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: selected ? color : C.border),
       ),
@@ -439,10 +447,20 @@ class AppSelectionTile extends StatelessWidget {
             width: 34,
             height: 34,
             decoration: BoxDecoration(
-              color: selected ? color : C.bgSurface,
+              color:
+                  selected
+                      ? color
+                      : C.isLight
+                      ? C.bgCardMuted
+                      : C.bgSurface,
               borderRadius: BorderRadius.circular(9),
             ),
-            child: Icon(icon, color: selected ? Colors.black : C.t2, size: 18),
+            child: Icon(
+              icon,
+              color:
+                  selected ? (C.isLight ? Colors.white : Colors.black) : C.t2,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 11),
           Expanded(

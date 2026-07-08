@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -53,7 +54,7 @@ class HomePageState extends State<HomePage> {
       title: Text(
         '货脉',
         style: TextStyle(
-          fontSize: 26,
+          fontSize: C.isLight ? 24 : 26,
           fontWeight: FontWeight.w900,
           color: C.t1,
         ),
@@ -134,206 +135,569 @@ class _HeroPhoneCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    padding: EdgeInsets.zero,
-    radius: C.radiusXl,
-    gradient: C.heroGradient,
-    borderColor: C.primary.withValues(alpha: 0.24),
-    child: Stack(
-      children: [
-        const Positioned.fill(
-          child: CustomPaint(painter: _CommandHeroPainter()),
-        ),
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 6,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          children: [
-                            _CommandBadge(
-                              icon: Icons.sensors_rounded,
-                              label: 'HUOMAI OPS',
-                              color: C.primary,
-                            ),
-                            _CommandBadge(
-                              icon: Icons.bolt_rounded,
-                              label: 'LIVE',
-                              color: C.orange,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          '今日经营',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: C.t2,
-                            fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) {
+    if (C.isLight) {
+      return _LightPlanetOpsCard(
+        stats: stats,
+        margin: margin,
+        onScan: onScan,
+        onPrice: onPrice,
+        onSell: onSell,
+      );
+    }
+    return GlassPanel(
+      padding: EdgeInsets.zero,
+      radius: C.radiusXl,
+      gradient: C.heroGradient,
+      borderColor: C.isLight ? C.navBorder : C.primary.withValues(alpha: 0.24),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: _CommandHeroPainter(C.isLight)),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              _CommandBadge(
+                                icon: Icons.sensors_rounded,
+                                label: 'HUOMAI OPS',
+                                color: C.primary,
+                              ),
+                              _CommandBadge(
+                                icon: Icons.bolt_rounded,
+                                label: 'LIVE',
+                                color: C.orange,
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        FittedBox(
-                          alignment: Alignment.centerLeft,
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            yuan(stats.gmv),
+                          const SizedBox(height: 12),
+                          Text(
+                            '今日经营',
                             style: TextStyle(
-                              fontSize: 44,
-                              height: 1,
+                              fontSize: 13,
+                              color: C.t2,
                               fontWeight: FontWeight.w900,
-                              color: C.t1,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          FittedBox(
+                            alignment: Alignment.centerLeft,
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              yuan(stats.gmv),
+                              style: TextStyle(
+                                fontSize: 44,
+                                height: 1,
+                                fontWeight: FontWeight.w900,
+                                color: C.t1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: C.t2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        StatusChip('${stats.orderCount} 单', C.primary),
                         const SizedBox(height: 8),
-                        Text(
-                          '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: C.t2,
-                            fontWeight: FontWeight.w700,
+                        Container(
+                          width: 68,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color:
+                                C.isLight
+                                    ? const Color(0xFF090B0A)
+                                    : C.primary.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(C.radiusMd),
+                            border: Border.all(
+                              color:
+                                  C.isLight
+                                      ? const Color(0xFF090B0A)
+                                      : C.primary.withValues(alpha: 0.24),
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.tablet_mac_rounded,
+                            color: C.isLight ? C.selected : C.primary,
+                            size: 22,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      StatusChip('${stats.orderCount} 单', C.primary),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 68,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: C.primary.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(C.radiusMd),
-                          border: Border.all(
-                            color: C.primary.withValues(alpha: 0.24),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final compact = box.maxWidth < 430;
+                    final width =
+                        compact
+                            ? (box.maxWidth - 8) / 2
+                            : (box.maxWidth - 16) / 3;
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: width,
+                          child: _MiniMetric(
+                            label: '在售',
+                            value: '${stats.inStockCount} 台',
+                            tint: C.primary,
                           ),
                         ),
-                        child: Icon(
-                          Icons.tablet_mac_rounded,
-                          color: C.primary,
-                          size: 22,
+                        SizedBox(
+                          width: width,
+                          child: _MiniMetric(
+                            label: '库存资金',
+                            value: yuan(stats.capitalOccupied),
+                            tint: C.orange,
+                          ),
+                        ),
+                        SizedBox(
+                          width: compact ? box.maxWidth : width,
+                          child: _MiniMetric(
+                            label: '今日毛利',
+                            value: yuan(stats.grossProfit),
+                            tint: stats.grossProfit >= 0 ? C.green : C.red,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 12),
+                LayoutBuilder(
+                  builder: (context, box) {
+                    final wide = box.maxWidth >= 520;
+                    final itemWidth =
+                        wide ? (box.maxWidth - 16) / 3 : box.maxWidth;
+                    return Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        SizedBox(
+                          width: itemWidth,
+                          child: _PastelPill(
+                            label: '链接素材',
+                            sub: '下载图片/视频，复制文案',
+                            icon: Icons.link_rounded,
+                            color: C.primary,
+                            onTap: onScan,
+                          ),
+                        ),
+                        SizedBox(
+                          width: itemWidth,
+                          child: _PastelPill(
+                            label: '批发行情',
+                            sub: '导入报价，辅助收货',
+                            icon: Icons.query_stats_rounded,
+                            color: C.blue,
+                            onTap: onPrice,
+                          ),
+                        ),
+                        SizedBox(
+                          width: itemWidth,
+                          child: _PastelPill(
+                            label: '售出登记',
+                            sub: '生成订单并算利润',
+                            icon: Icons.point_of_sale_outlined,
+                            color: C.green,
+                            onTap: onSell,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LightPlanetOpsCard extends StatelessWidget {
+  final Stats stats;
+  final double margin;
+  final VoidCallback onScan;
+  final VoidCallback onPrice;
+  final VoidCallback onSell;
+
+  const _LightPlanetOpsCard({
+    required this.stats,
+    required this.margin,
+    required this.onScan,
+    required this.onPrice,
+    required this.onSell,
+  });
+
+  @override
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(20),
+      side: const BorderSide(color: Color(0xFFBEC0CE)),
+    ),
+    clipBehavior: Clip.antiAlias,
+    child: Ink(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFFF9F9FE), Color(0xFFE1E2EE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.all(Radius.circular(20)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _PlanetViewport(stats: stats, margin: margin, onScan: onScan),
+            const SizedBox(height: 10),
+            LayoutBuilder(
+              builder: (context, box) {
+                final wide = box.maxWidth >= 560;
+                final itemWidth = wide ? (box.maxWidth - 16) / 3 : box.maxWidth;
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    SizedBox(
+                      width: itemWidth,
+                      child: _MissionAction(
+                        label: '链接素材',
+                        sub: '下载图片/视频，复制文案',
+                        icon: Icons.link_rounded,
+                        color: C.primary,
+                        emphasized: true,
+                        onTap: onScan,
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _MissionAction(
+                        label: '批发行情',
+                        sub: '导入报价，辅助收货',
+                        icon: Icons.query_stats_rounded,
+                        color: C.blue,
+                        onTap: onPrice,
+                      ),
+                    ),
+                    SizedBox(
+                      width: itemWidth,
+                      child: _MissionAction(
+                        label: '售出登记',
+                        sub: '生成订单并算利润',
+                        icon: Icons.point_of_sale_outlined,
+                        color: C.green,
+                        onTap: onSell,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _PlanetViewport extends StatelessWidget {
+  final Stats stats;
+  final double margin;
+  final VoidCallback onScan;
+
+  const _PlanetViewport({
+    required this.stats,
+    required this.margin,
+    required this.onScan,
+  });
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, box) {
+      final compact = box.maxWidth < 410;
+      final height = compact ? 598.0 : 540.0;
+      final headlineSize = compact ? 32.0 : 40.0;
+      return Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF080911),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFF05060B), width: 2),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: CustomPaint(painter: _PlanetOpsPainter()),
+            ),
+            Positioned(
+              top: 12,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 82,
+                  height: 25,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              top: 22,
+              right: 18,
+              child: Row(
+                children: [
+                  Text(
+                    'HUOMAI',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.86),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _SpaceBadge(
+                    icon: Icons.radar_rounded,
+                    label: 'LIVE',
+                    color: const Color(0xFFBBA7FF),
+                  ),
+                  const Spacer(),
+                  _SpaceBadge(
+                    icon: Icons.receipt_long_rounded,
+                    label: '${stats.orderCount} 单',
+                    color: const Color(0xFFFFD0D9),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 18,
+              top: compact ? 72 : 78,
+              right: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'STOCK IN',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: headlineSize,
+                      height: 0.94,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.42),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    'REAL TIME',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: headlineSize,
+                      height: 0.94,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withValues(alpha: 0.42),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '今日经营',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withValues(alpha: 0.70),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    alignment: Alignment.centerLeft,
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      yuan(stats.gmv),
+                      style: const TextStyle(
+                        fontSize: 48,
+                        height: 0.98,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.25,
+                      color: Colors.white.withValues(alpha: 0.70),
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: compact ? 178 : 196,
+                    child: _NeonCommandButton(label: '链接素材下载', onTap: onScan),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 18,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Expanded(
+                        child: Text(
+                          'MY DATA',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 30,
+                            height: 0.95,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(
+                            0xFFBBA7FF,
+                          ).withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(C.radiusSm),
+                          border: Border.all(
+                            color: const Color(
+                              0xFFBBA7FF,
+                            ).withValues(alpha: 0.36),
+                          ),
+                        ),
+                        child: Text(
+                          fmtDate(DateTime.now()),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFFE7DFFF),
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  _MarsDataTile(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: '库存资金',
+                    value: yuan(stats.capitalOccupied),
+                    color: const Color(0xFFEDE5FF),
+                  ),
+                  const SizedBox(height: 8),
+                  _MarsDataTile(
+                    icon: Icons.speed_rounded,
+                    label: '毛利率',
+                    value: '${margin.toStringAsFixed(1)}%',
+                    color: const Color(0xFFFFD7E0),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PulseMetric(
+                          label: '在售',
+                          value: '${stats.inStockCount} 台',
+                          color: const Color(0xFFC6B5FF),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _PulseMetric(
+                          label: '今日毛利',
+                          value: yuan(stats.grossProfit),
+                          color:
+                              stats.grossProfit >= 0
+                                  ? const Color(0xFFA9F6DF)
+                                  : const Color(0xFFFFC3D0),
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              LayoutBuilder(
-                builder: (context, box) {
-                  final compact = box.maxWidth < 430;
-                  final width =
-                      compact
-                          ? (box.maxWidth - 8) / 2
-                          : (box.maxWidth - 16) / 3;
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      SizedBox(
-                        width: width,
-                        child: _MiniMetric(
-                          label: '在售',
-                          value: '${stats.inStockCount} 台',
-                          tint: C.primary,
-                        ),
-                      ),
-                      SizedBox(
-                        width: width,
-                        child: _MiniMetric(
-                          label: '库存资金',
-                          value: yuan(stats.capitalOccupied),
-                          tint: C.orange,
-                        ),
-                      ),
-                      SizedBox(
-                        width: compact ? box.maxWidth : width,
-                        child: _MiniMetric(
-                          label: '今日毛利',
-                          value: yuan(stats.grossProfit),
-                          tint: stats.grossProfit >= 0 ? C.green : C.red,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              LayoutBuilder(
-                builder: (context, box) {
-                  final wide = box.maxWidth >= 520;
-                  final itemWidth =
-                      wide ? (box.maxWidth - 16) / 3 : box.maxWidth;
-                  return Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      SizedBox(
-                        width: itemWidth,
-                        child: _PastelPill(
-                          label: '链接素材',
-                          sub: '下载图片/视频，复制文案',
-                          icon: Icons.link_rounded,
-                          color: C.primary,
-                          onTap: onScan,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _PastelPill(
-                          label: '批发行情',
-                          sub: '导入报价，辅助收货',
-                          icon: Icons.query_stats_rounded,
-                          color: C.blue,
-                          onTap: onPrice,
-                        ),
-                      ),
-                      SizedBox(
-                        width: itemWidth,
-                        child: _PastelPill(
-                          label: '售出登记',
-                          sub: '生成订单并算利润',
-                          icon: Icons.point_of_sale_outlined,
-                          color: C.green,
-                          onTap: onSell,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
-    ),
+      );
+    },
   );
 }
 
-class _CommandBadge extends StatelessWidget {
+class _SpaceBadge extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
 
-  const _CommandBadge({
+  const _SpaceBadge({
     required this.icon,
     required this.label,
     required this.color,
@@ -343,9 +707,16 @@ class _CommandBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.12),
+      color: Colors.black.withValues(alpha: 0.24),
       borderRadius: BorderRadius.circular(C.radiusSm),
-      border: Border.all(color: color.withValues(alpha: 0.28)),
+      border: Border.all(color: color.withValues(alpha: 0.36)),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: 0.16),
+          blurRadius: 7,
+          offset: Offset.zero,
+        ),
+      ],
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -365,14 +736,925 @@ class _CommandBadge extends StatelessWidget {
   );
 }
 
+class _NeonCommandButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _NeonCommandButton({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 42,
+    child: Material(
+      color: const Color(0xFF7D65FF).withValues(alpha: 0.22),
+      shape: const _HudButtonBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _HudButtonPainter(const Color(0xFFCDBDFF)),
+              ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.link_rounded,
+                  size: 15,
+                  color: Color(0xFFF0ECFF),
+                ),
+                const SizedBox(width: 7),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFF0ECFF),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _HudButtonBorder extends ShapeBorder {
+  const _HudButtonBorder();
+
+  @override
+  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
+
+  @override
+  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
+      getOuterPath(rect.deflate(1), textDirection: textDirection);
+
+  @override
+  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
+    const notch = 9.0;
+    const cut = 5.0;
+    final path =
+        Path()
+          ..moveTo(rect.left + cut, rect.top)
+          ..lineTo(rect.right - cut, rect.top)
+          ..lineTo(rect.right, rect.top + cut)
+          ..lineTo(rect.right, rect.center.dy - notch * 0.34)
+          ..lineTo(rect.right - notch, rect.center.dy)
+          ..lineTo(rect.right, rect.center.dy + notch * 0.34)
+          ..lineTo(rect.right, rect.bottom - cut)
+          ..lineTo(rect.right - cut, rect.bottom)
+          ..lineTo(rect.left + cut, rect.bottom)
+          ..lineTo(rect.left, rect.bottom - cut)
+          ..lineTo(rect.left, rect.center.dy + notch * 0.34)
+          ..lineTo(rect.left + notch, rect.center.dy)
+          ..lineTo(rect.left, rect.center.dy - notch * 0.34)
+          ..lineTo(rect.left, rect.top + cut)
+          ..close();
+    return path;
+  }
+
+  @override
+  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
+    final glow =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4
+          ..color = const Color(0xFF9F7DFF).withValues(alpha: 0.20);
+    final line =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = const Color(0xFFD6CBFF).withValues(alpha: 0.95);
+    final path = getOuterPath(rect.deflate(2), textDirection: textDirection);
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, line);
+  }
+
+  @override
+  ShapeBorder scale(double t) => this;
+}
+
+class _HudButtonPainter extends CustomPainter {
+  final Color color;
+
+  const _HudButtonPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line =
+        Paint()
+          ..color = color.withValues(alpha: 0.22)
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(size.width * 0.20, size.height - 7),
+      Offset(size.width * 0.80, size.height - 7),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.20, 7),
+      Offset(size.width * 0.80, 7),
+      line,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _HudButtonPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _MarsDataTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _MarsDataTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 58,
+    padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+    decoration: BoxDecoration(
+      color: const Color(0xFF6E3341).withValues(alpha: 0.50),
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+    ),
+    child: Row(
+      children: [
+        CustomPaint(
+          painter: _RadialMeterPainter(color),
+          child: SizedBox(
+            width: 38,
+            height: 38,
+            child: Icon(icon, color: color, size: 17),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.58),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 23,
+                    height: 0.95,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _RadialMeterPainter extends CustomPainter {
+  final Color color;
+
+  const _RadialMeterPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 3;
+    final faint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.white.withValues(alpha: 0.18);
+    final bright =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 2
+          ..color = color.withValues(alpha: 0.90);
+    canvas.drawCircle(center, radius, faint);
+    canvas.drawCircle(center, radius * 0.54, faint);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi * 0.72,
+      math.pi * 1.36,
+      false,
+      bright,
+    );
+    canvas.drawCircle(center, 2.1, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadialMeterPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _PulseMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _PulseMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(11, 9, 11, 8),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.22),
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: color.withValues(alpha: 0.28)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 18,
+          child: CustomPaint(
+            painter: _PulseLinePainter(color),
+            size: Size.infinite,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.white.withValues(alpha: 0.56),
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 3),
+        FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 22,
+              height: 0.95,
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _PulseLinePainter extends CustomPainter {
+  final Color color;
+
+  const _PulseLinePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final grid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.08)
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(0, size.height * 0.52),
+      Offset(size.width, size.height * 0.52),
+      grid,
+    );
+
+    final pulse =
+        Paint()
+          ..color = color
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+    final path =
+        Path()
+          ..moveTo(0, size.height * 0.55)
+          ..lineTo(size.width * 0.16, size.height * 0.55)
+          ..lineTo(size.width * 0.22, size.height * 0.30)
+          ..lineTo(size.width * 0.29, size.height * 0.75)
+          ..lineTo(size.width * 0.35, size.height * 0.20)
+          ..lineTo(size.width * 0.43, size.height * 0.56)
+          ..lineTo(size.width * 0.62, size.height * 0.56)
+          ..lineTo(size.width * 0.70, size.height * 0.38)
+          ..lineTo(size.width * 0.78, size.height * 0.62)
+          ..lineTo(size.width, size.height * 0.50);
+    canvas.drawPath(path, pulse);
+  }
+
+  @override
+  bool shouldRepaint(covariant _PulseLinePainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _MissionAction extends StatelessWidget {
+  final String label;
+  final String sub;
+  final IconData icon;
+  final Color color;
+  final bool emphasized;
+  final VoidCallback onTap;
+
+  const _MissionAction({
+    required this.label,
+    required this.sub,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+    this.emphasized = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = emphasized ? const Color(0xFF05050A) : C.bgCardMuted;
+    final fg = emphasized ? Colors.white : C.t1;
+    final subFg = emphasized ? Colors.white.withValues(alpha: 0.62) : C.t2;
+    final iconBg = emphasized ? const Color(0xFFC9BBFF) : Colors.white;
+    final iconFg = emphasized ? const Color(0xFF05050A) : color;
+    return Material(
+      color: bg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusLg),
+        side: BorderSide(
+          color:
+              emphasized
+                  ? const Color(0xFF7D65FF)
+                  : color.withValues(alpha: 0.14),
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  borderRadius: BorderRadius.circular(C.radiusMd),
+                  border:
+                      emphasized
+                          ? Border.all(
+                            color: Colors.white.withValues(alpha: 0.35),
+                          )
+                          : null,
+                ),
+                child: Icon(icon, color: iconFg, size: 19),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: fg,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      sub,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: subFg,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: emphasized ? const Color(0xFFC9BBFF) : color,
+                size: 20,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PlanetOpsPainter extends CustomPainter {
+  const _PlanetOpsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final bg =
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF14151F),
+              Color(0xFF090A12),
+              Color(0xFF291119),
+              Color(0xFF09070D),
+            ],
+            stops: [0.0, 0.44, 0.68, 1.0],
+          ).createShader(rect);
+    canvas.drawRect(rect, bg);
+
+    final topWash =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              const Color(0xFFE9E9F1).withValues(alpha: 0.10),
+              const Color(0xFF727A91).withValues(alpha: 0.20),
+              Colors.transparent,
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.55));
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width, size.height * 0.58),
+      topWash,
+    );
+
+    final starPaint = Paint()..color = Colors.white.withValues(alpha: 0.46);
+    for (var i = 0; i < 72; i++) {
+      final x = ((i * 47) % 100) / 100 * size.width;
+      final y = ((i * 31 + 17) % 100) / 100 * size.height;
+      final r = i % 9 == 0 ? 1.2 : 0.48;
+      canvas.drawCircle(Offset(x, y), r, starPaint);
+    }
+
+    final compact = size.width < 430;
+    final guide =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.white.withValues(alpha: 0.08);
+    final guideCenter = Offset(size.width * 0.62, size.height * 0.16);
+    for (final radius in [140.0, 205.0, 278.0]) {
+      canvas.drawArc(
+        Rect.fromCircle(center: guideCenter, radius: radius),
+        math.pi * 0.72,
+        math.pi * 1.06,
+        false,
+        guide,
+      );
+    }
+
+    final marsTop = size.height * 0.56;
+    final marsRect = Rect.fromLTWH(
+      0,
+      marsTop,
+      size.width,
+      size.height - marsTop,
+    );
+    final mars =
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              const Color(0xFFB75862).withValues(alpha: 0.82),
+              const Color(0xFF622631).withValues(alpha: 0.74),
+              const Color(0xFF160A11).withValues(alpha: 0.95),
+            ],
+          ).createShader(marsRect);
+    canvas.drawRect(marsRect, mars);
+
+    final planetGlow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFFFFA0AA).withValues(alpha: 0.34),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.70, marsTop + 24),
+              radius: size.width * 0.30,
+            ),
+          );
+    canvas.drawCircle(
+      Offset(size.width * 0.70, marsTop + 24),
+      size.width * 0.30,
+      planetGlow,
+    );
+
+    final horizon =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.white.withValues(alpha: 0.14);
+    for (var i = 0; i < 9; i++) {
+      final y = marsTop + 34 + i * 14;
+      final path =
+          Path()
+            ..moveTo(0, y)
+            ..cubicTo(
+              size.width * 0.22,
+              y - 18,
+              size.width * 0.40,
+              y + 15,
+              size.width * 0.62,
+              y - 5,
+            )
+            ..cubicTo(
+              size.width * 0.80,
+              y - 18,
+              size.width * 0.90,
+              y + 8,
+              size.width,
+              y - 4,
+            );
+      canvas.drawPath(path, horizon);
+    }
+
+    final chartGrid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.10)
+          ..strokeWidth = 1;
+    final chart = Rect.fromLTWH(
+      size.width * 0.46,
+      marsTop + 76,
+      size.width * 0.44,
+      54,
+    );
+    for (var i = 0; i <= 4; i++) {
+      final x = chart.left + chart.width * i / 4;
+      canvas.drawLine(Offset(x, chart.top), Offset(x, chart.bottom), chartGrid);
+    }
+    for (var i = 0; i <= 3; i++) {
+      final y = chart.top + chart.height * i / 3;
+      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), chartGrid);
+    }
+    final chartGlow =
+        Paint()
+          ..color = const Color(0xFFCDBDFF).withValues(alpha: 0.24)
+          ..strokeWidth = 5
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+    final chartLine =
+        Paint()
+          ..color = const Color(0xFFE7DFFF)
+          ..strokeWidth = 1.8
+          ..strokeCap = StrokeCap.round
+          ..style = PaintingStyle.stroke;
+    final line =
+        Path()
+          ..moveTo(chart.left, chart.bottom - 9)
+          ..cubicTo(
+            chart.left + chart.width * 0.15,
+            chart.top + 10,
+            chart.left + chart.width * 0.26,
+            chart.bottom - 8,
+            chart.left + chart.width * 0.39,
+            chart.top + 18,
+          )
+          ..cubicTo(
+            chart.left + chart.width * 0.54,
+            chart.bottom - 4,
+            chart.left + chart.width * 0.68,
+            chart.top + 20,
+            chart.left + chart.width * 0.82,
+            chart.top + 12,
+          )
+          ..cubicTo(
+            chart.left + chart.width * 0.90,
+            chart.top + 8,
+            chart.left + chart.width * 0.96,
+            chart.bottom - 20,
+            chart.right,
+            chart.bottom - 18,
+          );
+    canvas.drawPath(line, chartGlow);
+    canvas.drawPath(line, chartLine);
+
+    final purpleGlow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF8F63FF).withValues(alpha: 0.40),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.72, size.height * 0.28),
+              radius: 170,
+            ),
+          );
+    canvas.drawCircle(
+      Offset(size.width * 0.72, size.height * 0.28),
+      170,
+      purpleGlow,
+    );
+
+    _drawHelmet(canvas, size, compact);
+    _drawHudCorners(canvas, size);
+  }
+
+  void _drawHelmet(Canvas canvas, Size size, bool compact) {
+    final cx = size.width * (compact ? 0.77 : 0.73);
+    final cy = size.height * (compact ? 0.25 : 0.24);
+    final radius = math.min(size.width, size.height) * (compact ? 0.23 : 0.22);
+    final outerRect = Rect.fromCenter(
+      center: Offset(cx, cy),
+      width: radius * 1.95,
+      height: radius * 2.15,
+    );
+    final helmet =
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFF4F5FA),
+              Color(0xFFAEB6C7),
+              Color(0xFF5E6677),
+              Color(0xFF202433),
+            ],
+            stops: [0.0, 0.36, 0.68, 1.0],
+          ).createShader(outerRect);
+    final helmetPath =
+        Path()
+          ..moveTo(cx - radius * 0.80, cy - radius * 0.92)
+          ..cubicTo(
+            cx - radius * 1.26,
+            cy - radius * 0.40,
+            cx - radius * 1.06,
+            cy + radius * 0.70,
+            cx - radius * 0.36,
+            cy + radius * 1.04,
+          )
+          ..cubicTo(
+            cx + radius * 0.32,
+            cy + radius * 1.34,
+            cx + radius * 1.02,
+            cy + radius * 0.66,
+            cx + radius * 1.04,
+            cy - radius * 0.08,
+          )
+          ..cubicTo(
+            cx + radius * 1.02,
+            cy - radius * 0.78,
+            cx + radius * 0.26,
+            cy - radius * 1.18,
+            cx - radius * 0.80,
+            cy - radius * 0.92,
+          )
+          ..close();
+    canvas.drawPath(helmetPath, helmet);
+
+    final shellStroke =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3
+          ..color = Colors.white.withValues(alpha: 0.38);
+    canvas.drawPath(helmetPath, shellStroke);
+
+    canvas.save();
+    canvas.translate(cx - radius * 0.37, cy - radius * 0.18);
+    canvas.rotate(-0.20);
+    final visorRect = Rect.fromCenter(
+      center: Offset.zero,
+      width: radius * 0.95,
+      height: radius * 1.08,
+    );
+    final visor =
+        Paint()
+          ..shader = const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF070912), Color(0xFF442E86), Color(0xFF151025)],
+          ).createShader(visorRect);
+    canvas.drawOval(visorRect, visor);
+    final visorLine =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = const Color(0xFFCABEFF).withValues(alpha: 0.55);
+    canvas.drawOval(visorRect.deflate(5), visorLine);
+    canvas.restore();
+
+    final lensCenter = Offset(cx + radius * 0.34, cy + radius * 0.03);
+    final lensBase =
+        Paint()
+          ..shader = const RadialGradient(
+            colors: [Color(0xFFE2E4ED), Color(0xFF6D7485), Color(0xFF1F2330)],
+          ).createShader(
+            Rect.fromCircle(center: lensCenter, radius: radius * 0.30),
+          );
+    canvas.drawCircle(lensCenter, radius * 0.30, lensBase);
+    for (final scale in [0.22, 0.14, 0.07]) {
+      canvas.drawCircle(
+        lensCenter,
+        radius * scale,
+        Paint()
+          ..style = scale == 0.07 ? PaintingStyle.fill : PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color =
+              scale == 0.07
+                  ? const Color(0xFF05060B)
+                  : Colors.black.withValues(alpha: 0.42),
+      );
+    }
+
+    final cableGlow =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 6
+          ..color = const Color(0xFF8E68FF).withValues(alpha: 0.22);
+    final cable =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 2.8
+          ..color = const Color(0xFF9C76FF);
+    for (var i = 0; i < 3; i++) {
+      final offset = i * radius * 0.12;
+      final path =
+          Path()
+            ..moveTo(cx + radius * 0.14, cy + radius * (0.42 + i * 0.12))
+            ..cubicTo(
+              cx + radius * 0.58,
+              cy + radius * 0.55 + offset,
+              cx + radius * 0.90,
+              cy + radius * 0.88 + offset,
+              cx + radius * 1.18,
+              cy + radius * (1.02 + i * 0.07),
+            );
+      canvas.drawPath(path, cableGlow);
+      canvas.drawPath(path, cable);
+    }
+
+    final panel =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.1
+          ..color = Colors.black.withValues(alpha: 0.34);
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(cx - radius * 0.10, cy + radius * 0.02),
+        width: radius * 1.58,
+        height: radius * 1.75,
+      ),
+      -math.pi * 0.55,
+      math.pi * 0.82,
+      false,
+      panel,
+    );
+    final bolt =
+        Paint()
+          ..color = const Color(0xFF10131E)
+          ..style = PaintingStyle.fill;
+    for (final p in [
+      Offset(cx - radius * 0.70, cy - radius * 0.42),
+      Offset(cx + radius * 0.76, cy - radius * 0.18),
+      Offset(cx + radius * 0.22, cy + radius * 0.66),
+      Offset(cx - radius * 0.28, cy + radius * 0.78),
+    ]) {
+      canvas.drawCircle(p, 3.0, bolt);
+      canvas.drawCircle(
+        p,
+        5.2,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1
+          ..color = Colors.white.withValues(alpha: 0.22),
+      );
+    }
+  }
+
+  void _drawHudCorners(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.square
+          ..strokeWidth = 1.4
+          ..color = Colors.white.withValues(alpha: 0.36);
+    const m = 18.0;
+    const l = 20.0;
+    final bottom = size.height * 0.56 + 18;
+    canvas.drawLine(Offset(m, bottom), Offset(m + l, bottom), paint);
+    canvas.drawLine(Offset(m, bottom), Offset(m, bottom + l), paint);
+    canvas.drawLine(
+      Offset(size.width - m, bottom),
+      Offset(size.width - m - l, bottom),
+      paint,
+    );
+    canvas.drawLine(
+      Offset(size.width - m, bottom),
+      Offset(size.width - m, bottom + l),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _CommandBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _CommandBadge({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = C.isLight && color == C.primary;
+    final bg =
+        C.isLight
+            ? primary
+                ? C.selected
+                : color.withValues(alpha: 0.10)
+            : color.withValues(alpha: 0.12);
+    final fg = primary ? C.selectedText : color;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(C.radiusSm),
+        border: Border.all(
+          color:
+              primary
+                  ? C.selectedText.withValues(alpha: 0.16)
+                  : color.withValues(alpha: C.isLight ? 0.18 : 0.28),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: fg, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: fg,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CommandHeroPainter extends CustomPainter {
-  const _CommandHeroPainter();
+  final bool isLight;
+
+  const _CommandHeroPainter(this.isLight);
 
   @override
   void paint(Canvas canvas, Size size) {
     final accent =
         Paint()
-          ..color = C.primary.withValues(alpha: 0.18)
+          ..color = (isLight ? const Color(0xFF090B0A) : C.primary).withValues(
+            alpha: isLight ? 0.08 : 0.18,
+          )
           ..strokeWidth = 1.2
           ..style = PaintingStyle.stroke;
     const cut = 24.0;
@@ -395,7 +1677,8 @@ class _CommandHeroPainter extends CustomPainter {
 
     final grid =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.035)
+          ..color = (isLight ? const Color(0xFF090B0A) : Colors.white)
+              .withValues(alpha: isLight ? 0.035 : 0.035)
           ..strokeWidth = 1;
     for (double y = 44; y < size.height; y += 28) {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
@@ -406,16 +1689,33 @@ class _CommandHeroPainter extends CustomPainter {
           ..shader = LinearGradient(
             colors: [
               Colors.transparent,
-              C.primary.withValues(alpha: 0.25),
+              (isLight ? C.selected : C.primary).withValues(
+                alpha: isLight ? 0.55 : 0.25,
+              ),
               Colors.transparent,
             ],
           ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
           ..strokeWidth = 1;
     canvas.drawLine(Offset(0, 64), Offset(size.width, 64), beam);
+
+    if (isLight) {
+      final wash =
+          Paint()
+            ..color = C.selected.withValues(alpha: 0.30)
+            ..style = PaintingStyle.fill;
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(size.width - 104, -34, 138, 82),
+          const Radius.circular(28),
+        ),
+        wash,
+      );
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CommandHeroPainter oldDelegate) =>
+      oldDelegate.isLight != isLight;
 }
 
 class _LinkMaterialImportPage extends StatelessWidget {
@@ -649,21 +1949,22 @@ class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
               onPressed: _busy ? null : _importMaterial,
               icon:
                   _busy
-                      ? const SizedBox(
+                      ? SizedBox(
                         width: 16,
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.black,
+                          color: C.primaryButtonFg,
                         ),
                       )
                       : Icon(Icons.download_rounded, size: 17),
               style: FilledButton.styleFrom(
-                backgroundColor: C.primary,
-                foregroundColor: Colors.black,
+                backgroundColor: C.primaryButtonBg,
+                foregroundColor: C.primaryButtonFg,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
+                  side: BorderSide(color: C.primaryButtonBorder),
                 ),
               ),
               label: Text(_busy ? '解析中' : '解析下载'),
@@ -933,7 +2234,7 @@ class _MiniMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 10),
     decoration: BoxDecoration(
-      color: C.bgSurface,
+      color: C.isLight ? C.bgCardMuted : C.bgSurface,
       borderRadius: BorderRadius.circular(C.radiusMd),
       border: Border.all(color: C.border),
     ),
@@ -982,67 +2283,85 @@ class _PastelPill extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: double.infinity,
-    child: Material(
-      color: color.withValues(alpha: 0.12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(C.radiusMd),
-        side: BorderSide(color: color.withValues(alpha: 0.26)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(C.radiusSm),
+  Widget build(BuildContext context) {
+    final primary = C.isLight && color == C.primary;
+    final tileBg =
+        C.isLight
+            ? primary
+                ? C.bgCard
+                : C.bgCardMuted
+            : color.withValues(alpha: 0.12);
+    final tileBorder =
+        C.isLight
+            ? primary
+                ? C.selected.withValues(alpha: 0.55)
+                : color.withValues(alpha: 0.20)
+            : color.withValues(alpha: 0.26);
+    final iconBg = primary ? C.selected : color;
+    final iconFg = C.isLight && !primary ? Colors.white : Colors.black;
+    final arrow = primary ? C.selectedText : color;
+    return SizedBox(
+      width: double.infinity,
+      child: Material(
+        color: tileBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(C.radiusMd),
+          side: BorderSide(color: tileBorder),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    borderRadius: BorderRadius.circular(C.radiusSm),
+                  ),
+                  child: Icon(icon, color: iconFg, size: 19),
                 ),
-                child: Icon(icon, color: Colors.black, size: 19),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: C.t1,
-                        fontWeight: FontWeight.w900,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: C.t1,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: C.t2.withValues(alpha: 0.88),
-                        fontWeight: FontWeight.w700,
+                      const SizedBox(height: 2),
+                      Text(
+                        sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: C.t2.withValues(alpha: 0.88),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Icon(Icons.chevron_right_rounded, color: color, size: 20),
-            ],
+                const SizedBox(width: 6),
+                Icon(Icons.chevron_right_rounded, color: arrow, size: 20),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _AttentionStrip extends StatelessWidget {
@@ -1309,13 +2628,17 @@ class _TrendToggle extends StatelessWidget {
           duration: C.fast,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: selected ? C.primary : Colors.transparent,
+            color:
+                selected
+                    ? (C.isLight ? C.selected : C.primary)
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(C.radiusSm),
           ),
           child: Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.black : C.t2,
+              color:
+                  selected ? (C.isLight ? C.selectedText : Colors.black) : C.t2,
               fontSize: 11,
               fontWeight: FontWeight.w900,
             ),

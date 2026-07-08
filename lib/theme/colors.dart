@@ -157,67 +157,67 @@ class C {
   );
 
   static const _light = _AppPalette(
-    bgDeep: Color(0xFFF3F8F1),
-    bgCard: Color(0xFFFFFFFF),
-    bgCardMuted: Color(0xFFEEF5EE),
-    bgSurface: Color(0xFFE8F1E8),
-    bgElevated: Color(0xFFDDE9DE),
-    nav: Color(0xF7FAFCF7),
-    navBorder: Color(0xFFD2DFD5),
-    border: Color(0xFFD8E4DA),
-    borderGlow: Color(0xFFAEC6B5),
-    divider: Color(0xFFE4ECE5),
-    t1: Color(0xFF15211B),
-    t2: Color(0xFF43564D),
-    t3: Color(0xFF6B7D73),
-    tMuted: Color(0xFF8C9A91),
-    cyan: Color(0xFF4D861B),
-    cyanDim: Color(0x1F7EC92C),
-    purple: Color(0xFF3867D6),
-    purpleDim: Color(0x1F3867D6),
-    mint: Color(0xFF247B5A),
-    greenDim: Color(0x1F247B5A),
-    neonOrange: Color(0xFFB66A18),
-    orangeDim: Color(0x1FB66A18),
-    neonRed: Color(0xFFBF3C49),
-    redDim: Color(0x1FBF3C49),
-    primaryDark: Color(0xFF396A13),
-    green: Color(0xFF247B5A),
-    blue: Color(0xFF2F68C8),
-    pink: Color(0xFFA83F74),
-    teal: Color(0xFF167A72),
+    bgDeep: Color(0xFFD8DBE7),
+    bgCard: Color(0xFFFAFAFE),
+    bgCardMuted: Color(0xFFECEEF7),
+    bgSurface: Color(0xFFE5E7F2),
+    bgElevated: Color(0xFFD0D4E2),
+    nav: Color(0xF7F6F6FC),
+    navBorder: Color(0xFFB9BDCF),
+    border: Color(0xFFC3C7D8),
+    borderGlow: Color(0xFF8F82D8),
+    divider: Color(0xFFD1D5E4),
+    t1: Color(0xFF070708),
+    t2: Color(0xFF3F4558),
+    t3: Color(0xFF6D7089),
+    tMuted: Color(0xFF989CB0),
+    cyan: Color(0xFF5D42F0),
+    cyanDim: Color(0x264539A6),
+    purple: Color(0xFF9F7CFF),
+    purpleDim: Color(0x269F7CFF),
+    mint: Color(0xFF168B8F),
+    greenDim: Color(0x22168B8F),
+    neonOrange: Color(0xFFC25E46),
+    orangeDim: Color(0x22C25E46),
+    neonRed: Color(0xFFB83C61),
+    redDim: Color(0x22B83C61),
+    primaryDark: Color(0xFF070708),
+    green: Color(0xFF168B6F),
+    blue: Color(0xFF2C315F),
+    pink: Color(0xFFB4588D),
+    teal: Color(0xFF3B7D95),
     metricGradient: LinearGradient(
-      colors: [Color(0xFFE8F7D6), Color(0xFFFFFFFF)],
+      colors: [Color(0xFF090A13), Color(0xFF31214B), Color(0xFFB9686A)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     heroGradient: LinearGradient(
-      colors: [Color(0xFFF8FBF5), Color(0xFFEAF4E6)],
+      colors: [Color(0xFFFAFAFE), Color(0xFFE4E6F1), Color(0xFFD3D6E5)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     cyanGradient: LinearGradient(
-      colors: [Color(0xFFD9F36A), Color(0xFFA9DB38)],
+      colors: [Color(0xFF8068FF), Color(0xFF5D42F0)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     successGradient: LinearGradient(
-      colors: [Color(0xFFBEE8CF), Color(0xFF73C998)],
+      colors: [Color(0xFF87E0C3), Color(0xFF168B6F)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     dangerGradient: LinearGradient(
-      colors: [Color(0xFFFFD7DC), Color(0xFFE66A74)],
+      colors: [Color(0xFFFFB0BE), Color(0xFFB83C61)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     purpleGradient: LinearGradient(
-      colors: [Color(0xFFDDE6FF), Color(0xFF86A0F2)],
+      colors: [Color(0xFFEAE7FF), Color(0xFF9F7CFF)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     glassGradient: LinearGradient(
-      colors: [Color(0xFFFFFFFF), Color(0xFFF1F7F0)],
+      colors: [Color(0xFFFFFFFF), Color(0xFFF0F1F9), Color(0xFFE2E5F0)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -278,7 +278,7 @@ class C {
 
   static List<BoxShadow> get cardShadow => [
     BoxShadow(
-      color: (_isLight ? const Color(0xFF213B28) : const Color(0xFF000000))
+      color: (_isLight ? const Color(0xFF1B1C2D) : const Color(0xFF000000))
           .withValues(alpha: _isLight ? 0.08 : 0.18),
       blurRadius: 8,
       offset: const Offset(0, 3),
@@ -287,7 +287,7 @@ class C {
 
   static List<BoxShadow> get elevationSm => [
     BoxShadow(
-      color: (_isLight ? const Color(0xFF213B28) : const Color(0xFF000000))
+      color: (_isLight ? const Color(0xFF1B1C2D) : const Color(0xFF000000))
           .withValues(alpha: _isLight ? 0.07 : 0.16),
       blurRadius: 8,
       offset: const Offset(0, 3),
@@ -314,10 +314,28 @@ class C {
   static Color get cardMuted => bgCardMuted;
   static Color get surface => bgSurface;
   static Color get line => border;
-  static Color get selected => cyan.withValues(alpha: _isLight ? 0.12 : 0.14);
-  static Color get selectedText => cyan;
-  static Color get primaryLight => cyanDim;
+  static Color get selected =>
+      _isLight ? const Color(0xFFE7E3FF) : cyan.withValues(alpha: 0.14);
+  static Color get selectedText => _isLight ? primaryDark : cyan;
+  static Color get primaryLight => _isLight ? const Color(0x265D42F0) : cyanDim;
   static Color get accentLight => purpleDim;
+
+  static Color get hudDark =>
+      _isLight ? const Color(0xFF080911) : const Color(0xFF0D131A);
+  static Color get hudDark2 =>
+      _isLight ? const Color(0xFF14101F) : const Color(0xFF121A23);
+  static Color get mars =>
+      _isLight ? const Color(0xFFC56B64) : const Color(0xFFF0B45C);
+  static Color get hudText => _isLight ? const Color(0xFFF7F4FF) : t1;
+  static Color get hudSubtext => _isLight ? const Color(0xFFD8D1F6) : t2;
+  static Color get hudMuted => _isLight ? const Color(0xFFA79ED0) : t3;
+  static Color get hudLine =>
+      _isLight ? const Color(0xFFC9BBFF).withValues(alpha: 0.28) : border;
+
+  static Color get primaryButtonBg => _isLight ? hudDark : primary;
+  static Color get primaryButtonFg => _isLight ? purple : Colors.black;
+  static Color get primaryButtonBorder =>
+      _isLight ? purple.withValues(alpha: 0.50) : primary;
 
   static const radiusXs = 6.0;
   static const radiusSm = 8.0;

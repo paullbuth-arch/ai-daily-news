@@ -13,6 +13,7 @@
 //     *_service.dart      ← 各服务层
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'theme/colors.dart';
 import 'storage.dart';
@@ -102,6 +103,19 @@ class _IpadBossAppState extends State<IpadBossApp> {
   @override
   Widget build(BuildContext context) {
     C.useLightTheme(gThemeMode == ThemeMode.light);
+    SystemChrome.setSystemUIOverlayStyle(
+      gThemeMode == ThemeMode.light
+          ? SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: C.nav,
+            systemNavigationBarIconBrightness: Brightness.dark,
+          )
+          : SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: C.bgDeep,
+            systemNavigationBarIconBrightness: Brightness.light,
+          ),
+    );
     return MaterialApp(
       title: '货脉',
       debugShowCheckedModeBanner: false,
@@ -123,7 +137,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
         secondary: C.blue,
         tertiary: C.green,
         surface: C.bgCard,
-        onPrimary: const Color(0xFF111B0F),
+        onPrimary: C.purple,
         onSurface: C.t1,
         outline: C.border,
       ),
@@ -178,23 +192,25 @@ class _IpadBossAppState extends State<IpadBossApp> {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: C.primary,
-          foregroundColor: const Color(0xFF111B0F),
+          backgroundColor: C.hudDark,
+          foregroundColor: C.purple,
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
+            side: BorderSide(color: C.purple.withValues(alpha: 0.50)),
           ),
           textStyle: TextStyle(fontWeight: FontWeight.w900),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: C.primary,
-          foregroundColor: const Color(0xFF111B0F),
+          backgroundColor: C.hudDark,
+          foregroundColor: C.purple,
           padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
+            side: BorderSide(color: C.purple.withValues(alpha: 0.50)),
           ),
           textStyle: TextStyle(fontWeight: FontWeight.w900),
         ),
@@ -202,7 +218,8 @@ class _IpadBossAppState extends State<IpadBossApp> {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: C.t1,
-          side: BorderSide(color: C.border),
+          backgroundColor: C.bgCard.withValues(alpha: 0.86),
+          side: BorderSide(color: C.purple.withValues(alpha: 0.26)),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(C.radiusMd),
           ),

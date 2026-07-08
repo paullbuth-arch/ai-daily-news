@@ -112,8 +112,8 @@ class OrderPageState extends State<OrderPage> {
                             ),
                             RoundIconButton(
                               icon: Icons.add_shopping_cart_outlined,
-                              color: Colors.black,
-                              background: C.cyan,
+                              color: C.isLight ? C.purple : Colors.black,
+                              background: C.isLight ? C.hudDark : C.cyan,
                               onTap:
                                   () => Navigator.push(
                                     context,
@@ -226,8 +226,9 @@ class _OrderSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(18),
-    radius: 26,
-    color: const Color(0xEA0A0D14),
+    radius: C.isLight ? 18 : 26,
+    color: C.isLight ? C.hudDark : const Color(0xEA0A0D14),
+    borderColor: C.isLight ? C.hudLine : null,
     child: Row(
       children: [
         Expanded(child: _SummaryItem('成交额', yuan(revenue), C.cyan)),
@@ -267,7 +268,7 @@ class _SummaryItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 11,
-            color: C.t3,
+            color: C.isLight ? C.hudMuted : C.t3,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -303,7 +304,7 @@ class _SegmentedTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(4),
-    radius: 24,
+    radius: C.isLight ? 14 : 24,
     child: Row(
       children: List.generate(tabs.length, (i) {
         final selected = i == current;
@@ -315,8 +316,11 @@ class _SegmentedTabs extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 10),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selected ? Colors.white : Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
+                color:
+                    selected
+                        ? (C.isLight ? C.hudDark : Colors.white)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(C.isLight ? 10 : 20),
               ),
               child: Text(
                 tabs[i],
@@ -325,7 +329,8 @@ class _SegmentedTabs extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
-                  color: selected ? Colors.black : C.t2,
+                  color:
+                      selected ? (C.isLight ? C.purple : Colors.black) : C.t2,
                 ),
               ),
             ),
@@ -406,6 +411,9 @@ class _OrderTimelineCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final profitColor = order.netProfit >= 0 ? C.mint : C.red;
     final pendingDays = _pendingDays(order);
+    final titleColor = C.isLight ? C.hudText : C.t1;
+    final bodyColor = C.isLight ? C.hudSubtext : C.t2;
+    final mutedColor = C.isLight ? C.hudMuted : C.t3;
     final deviceMeta =
         device == null
             ? ''
@@ -417,8 +425,9 @@ class _OrderTimelineCard extends StatelessWidget {
             ].where((value) => value.trim().isNotEmpty).join(' · ');
     return GlassPanel(
       padding: const EdgeInsets.all(14),
-      radius: 22,
-      color: const Color(0xE60C0F16),
+      radius: C.isLight ? 16 : 22,
+      color: C.isLight ? C.hudDark2 : const Color(0xE60C0F16),
+      borderColor: C.isLight ? C.hudLine : null,
       onTap: onTap,
       child: Row(
         children: [
@@ -428,8 +437,8 @@ class _OrderTimelineCard extends StatelessWidget {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: C.cyan.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
+                  color: C.cyan.withValues(alpha: C.isLight ? 0.22 : 0.16),
+                  borderRadius: BorderRadius.circular(C.isLight ? 10 : 21),
                 ),
                 child: Icon(Icons.tablet_mac_rounded, color: C.cyan, size: 21),
               ),
@@ -437,7 +446,7 @@ class _OrderTimelineCard extends StatelessWidget {
               Container(
                 width: 2,
                 height: 34,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: Colors.white.withValues(alpha: C.isLight ? 0.14 : 0.08),
               ),
             ],
           ),
@@ -454,7 +463,7 @@ class _OrderTimelineCard extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: C.t1,
+                          color: titleColor,
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                         ),
@@ -475,7 +484,7 @@ class _OrderTimelineCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: C.t3,
+                      color: mutedColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
@@ -487,7 +496,7 @@ class _OrderTimelineCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: C.t2,
+                    color: bodyColor,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
@@ -511,7 +520,7 @@ class _OrderTimelineCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: C.t3),
+          Icon(Icons.chevron_right_rounded, color: mutedColor),
         ],
       ),
     );
