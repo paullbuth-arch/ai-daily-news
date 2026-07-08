@@ -105,10 +105,10 @@ class _IpadBossAppState extends State<IpadBossApp> {
     C.useLightTheme(gThemeMode == ThemeMode.light);
     SystemChrome.setSystemUIOverlayStyle(
       gThemeMode == ThemeMode.light
-          ? SystemUiOverlayStyle.dark.copyWith(
+          ? SystemUiOverlayStyle.light.copyWith(
             statusBarColor: Colors.transparent,
             systemNavigationBarColor: C.nav,
-            systemNavigationBarIconBrightness: Brightness.dark,
+            systemNavigationBarIconBrightness: Brightness.light,
           )
           : SystemUiOverlayStyle.light.copyWith(
             statusBarColor: Colors.transparent,
@@ -129,10 +129,10 @@ class _IpadBossAppState extends State<IpadBossApp> {
   ThemeData _buildLightTheme() {
     final base = ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: C.bgDeep,
       fontFamily: null,
-      colorScheme: ColorScheme.light(
+      colorScheme: ColorScheme.dark(
         primary: C.primary,
         secondary: C.blue,
         tertiary: C.green,

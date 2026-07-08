@@ -365,21 +365,32 @@ class _LightPlanetOpsCard extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: Colors.transparent,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(20),
-      side: const BorderSide(color: Color(0xFFBEC0CE)),
+      borderRadius: BorderRadius.circular(26),
+      side: BorderSide(color: C.purple.withValues(alpha: 0.22)),
     ),
     clipBehavior: Clip.antiAlias,
     child: Ink(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFFF9F9FE), Color(0xFFE1E2EE)],
+          colors: const [
+            Color(0xFF2A2732),
+            Color(0xFF15141C),
+            Color(0xFF271820),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.all(Radius.circular(20)),
+        borderRadius: const BorderRadius.all(Radius.circular(26)),
+        boxShadow: [
+          BoxShadow(
+            color: C.purple.withValues(alpha: 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+        padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -450,14 +461,17 @@ class _PlanetViewport extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, box) {
       final compact = box.maxWidth < 410;
-      final height = compact ? 598.0 : 540.0;
-      final headlineSize = compact ? 32.0 : 40.0;
+      final height = compact ? 642.0 : 584.0;
+      final headlineSize = compact ? 36.0 : 42.0;
       return Container(
         height: height,
         decoration: BoxDecoration(
-          color: const Color(0xFF080911),
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFF05060B), width: 2),
+          color: const Color(0xFF070711),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: const Color(0xFFD8CBFF).withValues(alpha: 0.24),
+            width: 1,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
@@ -466,13 +480,13 @@ class _PlanetViewport extends StatelessWidget {
               child: CustomPaint(painter: _PlanetOpsPainter()),
             ),
             Positioned(
-              top: 12,
+              top: 13,
               left: 0,
               right: 0,
               child: Center(
                 child: Container(
-                  width: 82,
-                  height: 25,
+                  width: 88,
+                  height: 26,
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius: BorderRadius.circular(18),
@@ -481,19 +495,12 @@ class _PlanetViewport extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 18,
-              top: 22,
-              right: 18,
+              left: 20,
+              top: 25,
+              right: 20,
               child: Row(
                 children: [
-                  Text(
-                    'HUOMAI',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.86),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
+                  const _SpaceWordmark(text: 'HUOMAI'),
                   const SizedBox(width: 8),
                   _SpaceBadge(
                     icon: Icons.radar_rounded,
@@ -510,46 +517,58 @@ class _PlanetViewport extends StatelessWidget {
               ),
             ),
             Positioned(
-              left: 18,
-              top: compact ? 72 : 78,
-              right: 18,
+              left: 22,
+              top: 88,
+              right: 22,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'STOCK IN',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: headlineSize,
-                      height: 0.94,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withValues(alpha: 0.42),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                  SizedBox(
+                    width: compact ? 188 : 236,
+                    child: FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'STOCK IN',
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: headlineSize,
+                          height: 0.94,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.48),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
-                  Text(
-                    'REAL TIME',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: headlineSize,
-                      height: 0.94,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w900,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withValues(alpha: 0.42),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
+                  SizedBox(
+                    width: compact ? 188 : 236,
+                    child: FittedBox(
+                      alignment: Alignment.centerLeft,
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        'REAL TIME',
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: headlineSize,
+                          height: 0.94,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.48),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -589,16 +608,16 @@ class _PlanetViewport extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
-                    width: compact ? 178 : 196,
+                    width: compact ? 188 : 208,
                     child: _NeonCommandButton(label: '链接素材下载', onTap: onScan),
                   ),
                 ],
               ),
             ),
             Positioned(
-              left: 18,
-              right: 18,
-              bottom: 18,
+              left: 20,
+              right: 20,
+              bottom: 20,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -689,6 +708,49 @@ class _PlanetViewport extends StatelessWidget {
         ),
       );
     },
+  );
+}
+
+class _SpaceWordmark extends StatelessWidget {
+  final String text;
+
+  const _SpaceWordmark({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    final top = text.length >= 3 ? text.substring(0, 3) : text;
+    final bottom = text.length > 3 ? text.substring(3) : '';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _spaced(top),
+        if (bottom.isNotEmpty) ...[const SizedBox(height: 1), _spaced(bottom)],
+      ],
+    );
+  }
+
+  Widget _spaced(String value) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      for (var i = 0; i < value.length; i++) ...[
+        Text(
+          value[i],
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.82),
+            fontSize: 10,
+            height: 1,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        if (i != value.length - 1)
+          Container(
+            width: 10,
+            height: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            color: Colors.white.withValues(alpha: 0.22),
+          ),
+      ],
+    ],
   );
 }
 
@@ -888,9 +950,16 @@ class _MarsDataTile extends StatelessWidget {
     height: 58,
     padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
     decoration: BoxDecoration(
-      color: const Color(0xFF6E3341).withValues(alpha: 0.50),
+      gradient: LinearGradient(
+        colors: [
+          const Color(0xFF8C4050).withValues(alpha: 0.58),
+          const Color(0xFF5C2732).withValues(alpha: 0.54),
+        ],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ),
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
     ),
     child: Row(
       children: [
@@ -992,7 +1061,14 @@ class _PulseMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(11, 9, 11, 8),
     decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.22),
+      gradient: LinearGradient(
+        colors: [
+          Colors.black.withValues(alpha: 0.28),
+          const Color(0xFF2B111D).withValues(alpha: 0.48),
+        ],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
       borderRadius: BorderRadius.circular(C.radiusMd),
       border: Border.all(color: color.withValues(alpha: 0.28)),
     ),
@@ -1098,10 +1174,11 @@ class _MissionAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = emphasized ? const Color(0xFF05050A) : C.bgCardMuted;
+    final bg = emphasized ? C.hudDark : const Color(0xFF241E2A);
     final fg = emphasized ? Colors.white : C.t1;
     final subFg = emphasized ? Colors.white.withValues(alpha: 0.62) : C.t2;
-    final iconBg = emphasized ? const Color(0xFFC9BBFF) : Colors.white;
+    final iconBg =
+        emphasized ? const Color(0xFFC9BBFF) : color.withValues(alpha: 0.16);
     final iconFg = emphasized ? const Color(0xFF05050A) : color;
     return Material(
       color: bg,
@@ -1110,8 +1187,8 @@ class _MissionAction extends StatelessWidget {
         side: BorderSide(
           color:
               emphasized
-                  ? const Color(0xFF7D65FF)
-                  : color.withValues(alpha: 0.14),
+                  ? const Color(0xFFBBA7FF)
+                  : color.withValues(alpha: 0.24),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -1191,12 +1268,12 @@ class _PlanetOpsPainter extends CustomPainter {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF14151F),
-              Color(0xFF090A12),
-              Color(0xFF291119),
-              Color(0xFF09070D),
+              Color(0xFF1E1F2A),
+              Color(0xFF090911),
+              Color(0xFF4B202D),
+              Color(0xFF10070D),
             ],
-            stops: [0.0, 0.44, 0.68, 1.0],
+            stops: [0.0, 0.42, 0.64, 1.0],
           ).createShader(rect);
     canvas.drawRect(rect, bg);
 
@@ -1204,8 +1281,8 @@ class _PlanetOpsPainter extends CustomPainter {
         Paint()
           ..shader = LinearGradient(
             colors: [
-              const Color(0xFFE9E9F1).withValues(alpha: 0.10),
-              const Color(0xFF727A91).withValues(alpha: 0.20),
+              const Color(0xFFF0F0F8).withValues(alpha: 0.16),
+              const Color(0xFF767D94).withValues(alpha: 0.24),
               Colors.transparent,
             ],
           ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.55));
@@ -1214,7 +1291,7 @@ class _PlanetOpsPainter extends CustomPainter {
       topWash,
     );
 
-    final starPaint = Paint()..color = Colors.white.withValues(alpha: 0.46);
+    final starPaint = Paint()..color = Colors.white.withValues(alpha: 0.50);
     for (var i = 0; i < 72; i++) {
       final x = ((i * 47) % 100) / 100 * size.width;
       final y = ((i * 31 + 17) % 100) / 100 * size.height;
@@ -1228,8 +1305,8 @@ class _PlanetOpsPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
           ..color = Colors.white.withValues(alpha: 0.08);
-    final guideCenter = Offset(size.width * 0.62, size.height * 0.16);
-    for (final radius in [140.0, 205.0, 278.0]) {
+    final guideCenter = Offset(size.width * 0.58, size.height * 0.18);
+    for (final radius in [170.0, 252.0, 340.0]) {
       canvas.drawArc(
         Rect.fromCircle(center: guideCenter, radius: radius),
         math.pi * 0.72,
@@ -1239,7 +1316,7 @@ class _PlanetOpsPainter extends CustomPainter {
       );
     }
 
-    final marsTop = size.height * 0.56;
+    final marsTop = size.height * 0.50;
     final marsRect = Rect.fromLTWH(
       0,
       marsTop,
@@ -1253,7 +1330,7 @@ class _PlanetOpsPainter extends CustomPainter {
             end: Alignment.bottomCenter,
             colors: [
               const Color(0xFFB75862).withValues(alpha: 0.82),
-              const Color(0xFF622631).withValues(alpha: 0.74),
+              const Color(0xFF7C2D3B).withValues(alpha: 0.80),
               const Color(0xFF160A11).withValues(alpha: 0.95),
             ],
           ).createShader(marsRect);
@@ -1263,18 +1340,18 @@ class _PlanetOpsPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFFA0AA).withValues(alpha: 0.34),
+              const Color(0xFFFFA0AA).withValues(alpha: 0.42),
               Colors.transparent,
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.70, marsTop + 24),
-              radius: size.width * 0.30,
+              center: Offset(size.width * 0.68, marsTop + 28),
+              radius: size.width * 0.38,
             ),
           );
     canvas.drawCircle(
-      Offset(size.width * 0.70, marsTop + 24),
-      size.width * 0.30,
+      Offset(size.width * 0.68, marsTop + 28),
+      size.width * 0.38,
       planetGlow,
     );
 
@@ -1282,8 +1359,8 @@ class _PlanetOpsPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.14);
-    for (var i = 0; i < 9; i++) {
+          ..color = Colors.white.withValues(alpha: 0.16);
+    for (var i = 0; i < 10; i++) {
       final y = marsTop + 34 + i * 14;
       final path =
           Path()
@@ -1312,10 +1389,10 @@ class _PlanetOpsPainter extends CustomPainter {
           ..color = Colors.white.withValues(alpha: 0.10)
           ..strokeWidth = 1;
     final chart = Rect.fromLTWH(
-      size.width * 0.46,
-      marsTop + 76,
-      size.width * 0.44,
-      54,
+      size.width * 0.38,
+      marsTop + 78,
+      size.width * 0.52,
+      62,
     );
     for (var i = 0; i <= 4; i++) {
       final x = chart.left + chart.width * i / 4;
@@ -1327,14 +1404,14 @@ class _PlanetOpsPainter extends CustomPainter {
     }
     final chartGlow =
         Paint()
-          ..color = const Color(0xFFCDBDFF).withValues(alpha: 0.24)
-          ..strokeWidth = 5
+          ..color = const Color(0xFFD7CAFF).withValues(alpha: 0.30)
+          ..strokeWidth = 6
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke;
     final chartLine =
         Paint()
-          ..color = const Color(0xFFE7DFFF)
-          ..strokeWidth = 1.8
+          ..color = const Color(0xFFF0EAFF)
+          ..strokeWidth = 2.0
           ..strokeCap = StrokeCap.round
           ..style = PaintingStyle.stroke;
     final line =
@@ -1371,18 +1448,18 @@ class _PlanetOpsPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFF8F63FF).withValues(alpha: 0.40),
+              const Color(0xFF8F63FF).withValues(alpha: 0.48),
               Colors.transparent,
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.72, size.height * 0.28),
-              radius: 170,
+              center: Offset(size.width * 0.70, size.height * 0.28),
+              radius: 220,
             ),
           );
     canvas.drawCircle(
-      Offset(size.width * 0.72, size.height * 0.28),
-      170,
+      Offset(size.width * 0.70, size.height * 0.28),
+      220,
       purpleGlow,
     );
 
@@ -1391,13 +1468,17 @@ class _PlanetOpsPainter extends CustomPainter {
   }
 
   void _drawHelmet(Canvas canvas, Size size, bool compact) {
-    final cx = size.width * (compact ? 0.77 : 0.73);
-    final cy = size.height * (compact ? 0.25 : 0.24);
-    final radius = math.min(size.width, size.height) * (compact ? 0.23 : 0.22);
+    final cx = size.width * (compact ? 0.80 : 0.76);
+    final cy = size.height * (compact ? 0.30 : 0.29);
+    final radius = math.min(size.width, size.height) * (compact ? 0.34 : 0.32);
     final outerRect = Rect.fromCenter(
       center: Offset(cx, cy),
-      width: radius * 1.95,
-      height: radius * 2.15,
+      width: radius * 2.55,
+      height: radius * 2.45,
+    );
+    canvas.drawOval(
+      outerRect.shift(Offset(radius * 0.14, radius * 0.14)),
+      Paint()..color = Colors.black.withValues(alpha: 0.26),
     );
     final helmet =
         Paint()
@@ -1405,39 +1486,47 @@ class _PlanetOpsPainter extends CustomPainter {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFF4F5FA),
-              Color(0xFFAEB6C7),
-              Color(0xFF5E6677),
-              Color(0xFF202433),
+              Color(0xFFF2F3F8),
+              Color(0xFFC6CCD9),
+              Color(0xFF71798C),
+              Color(0xFF232938),
             ],
-            stops: [0.0, 0.36, 0.68, 1.0],
+            stops: [0.0, 0.34, 0.66, 1.0],
           ).createShader(outerRect);
     final helmetPath =
         Path()
-          ..moveTo(cx - radius * 0.80, cy - radius * 0.92)
+          ..moveTo(cx - radius * 1.02, cy - radius * 0.86)
           ..cubicTo(
+            cx - radius * 0.66,
+            cy - radius * 1.22,
+            cx + radius * 0.38,
+            cy - radius * 1.10,
+            cx + radius * 0.92,
+            cy - radius * 0.62,
+          )
+          ..cubicTo(
+            cx + radius * 1.32,
+            cy - radius * 0.26,
+            cx + radius * 1.22,
+            cy + radius * 0.58,
+            cx + radius * 0.76,
+            cy + radius * 0.92,
+          )
+          ..cubicTo(
+            cx + radius * 0.30,
+            cy + radius * 1.28,
+            cx - radius * 0.64,
+            cy + radius * 1.12,
+            cx - radius * 0.98,
+            cy + radius * 0.56,
+          )
+          ..cubicTo(
+            cx - radius * 1.28,
+            cy + radius * 0.02,
             cx - radius * 1.26,
-            cy - radius * 0.40,
-            cx - radius * 1.06,
-            cy + radius * 0.70,
-            cx - radius * 0.36,
-            cy + radius * 1.04,
-          )
-          ..cubicTo(
-            cx + radius * 0.32,
-            cy + radius * 1.34,
-            cx + radius * 1.02,
-            cy + radius * 0.66,
-            cx + radius * 1.04,
-            cy - radius * 0.08,
-          )
-          ..cubicTo(
-            cx + radius * 1.02,
-            cy - radius * 0.78,
-            cx + radius * 0.26,
-            cy - radius * 1.18,
-            cx - radius * 0.80,
-            cy - radius * 0.92,
+            cy - radius * 0.48,
+            cx - radius * 1.02,
+            cy - radius * 0.86,
           )
           ..close();
     canvas.drawPath(helmetPath, helmet);
@@ -1445,35 +1534,112 @@ class _PlanetOpsPainter extends CustomPainter {
     final shellStroke =
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.3
-          ..color = Colors.white.withValues(alpha: 0.38);
+          ..strokeWidth = 1.5
+          ..color = Colors.white.withValues(alpha: 0.42);
     canvas.drawPath(helmetPath, shellStroke);
 
-    canvas.save();
-    canvas.translate(cx - radius * 0.37, cy - radius * 0.18);
-    canvas.rotate(-0.20);
-    final visorRect = Rect.fromCenter(
-      center: Offset.zero,
-      width: radius * 0.95,
-      height: radius * 1.08,
+    final jawPath =
+        Path()
+          ..moveTo(cx - radius * 0.92, cy + radius * 0.40)
+          ..lineTo(cx - radius * 0.46, cy + radius * 0.93)
+          ..lineTo(cx - radius * 0.16, cy + radius * 1.18)
+          ..lineTo(cx - radius * 0.62, cy + radius * 1.04)
+          ..cubicTo(
+            cx - radius * 0.94,
+            cy + radius * 0.92,
+            cx - radius * 1.10,
+            cy + radius * 0.70,
+            cx - radius * 0.92,
+            cy + radius * 0.40,
+          )
+          ..close();
+    canvas.drawPath(
+      jawPath,
+      Paint()..color = const Color(0xFFB9C0CF).withValues(alpha: 0.76),
+    );
+    canvas.drawPath(
+      jawPath,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.1
+        ..color = Colors.black.withValues(alpha: 0.25),
+    );
+
+    final visorPath =
+        Path()
+          ..moveTo(cx - radius * 0.92, cy - radius * 0.28)
+          ..cubicTo(
+            cx - radius * 0.80,
+            cy - radius * 0.72,
+            cx - radius * 0.28,
+            cy - radius * 0.70,
+            cx + radius * 0.02,
+            cy - radius * 0.34,
+          )
+          ..cubicTo(
+            cx + radius * 0.32,
+            cy + radius * 0.05,
+            cx + radius * 0.08,
+            cy + radius * 0.55,
+            cx - radius * 0.40,
+            cy + radius * 0.62,
+          )
+          ..cubicTo(
+            cx - radius * 0.82,
+            cy + radius * 0.62,
+            cx - radius * 1.02,
+            cy + radius * 0.18,
+            cx - radius * 0.92,
+            cy - radius * 0.28,
+          )
+          ..close();
+    final visorBounds = Rect.fromCircle(
+      center: Offset(cx - radius * 0.46, cy - radius * 0.04),
+      radius: radius * 0.72,
     );
     final visor =
         Paint()
-          ..shader = const LinearGradient(
+          ..shader = LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF070912), Color(0xFF442E86), Color(0xFF151025)],
-          ).createShader(visorRect);
-    canvas.drawOval(visorRect, visor);
+            colors: const [
+              Color(0xFF080812),
+              Color(0xFF312064),
+              Color(0xFF7F61FF),
+              Color(0xFF110B22),
+            ],
+            stops: const [0.0, 0.42, 0.66, 1.0],
+          ).createShader(visorBounds);
+    canvas.drawPath(visorPath, visor);
     final visorLine =
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFCABEFF).withValues(alpha: 0.55);
-    canvas.drawOval(visorRect.deflate(5), visorLine);
-    canvas.restore();
+          ..strokeWidth = 1.5
+          ..color = const Color(0xFFD9CEFF).withValues(alpha: 0.62);
+    canvas.drawPath(visorPath, visorLine);
+    for (var i = 0; i < 4; i++) {
+      final y = cy - radius * 0.34 + i * radius * 0.20;
+      final path =
+          Path()
+            ..moveTo(cx - radius * 0.76, y)
+            ..cubicTo(
+              cx - radius * 0.45,
+              y - radius * 0.12,
+              cx - radius * 0.20,
+              y + radius * 0.02,
+              cx + radius * 0.02,
+              y + radius * 0.10,
+            );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4
+          ..color = const Color(0xFFB69DFF).withValues(alpha: 0.28),
+      );
+    }
 
-    final lensCenter = Offset(cx + radius * 0.34, cy + radius * 0.03);
+    final lensCenter = Offset(cx + radius * 0.38, cy + radius * 0.03);
     final lensBase =
         Paint()
           ..shader = const RadialGradient(
@@ -1481,16 +1647,16 @@ class _PlanetOpsPainter extends CustomPainter {
           ).createShader(
             Rect.fromCircle(center: lensCenter, radius: radius * 0.30),
           );
-    canvas.drawCircle(lensCenter, radius * 0.30, lensBase);
-    for (final scale in [0.22, 0.14, 0.07]) {
+    canvas.drawCircle(lensCenter, radius * 0.33, lensBase);
+    for (final scale in [0.26, 0.18, 0.10, 0.055]) {
       canvas.drawCircle(
         lensCenter,
         radius * scale,
         Paint()
           ..style = scale == 0.07 ? PaintingStyle.fill : PaintingStyle.stroke
-          ..strokeWidth = 2
+          ..strokeWidth = scale == 0.055 ? 1 : 2
           ..color =
-              scale == 0.07
+              scale == 0.055
                   ? const Color(0xFF05060B)
                   : Colors.black.withValues(alpha: 0.42),
       );
@@ -1500,26 +1666,26 @@ class _PlanetOpsPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
-          ..strokeWidth = 6
-          ..color = const Color(0xFF8E68FF).withValues(alpha: 0.22);
+          ..strokeWidth = 8
+          ..color = const Color(0xFF8E68FF).withValues(alpha: 0.26);
     final cable =
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round
-          ..strokeWidth = 2.8
-          ..color = const Color(0xFF9C76FF);
-    for (var i = 0; i < 3; i++) {
-      final offset = i * radius * 0.12;
+          ..strokeWidth = 3.3
+          ..color = const Color(0xFFA47CFF);
+    for (var i = 0; i < 4; i++) {
+      final offset = i * radius * 0.11;
       final path =
           Path()
-            ..moveTo(cx + radius * 0.14, cy + radius * (0.42 + i * 0.12))
+            ..moveTo(cx + radius * 0.10, cy + radius * (0.54 + i * 0.12))
             ..cubicTo(
-              cx + radius * 0.58,
-              cy + radius * 0.55 + offset,
-              cx + radius * 0.90,
-              cy + radius * 0.88 + offset,
-              cx + radius * 1.18,
-              cy + radius * (1.02 + i * 0.07),
+              cx + radius * 0.50,
+              cy + radius * 0.66 + offset,
+              cx + radius * 0.88,
+              cy + radius * 0.98 + offset,
+              cx + radius * 1.26,
+              cy + radius * (1.13 + i * 0.06),
             );
       canvas.drawPath(path, cableGlow);
       canvas.drawPath(path, cable);
@@ -1528,13 +1694,13 @@ class _PlanetOpsPainter extends CustomPainter {
     final panel =
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.1
-          ..color = Colors.black.withValues(alpha: 0.34);
+          ..strokeWidth = 1.3
+          ..color = Colors.black.withValues(alpha: 0.36);
     canvas.drawArc(
       Rect.fromCenter(
-        center: Offset(cx - radius * 0.10, cy + radius * 0.02),
-        width: radius * 1.58,
-        height: radius * 1.75,
+        center: Offset(cx - radius * 0.06, cy + radius * 0.02),
+        width: radius * 1.78,
+        height: radius * 1.92,
       ),
       -math.pi * 0.55,
       math.pi * 0.82,
@@ -1546,15 +1712,16 @@ class _PlanetOpsPainter extends CustomPainter {
           ..color = const Color(0xFF10131E)
           ..style = PaintingStyle.fill;
     for (final p in [
-      Offset(cx - radius * 0.70, cy - radius * 0.42),
-      Offset(cx + radius * 0.76, cy - radius * 0.18),
-      Offset(cx + radius * 0.22, cy + radius * 0.66),
-      Offset(cx - radius * 0.28, cy + radius * 0.78),
+      Offset(cx - radius * 0.82, cy - radius * 0.48),
+      Offset(cx + radius * 0.82, cy - radius * 0.18),
+      Offset(cx + radius * 0.18, cy + radius * 0.74),
+      Offset(cx - radius * 0.42, cy + radius * 0.84),
+      Offset(cx + radius * 0.56, cy + radius * 0.54),
     ]) {
-      canvas.drawCircle(p, 3.0, bolt);
+      canvas.drawCircle(p, radius * 0.026, bolt);
       canvas.drawCircle(
         p,
-        5.2,
+        radius * 0.045,
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1

@@ -11,9 +11,9 @@ class AppBackdrop extends StatelessWidget {
         colors:
             C.isLight
                 ? [
-                  const Color(0xFFD4D7E4),
-                  const Color(0xFFEDEDF4),
-                  const Color(0xFFD7DAE7),
+                  const Color(0xFF1F1D26),
+                  const Color(0xFF15141C),
+                  const Color(0xFF211A25),
                 ]
                 : [const Color(0xFF081018), C.bgDeep, const Color(0xFF05070A)],
         begin: Alignment.topLeft,
@@ -36,11 +36,11 @@ class _OpsBackdropPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final gridPaint =
         Paint()
-          ..color = (isLight ? const Color(0xFF60627A) : C.primary).withValues(
-            alpha: isLight ? 0.030 : 0.035,
+          ..color = (isLight ? const Color(0xFFB7AFFF) : C.primary).withValues(
+            alpha: isLight ? 0.060 : 0.035,
           )
           ..strokeWidth = 1;
-    final gap = isLight ? 54.0 : 28.0;
+    final gap = isLight ? 92.0 : 28.0;
     for (double x = 0; x <= size.width; x += gap) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
@@ -69,11 +69,11 @@ class _OpsBackdropPainter extends CustomPainter {
     if (isLight) {
       final orbit =
           Paint()
-            ..color = const Color(0xFF5D42F0).withValues(alpha: 0.055)
+            ..color = const Color(0xFFC7B7FF).withValues(alpha: 0.13)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1;
-      final center = Offset(size.width * 0.66, size.height * 0.18);
-      for (final scale in const [0.72, 1.0, 1.32]) {
+      final center = Offset(size.width * 0.58, size.height * 0.30);
+      for (final scale in const [1.10, 1.58, 2.08, 2.62]) {
         final rect = Rect.fromCenter(
           center: center,
           width: size.shortestSide * scale,
@@ -90,13 +90,13 @@ class _OpsBackdropPainter extends CustomPainter {
           Paint()
             ..shader = RadialGradient(
               colors: [
-                const Color(0xFFC56B64).withValues(alpha: 0.18),
+                const Color(0xFFFF8B7C).withValues(alpha: 0.28),
                 Colors.transparent,
               ],
             ).createShader(
               Rect.fromCircle(
-                center: Offset(size.width * 0.94, size.height * 0.10),
-                radius: size.width * 0.58,
+                center: Offset(size.width * 0.88, size.height * 0.22),
+                radius: size.width * 0.64,
               ),
             );
       canvas.drawRect(Offset.zero & size, redWash);
@@ -104,16 +104,31 @@ class _OpsBackdropPainter extends CustomPainter {
           Paint()
             ..shader = RadialGradient(
               colors: [
-                const Color(0xFF8F82D8).withValues(alpha: 0.16),
+                const Color(0xFF9F7DFF).withValues(alpha: 0.24),
                 Colors.transparent,
               ],
             ).createShader(
               Rect.fromCircle(
-                center: Offset(size.width * 0.06, size.height * 0.04),
-                radius: size.width * 0.56,
+                center: Offset(size.width * 0.06, size.height * 0.05),
+                radius: size.width * 0.62,
               ),
             );
       canvas.drawRect(Offset.zero & size, violetWash);
+
+      final cross =
+          Paint()
+            ..color = Colors.white.withValues(alpha: 0.08)
+            ..strokeWidth = 1;
+      canvas.drawLine(
+        Offset(size.width * 0.08, 0),
+        Offset(size.width * 0.08, size.height),
+        cross,
+      );
+      canvas.drawLine(
+        Offset(0, size.height * 0.34),
+        Offset(size.width, size.height * 0.34),
+        cross,
+      );
     }
 
     final shade =
@@ -122,7 +137,7 @@ class _OpsBackdropPainter extends CustomPainter {
             colors: [
               Colors.transparent,
               isLight
-                  ? Colors.white.withValues(alpha: 0.20)
+                  ? Colors.black.withValues(alpha: 0.42)
                   : Colors.black.withValues(alpha: 0.42),
             ],
             begin: Alignment.topCenter,
@@ -174,7 +189,7 @@ class GlassPanel extends StatelessWidget {
         gradient ??
         (C.isLight && resolvedColor == null
             ? const LinearGradient(
-              colors: [Color(0xFFFEFEFF), Color(0xFFF0F1F8)],
+              colors: [Color(0xFF30293A), Color(0xFF1F1C28), Color(0xFF4A242E)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             )
@@ -226,12 +241,12 @@ class _LightPanelPainter extends CustomPainter {
     if (size.width < 28 || size.height < 28) return;
     final line =
         Paint()
-          ..color = color.withValues(alpha: 0.55)
+          ..color = color.withValues(alpha: 0.52)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
     final accent =
         Paint()
-          ..color = C.purple.withValues(alpha: 0.20)
+          ..color = C.purple.withValues(alpha: 0.34)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
     const inset = 7.0;

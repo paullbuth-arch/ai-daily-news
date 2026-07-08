@@ -217,19 +217,19 @@ class _BottomNavButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedFg = C.isLight ? C.hudDark : C.primary;
+    final selectedFg = C.isLight ? C.purple : C.primary;
     final selectedBg =
         C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
     final primaryBg =
         C.isLight
             ? active
-                ? const Color(0xFF090B0A)
+                ? C.hudDark
                 : Colors.transparent
             : C.primary;
     final primaryFg =
         C.isLight
             ? active
-                ? C.selected
+                ? C.purple
                 : C.t3
             : Colors.black;
     final fg = active ? selectedFg : C.t3;
@@ -306,19 +306,19 @@ class _RailButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedFg = C.isLight ? C.hudDark : C.primary;
+    final selectedFg = C.isLight ? C.purple : C.primary;
     final selectedBg =
         C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
     final primaryBg =
         C.isLight
             ? active
-                ? const Color(0xFF090B0A)
+                ? C.hudDark
                 : Colors.transparent
             : C.primary;
     final primaryFg =
         C.isLight
             ? active
-                ? C.selected
+                ? C.purple
                 : C.t3
             : Colors.black;
     final fg = active ? selectedFg : C.t3;

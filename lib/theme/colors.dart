@@ -157,47 +157,47 @@ class C {
   );
 
   static const _light = _AppPalette(
-    bgDeep: Color(0xFFD8DBE7),
-    bgCard: Color(0xFFFAFAFE),
-    bgCardMuted: Color(0xFFECEEF7),
-    bgSurface: Color(0xFFE5E7F2),
-    bgElevated: Color(0xFFD0D4E2),
-    nav: Color(0xF7F6F6FC),
-    navBorder: Color(0xFFB9BDCF),
-    border: Color(0xFFC3C7D8),
-    borderGlow: Color(0xFF8F82D8),
-    divider: Color(0xFFD1D5E4),
-    t1: Color(0xFF070708),
-    t2: Color(0xFF3F4558),
-    t3: Color(0xFF6D7089),
-    tMuted: Color(0xFF989CB0),
-    cyan: Color(0xFF5D42F0),
-    cyanDim: Color(0x264539A6),
-    purple: Color(0xFF9F7CFF),
-    purpleDim: Color(0x269F7CFF),
-    mint: Color(0xFF168B8F),
-    greenDim: Color(0x22168B8F),
-    neonOrange: Color(0xFFC25E46),
-    orangeDim: Color(0x22C25E46),
-    neonRed: Color(0xFFB83C61),
-    redDim: Color(0x22B83C61),
-    primaryDark: Color(0xFF070708),
-    green: Color(0xFF168B6F),
-    blue: Color(0xFF2C315F),
-    pink: Color(0xFFB4588D),
-    teal: Color(0xFF3B7D95),
+    bgDeep: Color(0xFF191820),
+    bgCard: Color(0xFF211E29),
+    bgCardMuted: Color(0xFF2B2431),
+    bgSurface: Color(0xFF352A37),
+    bgElevated: Color(0xFF4B3643),
+    nav: Color(0xF014131A),
+    navBorder: Color(0xFF3D3447),
+    border: Color(0xFF594B63),
+    borderGlow: Color(0xFFD8CBFF),
+    divider: Color(0xFF3A3140),
+    t1: Color(0xFFF8F4FF),
+    t2: Color(0xFFDCD3EA),
+    t3: Color(0xFFAEA3BC),
+    tMuted: Color(0xFF817589),
+    cyan: Color(0xFFB596FF),
+    cyanDim: Color(0x36B596FF),
+    purple: Color(0xFFE0D2FF),
+    purpleDim: Color(0x36E0D2FF),
+    mint: Color(0xFF78E2C2),
+    greenDim: Color(0x2678E2C2),
+    neonOrange: Color(0xFFFF9A84),
+    orangeDim: Color(0x35FF9A84),
+    neonRed: Color(0xFFFF7C9B),
+    redDim: Color(0x38FF7C9B),
+    primaryDark: Color(0xFF0A0911),
+    green: Color(0xFF78E2C2),
+    blue: Color(0xFFAAB8FF),
+    pink: Color(0xFFFF9ACF),
+    teal: Color(0xFF75D0E6),
     metricGradient: LinearGradient(
-      colors: [Color(0xFF090A13), Color(0xFF31214B), Color(0xFFB9686A)],
+      colors: [Color(0xFF090913), Color(0xFF3F2B63), Color(0xFFC76A70)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     heroGradient: LinearGradient(
-      colors: [Color(0xFFFAFAFE), Color(0xFFE4E6F1), Color(0xFFD3D6E5)],
+      colors: [Color(0xFFEEEFF7), Color(0xFF9AA3B6), Color(0xFF171722)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     cyanGradient: LinearGradient(
-      colors: [Color(0xFF8068FF), Color(0xFF5D42F0)],
+      colors: [Color(0xFF9E78FF), Color(0xFF5A3DE8)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -207,17 +207,17 @@ class C {
       end: Alignment.bottomRight,
     ),
     dangerGradient: LinearGradient(
-      colors: [Color(0xFFFFB0BE), Color(0xFFB83C61)],
+      colors: [Color(0xFFFFA7B8), Color(0xFFC24666)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     purpleGradient: LinearGradient(
-      colors: [Color(0xFFEAE7FF), Color(0xFF9F7CFF)],
+      colors: [Color(0xFF332744), Color(0xFFC4A9FF)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     glassGradient: LinearGradient(
-      colors: [Color(0xFFFFFFFF), Color(0xFFF0F1F9), Color(0xFFE2E5F0)],
+      colors: [Color(0xFF312A39), Color(0xFF1D1A26), Color(0xFF4A242E)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -315,27 +315,27 @@ class C {
   static Color get surface => bgSurface;
   static Color get line => border;
   static Color get selected =>
-      _isLight ? const Color(0xFFE7E3FF) : cyan.withValues(alpha: 0.14);
-  static Color get selectedText => _isLight ? primaryDark : cyan;
-  static Color get primaryLight => _isLight ? const Color(0x265D42F0) : cyanDim;
+      _isLight ? const Color(0xFF342A49) : cyan.withValues(alpha: 0.14);
+  static Color get selectedText => _isLight ? purple : cyan;
+  static Color get primaryLight => _isLight ? const Color(0x337F5BFF) : cyanDim;
   static Color get accentLight => purpleDim;
 
   static Color get hudDark =>
-      _isLight ? const Color(0xFF080911) : const Color(0xFF0D131A);
+      _isLight ? const Color(0xFF090811) : const Color(0xFF0D131A);
   static Color get hudDark2 =>
-      _isLight ? const Color(0xFF14101F) : const Color(0xFF121A23);
+      _isLight ? const Color(0xFF171521) : const Color(0xFF121A23);
   static Color get mars =>
-      _isLight ? const Color(0xFFC56B64) : const Color(0xFFF0B45C);
+      _isLight ? const Color(0xFFFF8A7D) : const Color(0xFFF0B45C);
   static Color get hudText => _isLight ? const Color(0xFFF7F4FF) : t1;
   static Color get hudSubtext => _isLight ? const Color(0xFFD8D1F6) : t2;
   static Color get hudMuted => _isLight ? const Color(0xFFA79ED0) : t3;
   static Color get hudLine =>
-      _isLight ? const Color(0xFFC9BBFF).withValues(alpha: 0.28) : border;
+      _isLight ? const Color(0xFFD8CBFF).withValues(alpha: 0.34) : border;
 
   static Color get primaryButtonBg => _isLight ? hudDark : primary;
   static Color get primaryButtonFg => _isLight ? purple : Colors.black;
   static Color get primaryButtonBorder =>
-      _isLight ? purple.withValues(alpha: 0.50) : primary;
+      _isLight ? purple.withValues(alpha: 0.58) : primary;
 
   static const radiusXs = 6.0;
   static const radiusSm = 8.0;
