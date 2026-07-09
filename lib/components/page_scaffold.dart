@@ -10,9 +10,9 @@ class AppBackdrop extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            C.isLight ? const Color(0xFF292337) : const Color(0xFF071018),
-            C.isLight ? const Color(0xFF0B0A11) : C.bgDeep,
-            C.isLight ? const Color(0xFF201018) : const Color(0xFF05070A),
+            C.isLight ? const Color(0xFF242631) : const Color(0xFF071018),
+            C.isLight ? const Color(0xFF11131C) : C.bgDeep,
+            C.isLight ? const Color(0xFF181A25) : const Color(0xFF05070A),
             C.isLight ? const Color(0xFF07060B) : const Color(0xFF020406),
           ],
           stops: const [0, 0.42, 0.78, 1],
@@ -40,8 +40,8 @@ class _OpsBackdropPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFF9F7DFF).withValues(alpha: isLight ? 0.20 : 0.10),
-              const Color(0xFF4D357E).withValues(alpha: isLight ? 0.08 : 0.04),
+              const Color(0xFFA98DFF).withValues(alpha: isLight ? 0.22 : 0.10),
+              const Color(0xFF4C3D82).withValues(alpha: isLight ? 0.09 : 0.04),
               Colors.transparent,
             ],
           ).createShader(
@@ -52,22 +52,22 @@ class _OpsBackdropPainter extends CustomPainter {
           );
     canvas.drawRect(base, violetWash);
 
-    final marsWash =
+    final silverWash =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFF7D6C).withValues(alpha: isLight ? 0.22 : 0.10),
-              const Color(0xFFAB4A57).withValues(alpha: isLight ? 0.16 : 0.07),
-              const Color(0xFF4E1924).withValues(alpha: isLight ? 0.14 : 0.05),
+              const Color(0xFFE8EAF4).withValues(alpha: isLight ? 0.18 : 0.08),
+              const Color(0xFF8D94AF).withValues(alpha: isLight ? 0.11 : 0.05),
+              const Color(0xFF2B3041).withValues(alpha: isLight ? 0.12 : 0.04),
               Colors.transparent,
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.98, size.height * 0.26),
+              center: Offset(size.width * 0.86, size.height * 0.18),
               radius: size.shortestSide * 1.05,
             ),
           );
-    canvas.drawRect(base, marsWash);
+    canvas.drawRect(base, silverWash);
 
     final gridPaint =
         Paint()
@@ -186,8 +186,8 @@ class _OpsBackdropPainter extends CustomPainter {
           ..shader = LinearGradient(
             colors: [
               Colors.transparent,
-              const Color(0xFF7C2E38).withValues(alpha: isLight ? 0.20 : 0.06),
-              const Color(0xFF210A12).withValues(alpha: 0.34),
+              const Color(0xFF4B526A).withValues(alpha: isLight ? 0.16 : 0.06),
+              const Color(0xFF11131C).withValues(alpha: 0.36),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
@@ -207,7 +207,7 @@ class _OpsBackdropPainter extends CustomPainter {
     final contour =
         Paint()
           ..color = const Color(
-            0xFFFFB0B6,
+            0xFFDDE2F2,
           ).withValues(alpha: isLight ? 0.07 : 0.03)
           ..strokeWidth = 1
           ..style = PaintingStyle.stroke;
@@ -328,10 +328,10 @@ class GlassPanel extends StatelessWidget {
         (C.isLight && resolvedColor == null
             ? const LinearGradient(
               colors: [
-                Color(0xFF30283B),
-                Color(0xFF14121B),
-                Color(0xFF2B1520),
-                Color(0xFF5F2932),
+                Color(0xFF282C3A),
+                Color(0xFF151821),
+                Color(0xFF202332),
+                Color(0xFF37354D),
               ],
               stops: [0, 0.43, 0.76, 1],
               begin: Alignment.topLeft,
@@ -358,7 +358,7 @@ class GlassPanel extends StatelessWidget {
                   child: CustomPaint(
                     painter: _LightPanelPainter(
                       color: borderColor ?? C.border,
-                      accent: C.mars,
+                      accent: C.cyan,
                     ),
                   ),
                 ),
@@ -393,7 +393,7 @@ class _LightPanelPainter extends CustomPainter {
             colors: [
               Colors.transparent,
               accent.withValues(alpha: 0.11),
-              const Color(0xFF120810).withValues(alpha: 0.26),
+              const Color(0xFF070810).withValues(alpha: 0.26),
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,

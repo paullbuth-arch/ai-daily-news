@@ -202,9 +202,9 @@ class _BottomDock extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       colors: [
-                        Color(0xF71E1727),
-                        Color(0xFB090811),
-                        Color(0xF734151D),
+                        Color(0xF7242836),
+                        Color(0xFB090A11),
+                        Color(0xF733384C),
                       ],
                       stops: [0, 0.52, 1],
                       begin: Alignment.topLeft,
@@ -259,7 +259,7 @@ class _DockPainter extends CustomPainter {
             colors: [
               Color(0x00FFFFFF),
               Color(0x99F4EDFF),
-              Color(0x66FF907C),
+              Color(0x889A7AFF),
               Color(0x00FFFFFF),
             ],
           ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
@@ -323,6 +323,7 @@ class _BottomNavButton extends StatelessWidget {
     final selectedBg =
         C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
     final primaryFg = active ? C.purple : C.t2;
+    final primaryAccent = C.isLight ? C.cyan : C.primary;
     final fg = active ? selectedFg : C.t3;
     return Material(
       color: Colors.transparent,
@@ -342,8 +343,8 @@ class _BottomNavButton extends StatelessWidget {
                       ? LinearGradient(
                         colors: [
                           const Color(0xFF0A0911),
-                          (active ? C.purple : C.mars).withValues(alpha: 0.24),
-                          const Color(0xFF201018),
+                          primaryAccent.withValues(alpha: active ? 0.30 : 0.18),
+                          const Color(0xFF202332),
                         ],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
@@ -359,7 +360,7 @@ class _BottomNavButton extends StatelessWidget {
               border: Border.all(
                 color:
                     primary
-                        ? (active ? C.purple : C.mars).withValues(alpha: 0.42)
+                        ? primaryAccent.withValues(alpha: active ? 0.50 : 0.34)
                         : active
                         ? C.purple.withValues(alpha: 0.38)
                         : Colors.white.withValues(alpha: 0.08),
@@ -368,9 +369,8 @@ class _BottomNavButton extends StatelessWidget {
                   active || primary
                       ? [
                         BoxShadow(
-                          color: (primary ? C.mars : selectedFg).withValues(
-                            alpha: active ? 0.20 : 0.10,
-                          ),
+                          color: (primary ? primaryAccent : selectedFg)
+                              .withValues(alpha: active ? 0.20 : 0.10),
                           blurRadius: 10,
                           offset: Offset.zero,
                         ),
@@ -382,7 +382,7 @@ class _BottomNavButton extends StatelessWidget {
               children: [
                 CustomPaint(
                   painter: _DockCellPainter(
-                    color: primary ? (active ? C.purple : C.mars) : fg,
+                    color: primary ? primaryAccent : fg,
                     active: active || primary,
                   ),
                   child: SizedBox(

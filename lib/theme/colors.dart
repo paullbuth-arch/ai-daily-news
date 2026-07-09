@@ -157,47 +157,47 @@ class C {
   );
 
   static const _light = _AppPalette(
-    bgDeep: Color(0xFF111018),
-    bgCard: Color(0xFF1A1723),
-    bgCardMuted: Color(0xFF251F2D),
-    bgSurface: Color(0xFF31283A),
-    bgElevated: Color(0xFF472E3E),
-    nav: Color(0xF20A0910),
-    navBorder: Color(0xFF3A3146),
-    border: Color(0xFF62576E),
-    borderGlow: Color(0xFFE7DAFF),
-    divider: Color(0xFF382F40),
-    t1: Color(0xFFFAF7FF),
-    t2: Color(0xFFE5DDF3),
-    t3: Color(0xFFB9AEC8),
-    tMuted: Color(0xFF877B93),
-    cyan: Color(0xFFB79AFF),
-    cyanDim: Color(0x38B79AFF),
-    purple: Color(0xFFF4EDFF),
-    purpleDim: Color(0x38F4EDFF),
-    mint: Color(0xFF74E7C5),
-    greenDim: Color(0x2674E7C5),
-    neonOrange: Color(0xFFFF907C),
-    orangeDim: Color(0x38FF907C),
-    neonRed: Color(0xFFFF6F98),
-    redDim: Color(0x38FF6F98),
+    bgDeep: Color(0xFF11121A),
+    bgCard: Color(0xFF171923),
+    bgCardMuted: Color(0xFF202331),
+    bgSurface: Color(0xFF2C3040),
+    bgElevated: Color(0xFF3A3F52),
+    nav: Color(0xF20B0C13),
+    navBorder: Color(0xFF3F4254),
+    border: Color(0xFF606579),
+    borderGlow: Color(0xFFE1E2EE),
+    divider: Color(0xFF343849),
+    t1: Color(0xFFF6F7FC),
+    t2: Color(0xFFDDE0EC),
+    t3: Color(0xFFADB2C6),
+    tMuted: Color(0xFF7D8497),
+    cyan: Color(0xFFA88CFF),
+    cyanDim: Color(0x38A88CFF),
+    purple: Color(0xFFF1F2FA),
+    purpleDim: Color(0x38F1F2FA),
+    mint: Color(0xFF76E5D2),
+    greenDim: Color(0x2676E5D2),
+    neonOrange: Color(0xFFBFC4DA),
+    orangeDim: Color(0x38BFC4DA),
+    neonRed: Color(0xFFFF7D9B),
+    redDim: Color(0x38FF7D9B),
     primaryDark: Color(0xFF0A0911),
-    green: Color(0xFF74E7C5),
-    blue: Color(0xFFAAB7FF),
-    pink: Color(0xFFFF8EC7),
-    teal: Color(0xFF83D8F0),
+    green: Color(0xFF76E5D2),
+    blue: Color(0xFFAEBBFF),
+    pink: Color(0xFFD9D6FF),
+    teal: Color(0xFF9EE3F4),
     metricGradient: LinearGradient(
-      colors: [Color(0xFF0B0A12), Color(0xFF3E2C61), Color(0xFFAA4F59)],
+      colors: [Color(0xFF0B0C13), Color(0xFF343950), Color(0xFF6D65B9)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     heroGradient: LinearGradient(
-      colors: [Color(0xFFF0EEF8), Color(0xFFB7B7C8), Color(0xFF17151D)],
+      colors: [Color(0xFFF0F1F6), Color(0xFFB7BBC8), Color(0xFF161821)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     cyanGradient: LinearGradient(
-      colors: [Color(0xFFB99AFF), Color(0xFF6849E8)],
+      colors: [Color(0xFFC9BBFF), Color(0xFF7258F3)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -207,17 +207,17 @@ class C {
       end: Alignment.bottomRight,
     ),
     dangerGradient: LinearGradient(
-      colors: [Color(0xFFFFA0B8), Color(0xFFC24666)],
+      colors: [Color(0xFFFFA0C0), Color(0xFFC24666)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     purpleGradient: LinearGradient(
-      colors: [Color(0xFF332744), Color(0xFFC4A9FF)],
+      colors: [Color(0xFF242838), Color(0xFFE2E3EE)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
     glassGradient: LinearGradient(
-      colors: [Color(0xFF2B2535), Color(0xFF17151F), Color(0xFF43202A)],
+      colors: [Color(0xFF252937), Color(0xFF141620), Color(0xFF373244)],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -315,20 +315,20 @@ class C {
   static Color get surface => bgSurface;
   static Color get line => border;
   static Color get selected =>
-      _isLight ? const Color(0xFF342A49) : cyan.withValues(alpha: 0.14);
+      _isLight ? const Color(0xFF373A4E) : cyan.withValues(alpha: 0.14);
   static Color get selectedText => _isLight ? purple : cyan;
   static Color get primaryLight => _isLight ? const Color(0x337F5BFF) : cyanDim;
   static Color get accentLight => purpleDim;
 
   static Color get hudDark =>
-      _isLight ? const Color(0xFF090811) : const Color(0xFF0D131A);
+      _isLight ? const Color(0xFF090A11) : const Color(0xFF0D131A);
   static Color get hudDark2 =>
-      _isLight ? const Color(0xFF171521) : const Color(0xFF121A23);
+      _isLight ? const Color(0xFF171923) : const Color(0xFF121A23);
   static Color get mars =>
-      _isLight ? const Color(0xFFFF8A7D) : const Color(0xFFF0B45C);
+      _isLight ? const Color(0xFFA88CFF) : const Color(0xFFF0B45C);
   static Color get hudText => _isLight ? const Color(0xFFF7F4FF) : t1;
-  static Color get hudSubtext => _isLight ? const Color(0xFFD8D1F6) : t2;
-  static Color get hudMuted => _isLight ? const Color(0xFFA79ED0) : t3;
+  static Color get hudSubtext => _isLight ? const Color(0xFFDDE0EE) : t2;
+  static Color get hudMuted => _isLight ? const Color(0xFFA9AFC7) : t3;
   static Color get hudLine =>
       _isLight ? const Color(0xFFD8CBFF).withValues(alpha: 0.34) : border;
 

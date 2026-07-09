@@ -374,10 +374,10 @@ class _OperationsDashboardCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(C.radiusXl),
         gradient: const LinearGradient(
           colors: [
-            Color(0xFF2C2637),
-            Color(0xFF15131C),
-            Color(0xFF2A1720),
-            Color(0xFF6E313A),
+            Color(0xFF2B2F3E),
+            Color(0xFF141722),
+            Color(0xFF202432),
+            Color(0xFF3C4052),
           ],
           stops: [0, 0.42, 0.72, 1],
           begin: Alignment.topLeft,
@@ -386,7 +386,9 @@ class _OperationsDashboardCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          const Positioned.fill(child: CustomPaint(painter: _MarsHudPainter())),
+          const Positioned.fill(
+            child: CustomPaint(painter: _HelmetHudPainter()),
+          ),
           Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -428,12 +430,12 @@ class _OperationsDashboardCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'BOSS DATA',
-                            maxLines: 1,
+                            '货脉实时看板',
+                            maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.90),
-                              fontSize: 32,
+                              fontSize: 31,
                               height: 0.95,
                               fontWeight: FontWeight.w900,
                             ),
@@ -558,32 +560,32 @@ class _OperationsDashboardCard extends StatelessWidget {
   );
 }
 
-class _MarsHudPainter extends CustomPainter {
-  const _MarsHudPainter();
+class _HelmetHudPainter extends CustomPainter {
+  const _HelmetHudPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final planet =
+    final silver =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFFFFAAA2).withValues(alpha: 0.34),
-              const Color(0xFFD76A66).withValues(alpha: 0.18),
+              const Color(0xFFE9EAF1).withValues(alpha: 0.22),
+              const Color(0xFF9CA2B6).withValues(alpha: 0.12),
               Colors.transparent,
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.78, size.height * 0.33),
-              radius: size.width * 0.48,
+              center: Offset(size.width * 0.24, size.height * 0.16),
+              radius: size.width * 0.60,
             ),
           );
-    canvas.drawRect(rect, planet);
+    canvas.drawRect(rect, silver);
 
     final terrain =
         Paint()
           ..shader = const LinearGradient(
-            colors: [Color(0x006D2732), Color(0x8C6D2732), Color(0xC0180C12)],
+            colors: [Color(0x004B526A), Color(0x824B526A), Color(0xD010121A)],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(
@@ -623,15 +625,15 @@ class _MarsHudPainter extends CustomPainter {
 
     final orbit =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.09)
+          ..color = Colors.white.withValues(alpha: 0.13)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
-    final center = Offset(size.width * 0.80, size.height * 0.16);
-    for (final radius in [96.0, 148.0, 206.0]) {
+    final center = Offset(size.width * 0.50, size.height * 0.08);
+    for (final radius in [110.0, 166.0, 232.0, 304.0]) {
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
-        math.pi * 0.60,
-        math.pi * 0.94,
+        math.pi * 0.40,
+        math.pi * 1.08,
         false,
         orbit,
       );
@@ -642,14 +644,14 @@ class _MarsHudPainter extends CustomPainter {
           ..shader = LinearGradient(
             colors: [
               Colors.transparent,
-              const Color(0xFFFFD7E0).withValues(alpha: 0.45),
+              const Color(0xFFE9EAF8).withValues(alpha: 0.48),
               Colors.transparent,
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ).createShader(Rect.fromLTWH(0, 0, 1, size.height))
           ..strokeWidth = 1.4;
-    final scanX = size.width - 38;
+    final scanX = size.width - 42;
     canvas.drawLine(
       Offset(scanX, size.height * 0.16),
       Offset(scanX, size.height * 0.72),
@@ -711,7 +713,7 @@ class _MarsHudPainter extends CustomPainter {
 
     final pulse =
         Paint()
-          ..color = const Color(0xFFC4A9FF).withValues(alpha: 0.18)
+          ..color = const Color(0xFF9C7DFF).withValues(alpha: 0.20)
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
     canvas.drawCircle(Offset(size.width * 0.18, size.height * 0.38), 28, pulse);
 
@@ -742,19 +744,24 @@ class _HeroVisualModule extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 164,
+    height: 258,
     child: Material(
       color: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(C.radiusLg),
-        side: BorderSide(color: Colors.white.withValues(alpha: 0.26)),
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.34)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Ink(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFE3E3ED), Color(0xFF9EA2B5), Color(0xFF262230)],
-            stops: [0, 0.58, 1],
+            colors: [
+              Color(0xFFF2F3F8),
+              Color(0xFFD7DAE4),
+              Color(0xFF8C94AA),
+              Color(0xFF252533),
+            ],
+            stops: [0, 0.38, 0.70, 1],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -765,48 +772,128 @@ class _HeroVisualModule extends StatelessWidget {
               child: CustomPaint(painter: _DeviceCorePainter()),
             ),
             Positioned(
-              left: 14,
               top: 12,
-              child: Text(
-                'CHECK BAY',
-                style: TextStyle(
-                  color: const Color(0xFF171522).withValues(alpha: 0.84),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  width: 88,
+                  height: 23,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.22),
+                        blurRadius: 8,
+                        offset: Offset.zero,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             Positioned(
               left: 14,
-              right: 14,
+              top: 42,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'S    E    A',
+                    style: TextStyle(
+                      color: const Color(0xFF11131D).withValues(alpha: 0.76),
+                      fontSize: 10,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'T    L    R',
+                    style: TextStyle(
+                      color: const Color(0xFF11131D).withValues(alpha: 0.76),
+                      fontSize: 10,
+                      height: 1.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: 16,
+              right: 16,
+              bottom: 72,
+              child: Text(
+                'INFORMATION AND ANALYSIS OF',
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.74),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 18,
+              right: 18,
+              bottom: 42,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  'PLANETS IN REAL TIME',
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.94),
+                    fontSize: 27,
+                    height: 0.95,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 34,
+              right: 34,
               bottom: 12,
               child: Container(
                 height: 34,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6D58CE).withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(C.radiusMd),
+                  color: const Color(0xFF7F5FFF).withValues(alpha: 0.86),
+                  borderRadius: BorderRadius.circular(6),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.58),
+                    color: const Color(0xFFE6DDFF).withValues(alpha: 0.82),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF9A78FF).withValues(alpha: 0.34),
-                      blurRadius: 10,
+                      color: const Color(0xFF9A78FF).withValues(alpha: 0.48),
+                      blurRadius: 14,
                       offset: Offset.zero,
                     ),
                   ],
                 ),
-                alignment: Alignment.center,
-                child: FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    '$count UNITS LIVE',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w900,
+                child: Stack(
+                  children: [
+                    const Positioned.fill(
+                      child: CustomPaint(painter: _CtaFramePainter()),
                     ),
-                  ),
+                    Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '$count UNITS LIVE',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -823,43 +910,97 @@ class _DeviceCorePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
-    final glow =
+    final silverWash =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFF7457FF).withValues(alpha: 0.72),
-              const Color(0xFF201642).withValues(alpha: 0.46),
+              Colors.white.withValues(alpha: 0.70),
+              const Color(0xFFD9DCE8).withValues(alpha: 0.30),
               Colors.transparent,
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.32, size.height * 0.50),
-              radius: size.shortestSide * 0.42,
+              center: Offset(size.width * 0.30, size.height * 0.22),
+              radius: size.width * 0.62,
+            ),
+          );
+    canvas.drawRect(rect, silverWash);
+
+    final glow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF896CFF).withValues(alpha: 0.68),
+              const Color(0xFF27195E).withValues(alpha: 0.48),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.36, size.height * 0.44),
+              radius: size.shortestSide * 0.54,
             ),
           );
     canvas.drawRect(rect, glow);
 
+    final orbit =
+        Paint()
+          ..color = const Color(0xFF151824).withValues(alpha: 0.13)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final orbitCenter = Offset(size.width * 0.55, size.height * 0.06);
+    for (final radius in [96.0, 142.0, 188.0, 242.0]) {
+      canvas.drawArc(
+        Rect.fromCircle(center: orbitCenter, radius: radius),
+        math.pi * 0.62,
+        math.pi * 1.18,
+        false,
+        orbit,
+      );
+    }
+
     final grain =
         Paint()
-          ..color = const Color(0xFF323345).withValues(alpha: 0.10)
+          ..color = const Color(0xFF202333).withValues(alpha: 0.10)
           ..strokeWidth = 1;
-    for (double x = 10; x < size.width; x += 17) {
-      for (double y = 10; y < size.height; y += 17) {
+    for (double x = 9; x < size.width; x += 13) {
+      for (double y = 9; y < size.height; y += 13) {
         canvas.drawCircle(Offset(x, y), 0.7, grain);
       }
     }
 
-    final shell =
+    final shadowShell =
         Paint()
-          ..color = const Color(0xFFD8DAE6).withValues(alpha: 0.86)
+          ..color = const Color(0xFF353947).withValues(alpha: 0.22)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 15
+          ..strokeWidth = 36
           ..strokeCap = StrokeCap.round;
     canvas.drawArc(
       Rect.fromCenter(
-        center: Offset(size.width * 0.38, size.height * 0.52),
-        width: size.width * 0.68,
-        height: size.height * 0.94,
+        center: Offset(size.width * 0.46, size.height * 0.47),
+        width: size.width * 0.96,
+        height: size.height * 1.04,
+      ),
+      math.pi * 0.58,
+      math.pi * 1.48,
+      false,
+      shadowShell,
+    );
+
+    final shell =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0xFFF4F5FA), Color(0xFFBAC0CE), Color(0xFF737D94)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 30
+          ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.46, size.height * 0.47),
+        width: size.width * 0.92,
+        height: size.height * 0.98,
       ),
       math.pi * 0.60,
       math.pi * 1.45,
@@ -867,60 +1008,130 @@ class _DeviceCorePainter extends CustomPainter {
       shell,
     );
 
+    final shellEdge =
+        Paint()
+          ..color = const Color(0xFF171A24).withValues(alpha: 0.32)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.3;
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.46, size.height * 0.47),
+        width: size.width * 0.92,
+        height: size.height * 0.98,
+      ),
+      math.pi * 0.60,
+      math.pi * 1.45,
+      false,
+      shellEdge,
+    );
+
     final visor =
         Paint()
           ..shader = RadialGradient(
             colors: [
-              const Color(0xFF8C72FF),
+              const Color(0xFFBBAAFF),
+              const Color(0xFF6046D9),
               const Color(0xFF1A1230),
               const Color(0xFF06050B),
             ],
           ).createShader(
             Rect.fromCircle(
-              center: Offset(size.width * 0.35, size.height * 0.54),
-              radius: size.shortestSide * 0.24,
+              center: Offset(size.width * 0.34, size.height * 0.45),
+              radius: size.shortestSide * 0.34,
             ),
           );
     canvas.drawOval(
       Rect.fromCenter(
-        center: Offset(size.width * 0.34, size.height * 0.54),
-        width: size.width * 0.26,
-        height: size.height * 0.42,
+        center: Offset(size.width * 0.34, size.height * 0.45),
+        width: size.width * 0.34,
+        height: size.height * 0.38,
       ),
       visor,
     );
 
+    final visorEdge =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.46)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.2;
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.34, size.height * 0.45),
+        width: size.width * 0.37,
+        height: size.height * 0.41,
+      ),
+      visorEdge,
+    );
+
     final wire =
         Paint()
-          ..color = const Color(0xFF7E65FF).withValues(alpha: 0.86)
+          ..color = const Color(0xFF7E65FF).withValues(alpha: 0.84)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
+          ..strokeWidth = 3.2
           ..strokeCap = StrokeCap.round;
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 5; i++) {
       final path =
           Path()
-            ..moveTo(size.width * 0.26, size.height * (0.36 + i * 0.055))
+            ..moveTo(size.width * 0.25, size.height * (0.34 + i * 0.045))
             ..quadraticBezierTo(
-              size.width * 0.54,
-              size.height * (0.22 + i * 0.05),
-              size.width * 0.78,
-              size.height * (0.36 + i * 0.035),
+              size.width * 0.57,
+              size.height * (0.20 + i * 0.045),
+              size.width * 0.88,
+              size.height * (0.36 + i * 0.030),
             );
       canvas.drawPath(path, wire);
     }
 
     final lens =
         Paint()
-          ..color = const Color(0xFF14121B).withValues(alpha: 0.48)
+          ..color = const Color(0xFF161821).withValues(alpha: 0.62)
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 4;
-    final lensCenter = Offset(size.width * 0.74, size.height * 0.44);
-    canvas.drawCircle(lensCenter, size.shortestSide * 0.15, lens);
-    canvas.drawCircle(lensCenter, size.shortestSide * 0.07, lens);
+          ..strokeWidth = 7;
+    final lensCenter = Offset(size.width * 0.73, size.height * 0.39);
+    canvas.drawCircle(lensCenter, size.shortestSide * 0.17, lens);
+    canvas.drawCircle(lensCenter, size.shortestSide * 0.08, lens);
+    canvas.drawCircle(
+      lensCenter,
+      size.shortestSide * 0.035,
+      Paint()..color = const Color(0xFF0A0B10).withValues(alpha: 0.86),
+    );
+
+    final screw =
+        Paint()..color = const Color(0xFF11131D).withValues(alpha: 0.78);
+    for (final p in [
+      Offset(size.width * 0.54, size.height * 0.25),
+      Offset(size.width * 0.58, size.height * 0.56),
+      Offset(size.width * 0.78, size.height * 0.59),
+      Offset(size.width * 0.47, size.height * 0.67),
+    ]) {
+      canvas.drawCircle(p, 3.2, screw);
+      canvas.drawCircle(p, 1.0, Paint()..color = Colors.white24);
+    }
+
+    final neck =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0x99C9CEDB), Color(0x773A4054)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(rect)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 20
+          ..strokeCap = StrokeCap.round;
+    final neckPath =
+        Path()
+          ..moveTo(size.width * 0.45, size.height * 0.70)
+          ..quadraticBezierTo(
+            size.width * 0.42,
+            size.height * 0.88,
+            size.width * 0.55,
+            size.height * 1.05,
+          );
+    canvas.drawPath(neckPath, neck);
 
     final frame =
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.34)
+          ..color = Colors.white.withValues(alpha: 0.38)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
     const inset = 8.0;
@@ -945,6 +1156,60 @@ class _DeviceCorePainter extends CustomPainter {
       Offset(size.width - inset, inset + len),
       frame,
     );
+
+    final shade =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              Colors.black.withValues(alpha: 0.18),
+              Colors.black.withValues(alpha: 0.42),
+            ],
+            stops: const [0, 0.58, 1],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(rect);
+    canvas.drawRect(rect, shade);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _CtaFramePainter extends CustomPainter {
+  const _CtaFramePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final line =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.54)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final glow =
+        Paint()
+          ..color = const Color(0xFFD9CBFF).withValues(alpha: 0.48)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4;
+    final mid = size.width / 2;
+    final y = size.height / 2;
+    final path =
+        Path()
+          ..moveTo(8, 7)
+          ..lineTo(mid - 20, 7)
+          ..lineTo(mid - 12, y)
+          ..lineTo(mid + 12, y)
+          ..lineTo(mid + 20, 7)
+          ..lineTo(size.width - 8, 7)
+          ..lineTo(size.width - 8, size.height - 7)
+          ..lineTo(mid + 20, size.height - 7)
+          ..lineTo(mid + 12, y)
+          ..lineTo(mid - 12, y)
+          ..lineTo(mid - 20, size.height - 7)
+          ..lineTo(8, size.height - 7)
+          ..close();
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, line);
   }
 
   @override
@@ -2137,12 +2402,12 @@ class _AlertTile extends StatelessWidget {
     radius: C.radiusLg,
     gradient: LinearGradient(
       colors: [
-        const Color(0xFF2B2434),
-        const Color(0xFF111018),
-        color.withValues(alpha: 0.22),
-        const Color(0xFF4A1E29),
+        const Color(0xFF292D3C),
+        const Color(0xFF11131C),
+        color.withValues(alpha: 0.16),
+        const Color(0xFF343A50),
       ],
-      stops: const [0, 0.42, 0.72, 1],
+      stops: const [0, 0.44, 0.74, 1],
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
@@ -2304,7 +2569,7 @@ class _TrendPanelState extends State<_TrendPanel> {
       padding: const EdgeInsets.all(16),
       radius: C.radiusLg,
       gradient: const LinearGradient(
-        colors: [Color(0xFF211B2A), Color(0xFF18141D), Color(0xFF3B1724)],
+        colors: [Color(0xFF252938), Color(0xFF11131C), Color(0xFF353A51)],
         stops: [0, 0.52, 1],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
@@ -2697,7 +2962,7 @@ class _ChannelPanel extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       radius: C.radiusLg,
       gradient: const LinearGradient(
-        colors: [Color(0xFF1D1826), Color(0xFF15131B), Color(0xFF331A24)],
+        colors: [Color(0xFF222735), Color(0xFF11131B), Color(0xFF30364A)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
@@ -2922,7 +3187,7 @@ class _AiPanel extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       radius: C.radiusLg,
       gradient: const LinearGradient(
-        colors: [Color(0xFF181520), Color(0xFF111018), Color(0xFF321622)],
+        colors: [Color(0xFF202432), Color(0xFF0E1018), Color(0xFF2B3043)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
