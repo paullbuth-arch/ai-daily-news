@@ -18,8 +18,16 @@ Android 覆盖安装要求同一个包名使用同一张签名证书。这个项
 正式签名证书 SHA256 必须是：
 
 ```text
-ada83336389b563a5d4260fe76c15f601a2766187aec78c74b1242b382beadac
+84c43cb86f4c390aaa48f7af429828d4207680ac760a17d30cf0bf332734fa28
 ```
+
+这把正式 keystore 已在当前电脑创建，默认位置是：
+
+```text
+D:\V881\padtest\dev_env\keys\ipad_boss_release.jks
+```
+
+另一台电脑不要重新生成 keystore，直接同步同一份 `ipad_boss_release.jks`，并用相同密码配置本机的 `tools/build_env.local.ps1`。
 
 ## 推荐目录
 

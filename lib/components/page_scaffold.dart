@@ -12,9 +12,9 @@ class AppBackdrop extends StatelessWidget {
           colors:
               C.isLight
                   ? [
-                    const Color(0xFF1F1D26),
-                    const Color(0xFF15141C),
-                    const Color(0xFF211A25),
+                    const Color(0xFF1D1C25),
+                    const Color(0xFF14131B),
+                    const Color(0xFF201922),
                   ]
                   : [
                     const Color(0xFF081018),
@@ -43,10 +43,10 @@ class _OpsBackdropPainter extends CustomPainter {
     final gridPaint =
         Paint()
           ..color = (isLight ? const Color(0xFFB7AFFF) : C.primary).withValues(
-            alpha: isLight ? 0.060 : 0.035,
+            alpha: isLight ? 0.045 : 0.035,
           )
           ..strokeWidth = 1;
-    final gap = isLight ? 92.0 : 28.0;
+    final gap = isLight ? 108.0 : 28.0;
     for (double x = 0; x <= size.width; x += gap) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
@@ -75,11 +75,11 @@ class _OpsBackdropPainter extends CustomPainter {
     if (isLight) {
       final orbit =
           Paint()
-            ..color = const Color(0xFFC7B7FF).withValues(alpha: 0.13)
+            ..color = const Color(0xFFC7B7FF).withValues(alpha: 0.12)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 1;
       final center = Offset(size.width * 0.58, size.height * 0.30);
-      for (final scale in const [1.10, 1.58, 2.08, 2.62]) {
+      for (final scale in const [1.18, 1.68, 2.20, 2.78]) {
         final rect = Rect.fromCenter(
           center: center,
           width: size.shortestSide * scale,
@@ -96,12 +96,12 @@ class _OpsBackdropPainter extends CustomPainter {
           Paint()
             ..shader = RadialGradient(
               colors: [
-                const Color(0xFFFF8B7C).withValues(alpha: 0.28),
+                const Color(0xFFFF8B7C).withValues(alpha: 0.24),
                 Colors.transparent,
               ],
             ).createShader(
               Rect.fromCircle(
-                center: Offset(size.width * 0.88, size.height * 0.22),
+                center: Offset(size.width * 0.92, size.height * 0.24),
                 radius: size.width * 0.64,
               ),
             );
@@ -110,7 +110,7 @@ class _OpsBackdropPainter extends CustomPainter {
           Paint()
             ..shader = RadialGradient(
               colors: [
-                const Color(0xFF9F7DFF).withValues(alpha: 0.24),
+                const Color(0xFF9F7DFF).withValues(alpha: 0.22),
                 Colors.transparent,
               ],
             ).createShader(

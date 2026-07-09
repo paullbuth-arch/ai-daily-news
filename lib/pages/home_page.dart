@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -361,163 +362,308 @@ class _OperationsDashboardCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => GlassPanel(
-    padding: const EdgeInsets.all(12),
-    radius: C.radiusLg,
-    borderColor: C.purple.withValues(alpha: 0.26),
-    gradient: const LinearGradient(
-      colors: [Color(0xFF2B2634), Color(0xFF181620), Color(0xFF321D28)],
-      begin: Alignment.topLeft,
-      end: Alignment.bottomRight,
+  Widget build(BuildContext context) => Material(
+    color: Colors.transparent,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(C.radiusLg),
+      side: BorderSide(color: C.purple.withValues(alpha: 0.38)),
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            _DashboardBadge(
-              icon: Icons.space_dashboard_rounded,
-              label: '今日概览',
-              color: C.purple,
-            ),
-            const SizedBox(width: 8),
-            _DashboardBadge(
-              icon: Icons.receipt_long_rounded,
-              label: '${stats.orderCount} 单',
-              color: C.pink,
-            ),
-            const Spacer(),
-            Text(
-              fmtDate(DateTime.now()),
-              style: TextStyle(
-                color: C.t2,
-                fontSize: 11,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ],
+    clipBehavior: Clip.antiAlias,
+    child: Ink(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(C.radiusLg),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF28212B), Color(0xFF15131C), Color(0xFF5A2730)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 12),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              flex: 7,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '今日经营',
-                    style: TextStyle(
-                      color: C.t2,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w900,
+      ),
+      child: Stack(
+        children: [
+          const Positioned.fill(child: CustomPaint(painter: _MarsHudPainter())),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    _DashboardBadge(
+                      icon: Icons.sensors_rounded,
+                      label: 'HUOMAI OPS',
+                      color: C.purple,
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  FittedBox(
-                    alignment: Alignment.centerLeft,
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      yuan(stats.gmv),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 44,
-                        height: 0.95,
+                    const SizedBox(width: 8),
+                    _DashboardBadge(
+                      icon: Icons.receipt_long_rounded,
+                      label: '${stats.orderCount} 单',
+                      color: C.pink,
+                    ),
+                    const Spacer(),
+                    Text(
+                      fmtDate(DateTime.now()),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 11,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              flex: 5,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _DashboardCount(
-                      label: '在售',
-                      value: '${stats.inStockCount} 台',
-                      color: C.purple,
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      flex: 7,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'MY DATA',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.90),
+                              fontSize: 25,
+                              height: 0.95,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            '今日经营',
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.64),
+                              fontSize: 12,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          FittedBox(
+                            alignment: Alignment.centerLeft,
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              yuan(stats.gmv),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 46,
+                                height: 0.92,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _DashboardCount(
-                      label: '待发',
-                      value: '${stats.pendingCount} 单',
-                      color: C.orange,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 5,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _DashboardCount(
+                              label: '在售',
+                              value: '${stats.inStockCount} 台',
+                              color: C.purple,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _DashboardCount(
+                              label: '待发',
+                              value: '${stats.pendingCount} 单',
+                              color: C.orange,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DashboardMetric(
+                        label: '毛利',
+                        value: yuan(stats.grossProfit),
+                        color: stats.grossProfit >= 0 ? C.green : C.red,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DashboardMetric(
+                        label: '毛利率',
+                        value: '${margin.toStringAsFixed(1)}%',
+                        color: C.pink,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DashboardMetric(
+                        label: '库存资金',
+                        value: yuan(stats.capitalOccupied),
+                        color: C.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _DashboardAction(
+                        label: '链接素材',
+                        icon: Icons.link_rounded,
+                        color: C.purple,
+                        onTap: onScan,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DashboardAction(
+                        label: '批发行情',
+                        icon: Icons.query_stats_rounded,
+                        color: C.blue,
+                        onTap: onPrice,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _DashboardAction(
+                        label: '售出登记',
+                        icon: Icons.point_of_sale_outlined,
+                        color: C.green,
+                        onTap: onSell,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _DashboardMetric(
-                label: '毛利',
-                value: yuan(stats.grossProfit),
-                color: stats.grossProfit >= 0 ? C.green : C.red,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _DashboardMetric(
-                label: '毛利率',
-                value: '${margin.toStringAsFixed(1)}%',
-                color: C.pink,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _DashboardMetric(
-                label: '库存资金',
-                value: yuan(stats.capitalOccupied),
-                color: C.blue,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _DashboardAction(
-                label: '链接素材',
-                icon: Icons.link_rounded,
-                color: C.purple,
-                onTap: onScan,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _DashboardAction(
-                label: '批发行情',
-                icon: Icons.query_stats_rounded,
-                color: C.blue,
-                onTap: onPrice,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _DashboardAction(
-                label: '售出登记',
-                icon: Icons.point_of_sale_outlined,
-                color: C.green,
-                onTap: onSell,
-              ),
-            ),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     ),
   );
+}
+
+class _MarsHudPainter extends CustomPainter {
+  const _MarsHudPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final planet =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFFFFAAA2).withValues(alpha: 0.34),
+              const Color(0xFFD76A66).withValues(alpha: 0.18),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.78, size.height * 0.33),
+              radius: size.width * 0.48,
+            ),
+          );
+    canvas.drawRect(rect, planet);
+
+    final terrain =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [Color(0x006D2732), Color(0x8C6D2732), Color(0xC0180C12)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(
+            Rect.fromLTWH(
+              0,
+              size.height * 0.45,
+              size.width,
+              size.height * 0.55,
+            ),
+          );
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height * 0.45, size.width, size.height * 0.55),
+      terrain,
+    );
+
+    final grid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.055)
+          ..strokeWidth = 1;
+    for (double y = size.height * 0.55; y < size.height; y += 18) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+    for (double x = 16; x < size.width; x += 34) {
+      canvas.drawLine(
+        Offset(x, size.height * 0.54),
+        Offset(x - size.width * 0.10, size.height),
+        grid,
+      );
+    }
+
+    final orbit =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.09)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final center = Offset(size.width * 0.80, size.height * 0.16);
+    for (final radius in [96.0, 148.0, 206.0]) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        math.pi * 0.60,
+        math.pi * 0.94,
+        false,
+        orbit,
+      );
+    }
+
+    final scanner =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              const Color(0xFFFFD7E0).withValues(alpha: 0.45),
+              Colors.transparent,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(Rect.fromLTWH(0, 0, 1, size.height))
+          ..strokeWidth = 1.4;
+    final scanX = size.width - 38;
+    canvas.drawLine(
+      Offset(scanX, size.height * 0.16),
+      Offset(scanX, size.height * 0.72),
+      scanner,
+    );
+    canvas.drawLine(
+      Offset(scanX + 12, size.height * 0.20),
+      Offset(scanX + 12, size.height * 0.62),
+      scanner,
+    );
+
+    final glow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFFA884FF).withValues(alpha: 0.24),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.28, size.height * 0.82),
+              radius: size.width * 0.42,
+            ),
+          );
+    canvas.drawRect(rect, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _DashboardBadge extends StatelessWidget {
@@ -533,11 +679,18 @@ class _DashboardBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
     decoration: BoxDecoration(
-      color: color.withValues(alpha: 0.13),
+      color: Colors.black.withValues(alpha: 0.28),
       borderRadius: BorderRadius.circular(C.radiusSm),
-      border: Border.all(color: color.withValues(alpha: 0.28)),
+      border: Border.all(color: color.withValues(alpha: 0.42)),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: 0.12),
+          blurRadius: 8,
+          offset: Offset.zero,
+        ),
+      ],
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -547,7 +700,7 @@ class _DashboardBadge extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: color,
+            color: color == C.purple ? Colors.white : color,
             fontSize: 10,
             fontWeight: FontWeight.w900,
           ),
@@ -572,9 +725,16 @@ class _DashboardCount extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.18),
+      color: Colors.black.withValues(alpha: 0.25),
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: color.withValues(alpha: 0.22)),
+      border: Border.all(color: color.withValues(alpha: 0.36)),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: 0.10),
+          blurRadius: 10,
+          offset: Offset.zero,
+        ),
+      ],
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -585,7 +745,7 @@ class _DashboardCount extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: C.t3,
+            color: Colors.white.withValues(alpha: 0.62),
             fontSize: 10,
             height: 1,
             fontWeight: FontWeight.w800,
@@ -625,9 +785,9 @@ class _DashboardMetric extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
     decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: 0.055),
+      color: const Color(0xFF6D3038).withValues(alpha: 0.30),
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -638,7 +798,7 @@ class _DashboardMetric extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
-            color: C.t3,
+            color: Colors.white.withValues(alpha: 0.58),
             fontSize: 10,
             height: 1,
             fontWeight: FontWeight.w800,
@@ -680,10 +840,10 @@ class _DashboardAction extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(
     height: 46,
     child: Material(
-      color: color.withValues(alpha: 0.11),
+      color: Colors.black.withValues(alpha: 0.22),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
-        side: BorderSide(color: color.withValues(alpha: 0.25)),
+        side: BorderSide(color: color.withValues(alpha: 0.44)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
