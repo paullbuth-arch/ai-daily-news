@@ -69,8 +69,6 @@ class Storage {
     final settings = normalized['settings'];
     if (settings == null) {
       normalized['settings'] = <String, dynamic>{};
-    } else if (settings is Map<String, dynamic>) {
-      normalized['settings'] = settings;
     } else if (settings is Map) {
       normalized['settings'] = Map<String, dynamic>.from(settings);
     } else {
@@ -525,7 +523,7 @@ class Storage {
   Future<void> clearAll({bool markInitialized = false}) async {
     _cache = _emptyData();
     if (markInitialized) {
-      _cache['settings'] = {'initialized': true};
+      _cache['settings'] = <String, dynamic>{'initialized': true};
     }
     await _flush();
   }

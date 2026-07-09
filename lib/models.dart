@@ -2,6 +2,19 @@
 // 零外部依赖，纯Dart，可单元测试
 
 /// 单台设备（库存中的iPad）
+bool _boolFromJson(dynamic value, {bool fallback = true}) {
+  if (value == null) return fallback;
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty) return fallback;
+    if (['true', '1', 'yes', 'y', 'on'].contains(normalized)) return true;
+    if (['false', '0', 'no', 'n', 'off'].contains(normalized)) return false;
+  }
+  return fallback;
+}
+
 class Device {
   final String id; // 内部ID（时间戳）
   String serial; // 序列号
@@ -95,7 +108,7 @@ class Device {
     condition: j['condition'] as String,
     batteryHealth: (j['batteryHealth'] as num?)?.toInt() ?? 100,
     cycleCount: (j['cycleCount'] as num?)?.toInt() ?? 0,
-    idLockClean: j['idLockClean'] as bool? ?? true,
+    idLockClean: _boolFromJson(j['idLockClean']),
     accessories: j['accessories'] as String? ?? '裸机',
     purchaseCost: (j['purchaseCost'] as num).toInt(),
     purchaseChannel: j['purchaseChannel'] as String? ?? '',
@@ -538,14 +551,14 @@ class QCReport {
     frameCondition: j['frameCondition'] as String? ?? '完美',
     backCondition: j['backCondition'] as String? ?? '完美',
     cameraCondition: j['cameraCondition'] as String? ?? '正常',
-    hasFaceId: j['hasFaceId'] as bool? ?? true,
-    hasTouchId: j['hasTouchId'] as bool? ?? true,
-    wifiOk: j['wifiOk'] as bool? ?? true,
-    bluetoothOk: j['bluetoothOk'] as bool? ?? true,
-    microphoneOk: j['microphoneOk'] as bool? ?? true,
-    speakerOk: j['speakerOk'] as bool? ?? true,
-    buttonsOk: j['buttonsOk'] as bool? ?? true,
-    chargingOk: j['chargingOk'] as bool? ?? true,
+    hasFaceId: _boolFromJson(j['hasFaceId']),
+    hasTouchId: _boolFromJson(j['hasTouchId']),
+    wifiOk: _boolFromJson(j['wifiOk']),
+    bluetoothOk: _boolFromJson(j['bluetoothOk']),
+    microphoneOk: _boolFromJson(j['microphoneOk']),
+    speakerOk: _boolFromJson(j['speakerOk']),
+    buttonsOk: _boolFromJson(j['buttonsOk']),
+    chargingOk: _boolFromJson(j['chargingOk']),
     grade: j['grade'] as String? ?? 'A',
     conclusion: j['conclusion'] as String? ?? '通过',
     repairSuggestion: j['repairSuggestion'] as String?,

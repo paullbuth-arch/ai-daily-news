@@ -9,6 +9,14 @@ $LocalFlutterSdk = Join-Path $LocalDevEnv "flutter"
 # $LocalJdk = Join-Path $LocalDevEnv "jdk-17.0.13+11"
 # $LocalAndroidSdk = Join-Path $LocalDevEnv "android-sdk"
 
+# Release signing. Keep the same keystore on every development computer.
+# Put the shared file outside Git, for example:
+#   ..\dev_env\keys\ipad_boss_release.jks
+# $LocalReleaseKeystore = Join-Path $LocalDevEnv "keys\ipad_boss_release.jks"
+# $LocalReleaseKeyAlias = "boss"
+# $LocalReleaseStorePassword = ""
+# $LocalReleaseKeyPassword = $LocalReleaseStorePassword
+
 # Optional fallback endpoints. The version endpoint is injected by default so
 # in-app updates still work when the public domain is blocked by ICP/CDN.
 # $DeepSellFallbackBaseUrl = "https://42.193.131.66"

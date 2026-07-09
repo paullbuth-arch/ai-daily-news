@@ -693,6 +693,18 @@ void main() {
       expect(st.getSettings()['initialized'], true);
     });
 
+    test('empty startup settings can accept string values', () async {
+      final st = Storage('${tmp.path}/settings-type.json');
+      await st.load();
+      await st.prepareForUserDataStartup();
+
+      final settings = st.getSettings();
+      settings['themeMode'] = 'light';
+      await st.saveSettings(settings);
+
+      expect(st.getSettings()['themeMode'], 'light');
+    });
+
     test('old bundled demo data is cleared on startup', () async {
       final st = Storage('${tmp.path}/demo.json');
       await st.load();

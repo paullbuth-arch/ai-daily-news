@@ -8,6 +8,11 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $HasDevEnvParam = $PSBoundParameters.ContainsKey("DevEnv")
 $HasFlutterSdkParam = $PSBoundParameters.ContainsKey("FlutterSdk")
+$ExpectedReleaseCertSha256 = "ada83336389b563a5d4260fe76c15f601a2766187aec78c74b1242b382beadac"
+$ReleaseKeystore = ""
+$ReleaseKeyAlias = "boss"
+$ReleaseStorePassword = ""
+$ReleaseKeyPassword = ""
 
 $LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
 if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
@@ -15,6 +20,10 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
   $LocalFlutterSdk = ""
   $LocalJdk = ""
   $LocalAndroidSdk = ""
+  $LocalReleaseKeystore = ""
+  $LocalReleaseKeyAlias = ""
+  $LocalReleaseStorePassword = ""
+  $LocalReleaseKeyPassword = ""
   . $LocalConfig
 
   if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
@@ -24,6 +33,10 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
     $env:ANDROID_HOME = $LocalAndroidSdk
     $env:ANDROID_SDK_ROOT = $LocalAndroidSdk
   }
+  if ($LocalReleaseKeystore) { $ReleaseKeystore = $LocalReleaseKeystore }
+  if ($LocalReleaseKeyAlias) { $ReleaseKeyAlias = $LocalReleaseKeyAlias }
+  if ($LocalReleaseStorePassword) { $ReleaseStorePassword = $LocalReleaseStorePassword }
+  if ($LocalReleaseKeyPassword) { $ReleaseKeyPassword = $LocalReleaseKeyPassword }
 }
 
 function Resolve-FirstExistingDir {
@@ -72,6 +85,34 @@ function Find-Jdk {
   return $null
 }
 
+function Get-KeystoreCertSha256 {
+  param(
+    [string]$JdkPath,
+    [string]$Keystore,
+    [string]$Alias,
+    [string]$StorePass
+  )
+
+  $keytool = Join-Path $JdkPath "bin\keytool.exe"
+  if (-not (Test-Path -LiteralPath $keytool -PathType Leaf)) {
+    return ""
+  }
+
+  $pem = & $keytool -exportcert -rfc -keystore $Keystore -alias $Alias -storepass $StorePass 2>$null
+  if ($LASTEXITCODE -ne 0 -or -not $pem) {
+    return ""
+  }
+
+  $base64 = ($pem | Where-Object { $_ -notmatch "^-+.*-+$" }) -join ""
+  $bytes = [Convert]::FromBase64String($base64)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    return ([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace("-", "").ToLowerInvariant()
+  } finally {
+    $sha.Dispose()
+  }
+}
+
 if (-not $DevEnv) {
   $DevEnv = Resolve-FirstExistingDir @(
     (Join-Path $ProjectRoot "dev_env"),
@@ -102,6 +143,26 @@ $AndroidSdk = Resolve-FirstExistingDir @(
   $env:ANDROID_SDK_ROOT
 )
 
+$DefaultReleaseKeystore = ""
+if ($DevEnv) {
+  $DefaultReleaseKeystore = Join-Path $DevEnv "keys\ipad_boss_release.jks"
+}
+if (-not $ReleaseKeystore -and $DefaultReleaseKeystore -and (Test-Path -LiteralPath $DefaultReleaseKeystore -PathType Leaf)) {
+  $ReleaseKeystore = $DefaultReleaseKeystore
+}
+if (-not $ReleaseKeyPassword -and $ReleaseStorePassword) {
+  $ReleaseKeyPassword = $ReleaseStorePassword
+}
+if ($ReleaseKeystore -and (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
+  $ReleaseKeystore = (Resolve-Path -LiteralPath $ReleaseKeystore).Path
+}
+
+$ReleaseCertSha256 = ""
+if ($Jdk -and $ReleaseKeystore -and $ReleaseKeyAlias -and $ReleaseStorePassword -and (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
+  $ReleaseCertSha256 = Get-KeystoreCertSha256 $Jdk $ReleaseKeystore $ReleaseKeyAlias $ReleaseStorePassword
+}
+$ReleaseCertOk = $ReleaseCertSha256 -and ($ReleaseCertSha256 -eq $ExpectedReleaseCertSha256)
+
 $Checks = @(
   [pscustomobject]@{ Name = "Project"; Path = $ProjectRoot; Required = "pubspec.yaml"; Ok = Test-Path -LiteralPath (Join-Path $ProjectRoot "pubspec.yaml") },
   [pscustomobject]@{ Name = "DevEnv"; Path = $DevEnv; Required = "jdk + android-sdk"; Ok = [bool]$DevEnv },
@@ -109,7 +170,10 @@ $Checks = @(
   [pscustomobject]@{ Name = "JDK"; Path = $Jdk; Required = "bin\java.exe"; Ok = $Jdk -and (Test-Path -LiteralPath (Join-Path $Jdk "bin\java.exe")) },
   [pscustomobject]@{ Name = "Android SDK"; Path = $AndroidSdk; Required = "platforms\android-36"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "platforms\android-36\android.jar")) },
   [pscustomobject]@{ Name = "Android build-tools"; Path = $AndroidSdk; Required = "build-tools\36.0.0"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "build-tools\36.0.0")) },
-  [pscustomobject]@{ Name = "Android NDK"; Path = $AndroidSdk; Required = "ndk\27.0.12077973"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "ndk\27.0.12077973")) }
+  [pscustomobject]@{ Name = "Android NDK"; Path = $AndroidSdk; Required = "ndk\27.0.12077973"; Ok = $AndroidSdk -and (Test-Path -LiteralPath (Join-Path $AndroidSdk "ndk\27.0.12077973")) },
+  [pscustomobject]@{ Name = "Release keystore"; Path = $ReleaseKeystore; Required = "shared ipad_boss_release.jks"; Ok = $ReleaseKeystore -and (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf) },
+  [pscustomobject]@{ Name = "Release signing secret"; Path = "tools\build_env.local.ps1"; Required = "release alias + passwords"; Ok = $ReleaseKeyAlias -and $ReleaseStorePassword -and $ReleaseKeyPassword },
+  [pscustomobject]@{ Name = "Release cert SHA256"; Path = $ReleaseCertSha256; Required = $ExpectedReleaseCertSha256; Ok = $ReleaseCertOk }
 )
 
 $Checks | Format-Table Name, Ok, Required, Path -AutoSize
@@ -117,7 +181,7 @@ $Checks | Format-Table Name, Ok, Required, Path -AutoSize
 $failed = $Checks | Where-Object { -not $_.Ok }
 if ($failed) {
   Write-Host ""
-  Write-Error "Build environment is incomplete. See docs/portable build environment guide or BUILD_APK.md."
+  Write-Error "Build environment is incomplete. See BUILD_APK.md and docs/apk-signing.md."
 }
 
 Write-Host ""

@@ -22,6 +22,18 @@ if (flutterVersionName == null) {
     flutterVersionName = '1.0'
 }
 
+def releaseStoreFilePath = localProperties.getProperty('release.storeFile')
+def releaseKeyAlias = localProperties.getProperty('release.keyAlias')
+def releaseStorePassword = localProperties.getProperty('release.storePassword')
+def releaseKeyPassword = localProperties.getProperty('release.keyPassword')
+def releaseSigningConfigured = releaseStoreFilePath &&
+        releaseKeyAlias &&
+        releaseStorePassword &&
+        releaseKeyPassword
+def releaseSigningRequired = gradle.startParameter.taskNames.any { taskName ->
+    taskName.toLowerCase().contains('release')
+}
+
 android {
     namespace "com.ipadboss.ipad_boss_app"
     compileSdkVersion 36
@@ -54,16 +66,20 @@ android {
 
     signingConfigs {
         release {
-            keyAlias 'boss'
-            keyPassword '123456'
-            storeFile file('release-keystore.jks')
-            storePassword '123456'
+            if (releaseSigningConfigured) {
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+                storeFile file(releaseStoreFilePath)
+                storePassword releaseStorePassword
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (releaseSigningConfigured) {
+                signingConfig signingConfigs.release
+            }
             shrinkResources true
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
@@ -82,4 +98,10 @@ flutter {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.2.0"
     implementation "com.google.mlkit:text-recognition-chinese:16.0.1"
+}
+
+gradle.projectsEvaluated {
+    if (releaseSigningRequired && !releaseSigningConfigured) {
+        throw new GradleException("Release signing is not configured. Run tools/build_apk.ps1 after setting tools/build_env.local.ps1.")
+    }
 }

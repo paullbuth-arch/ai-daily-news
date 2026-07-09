@@ -20,6 +20,10 @@ $DeepSellFallbackBaseUrl = ""
 $DefaultDeepSellFallbackVersionUrl = "https://42.193.131.66/api/version"
 $DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
 $ExpectedReleaseCertSha256 = "ada83336389b563a5d4260fe76c15f601a2766187aec78c74b1242b382beadac"
+$ReleaseKeystore = ""
+$ReleaseKeyAlias = "boss"
+$ReleaseStorePassword = ""
+$ReleaseKeyPassword = ""
 
 $LocalConfig = Join-Path $PSScriptRoot "build_env.local.ps1"
 if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
@@ -27,6 +31,10 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
   $LocalFlutterSdk = ""
   $LocalJdk = ""
   $LocalAndroidSdk = ""
+  $LocalReleaseKeystore = ""
+  $LocalReleaseKeyAlias = ""
+  $LocalReleaseStorePassword = ""
+  $LocalReleaseKeyPassword = ""
   $DeepSellSyncToken = ""
   $DeepSellSyncEmail = ""
   $DeepSellSyncPassword = ""
@@ -41,6 +49,10 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
     $env:ANDROID_HOME = $LocalAndroidSdk
     $env:ANDROID_SDK_ROOT = $LocalAndroidSdk
   }
+  if ($LocalReleaseKeystore) { $ReleaseKeystore = $LocalReleaseKeystore }
+  if ($LocalReleaseKeyAlias) { $ReleaseKeyAlias = $LocalReleaseKeyAlias }
+  if ($LocalReleaseStorePassword) { $ReleaseStorePassword = $LocalReleaseStorePassword }
+  if ($LocalReleaseKeyPassword) { $ReleaseKeyPassword = $LocalReleaseKeyPassword }
 }
 
 function Add-DartDefine {
@@ -201,27 +213,54 @@ $env:ANDROID_SDK_ROOT = $AndroidSdk
 $env:FLUTTER_HOME = $FlutterSdk
 $env:Path = "$env:JAVA_HOME\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:FLUTTER_HOME\bin;$env:Path"
 
+$DefaultReleaseKeystore = ""
+if ($DevEnv) {
+  $DefaultReleaseKeystore = Join-Path $DevEnv "keys\ipad_boss_release.jks"
+}
+if (-not $ReleaseKeystore -and $DefaultReleaseKeystore -and (Test-Path -LiteralPath $DefaultReleaseKeystore -PathType Leaf)) {
+  $ReleaseKeystore = $DefaultReleaseKeystore
+}
+if (-not $ReleaseKeyPassword -and $ReleaseStorePassword) {
+  $ReleaseKeyPassword = $ReleaseStorePassword
+}
+if ($ReleaseKeystore -and (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
+  $ReleaseKeystore = (Resolve-Path -LiteralPath $ReleaseKeystore).Path
+}
+
+$missingSigningConfig = @()
+if (-not $ReleaseKeystore) { $missingSigningConfig += "`$LocalReleaseKeystore" }
+if (-not $ReleaseKeyAlias) { $missingSigningConfig += "`$LocalReleaseKeyAlias" }
+if (-not $ReleaseStorePassword) { $missingSigningConfig += "`$LocalReleaseStorePassword" }
+if (-not $ReleaseKeyPassword) { $missingSigningConfig += "`$LocalReleaseKeyPassword" }
+if ($missingSigningConfig.Count -gt 0) {
+  throw "Release signing is incomplete. Configure $($missingSigningConfig -join ', ') in tools\build_env.local.ps1. See docs\apk-signing.md."
+}
+if (-not (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
+  throw "Release keystore not found: $ReleaseKeystore. See docs\apk-signing.md."
+}
+
+$ReleaseCertSha256 = Get-KeystoreCertSha256 $ReleaseKeystore $ReleaseKeyAlias $ReleaseStorePassword
+if ($ReleaseCertSha256 -ne $ExpectedReleaseCertSha256) {
+  throw "Release keystore SHA256 mismatch. Expected $ExpectedReleaseCertSha256 but found $ReleaseCertSha256. Use the shared release keystore documented in docs\apk-signing.md."
+}
+
 $localProperties = @(
   "sdk.dir=$(To-PropertiesPath $AndroidSdk)",
   "flutter.sdk=$(To-PropertiesPath $FlutterSdk)",
-  "flutter.buildMode=release"
+  "flutter.buildMode=release",
+  "release.storeFile=$(To-PropertiesPath $ReleaseKeystore)",
+  "release.keyAlias=$ReleaseKeyAlias",
+  "release.storePassword=$ReleaseStorePassword",
+  "release.keyPassword=$ReleaseKeyPassword"
 )
 Set-Content -LiteralPath (Join-Path $ProjectRoot "android\local.properties") -Value $localProperties -Encoding ASCII
 
 $Flutter = Join-Path $FlutterSdk "bin\flutter.bat"
-$ReleaseKeystore = Join-Path $ProjectRoot "android\app\release-keystore.jks"
-if (-not (Test-Path -LiteralPath $ReleaseKeystore -PathType Leaf)) {
-  throw "Release keystore not found: $ReleaseKeystore"
-}
-$ReleaseCertSha256 = Get-KeystoreCertSha256 $ReleaseKeystore "boss" "123456"
-if ($ReleaseCertSha256 -ne $ExpectedReleaseCertSha256) {
-  throw "Release keystore SHA256 mismatch. Expected $ExpectedReleaseCertSha256 but found $ReleaseCertSha256."
-}
-
 Write-Host "Project:     $ProjectRoot"
 Write-Host "Flutter SDK: $FlutterSdk"
 Write-Host "JDK:         $Jdk"
 Write-Host "Android SDK: $AndroidSdk"
+Write-Host "Keystore:    $ReleaseKeystore"
 Write-Host "Release cert SHA256: $ReleaseCertSha256"
 Write-Host ""
 

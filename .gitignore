@@ -29,6 +29,7 @@ dev_env/
 portable_build_env/
 portable_build_env.zip
 tools/build_env.local.ps1
+local_artifacts/
 
 # OS files
 *.swp

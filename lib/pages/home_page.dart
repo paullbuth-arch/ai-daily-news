@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -137,7 +136,7 @@ class _HeroPhoneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (C.isLight) {
-      return _LightPlanetOpsCard(
+      return _OperationsDashboardCard(
         stats: stats,
         margin: margin,
         onScan: onScan,
@@ -346,14 +345,14 @@ class _HeroPhoneCard extends StatelessWidget {
   }
 }
 
-class _LightPlanetOpsCard extends StatelessWidget {
+class _OperationsDashboardCard extends StatelessWidget {
   final Stats stats;
   final double margin;
   final VoidCallback onScan;
   final VoidCallback onPrice;
   final VoidCallback onSell;
 
-  const _LightPlanetOpsCard({
+  const _OperationsDashboardCard({
     required this.stats,
     required this.margin,
     required this.onScan,
@@ -362,404 +361,171 @@ class _LightPlanetOpsCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.transparent,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(26),
-      side: BorderSide(color: C.purple.withValues(alpha: 0.22)),
+  Widget build(BuildContext context) => GlassPanel(
+    padding: const EdgeInsets.all(12),
+    radius: C.radiusLg,
+    borderColor: C.purple.withValues(alpha: 0.26),
+    gradient: const LinearGradient(
+      colors: [Color(0xFF2B2634), Color(0xFF181620), Color(0xFF321D28)],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
     ),
-    clipBehavior: Clip.antiAlias,
-    child: Ink(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: const [
-            Color(0xFF2A2732),
-            Color(0xFF15141C),
-            Color(0xFF271820),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: const BorderRadius.all(Radius.circular(26)),
-        boxShadow: [
-          BoxShadow(
-            color: C.purple.withValues(alpha: 0.10),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(6, 6, 6, 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            _PlanetViewport(stats: stats, margin: margin, onScan: onScan),
-            const SizedBox(height: 10),
-            LayoutBuilder(
-              builder: (context, box) {
-                final wide = box.maxWidth >= 560;
-                final itemWidth = wide ? (box.maxWidth - 16) / 3 : box.maxWidth;
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    SizedBox(
-                      width: itemWidth,
-                      child: _MissionAction(
-                        label: '链接素材',
-                        sub: '下载图片/视频，复制文案',
-                        icon: Icons.link_rounded,
-                        color: C.primary,
-                        emphasized: true,
-                        onTap: onScan,
-                      ),
-                    ),
-                    SizedBox(
-                      width: itemWidth,
-                      child: _MissionAction(
-                        label: '批发行情',
-                        sub: '导入报价，辅助收货',
-                        icon: Icons.query_stats_rounded,
-                        color: C.blue,
-                        onTap: onPrice,
-                      ),
-                    ),
-                    SizedBox(
-                      width: itemWidth,
-                      child: _MissionAction(
-                        label: '售出登记',
-                        sub: '生成订单并算利润',
-                        icon: Icons.point_of_sale_outlined,
-                        color: C.green,
-                        onTap: onSell,
-                      ),
-                    ),
-                  ],
-                );
-              },
+            _DashboardBadge(
+              icon: Icons.space_dashboard_rounded,
+              label: '今日概览',
+              color: C.purple,
+            ),
+            const SizedBox(width: 8),
+            _DashboardBadge(
+              icon: Icons.receipt_long_rounded,
+              label: '${stats.orderCount} 单',
+              color: C.pink,
+            ),
+            const Spacer(),
+            Text(
+              fmtDate(DateTime.now()),
+              style: TextStyle(
+                color: C.t2,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ],
         ),
-      ),
-    ),
-  );
-}
-
-class _PlanetViewport extends StatelessWidget {
-  final Stats stats;
-  final double margin;
-  final VoidCallback onScan;
-
-  const _PlanetViewport({
-    required this.stats,
-    required this.margin,
-    required this.onScan,
-  });
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, box) {
-      final compact = box.maxWidth < 410;
-      final height = compact ? 642.0 : 584.0;
-      final headlineSize = compact ? 36.0 : 42.0;
-      return Container(
-        height: height,
-        decoration: BoxDecoration(
-          color: const Color(0xFF070711),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: const Color(0xFFD8CBFF).withValues(alpha: 0.24),
-            width: 1,
-          ),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const Positioned.fill(
-              child: CustomPaint(painter: _PlanetOpsPainter()),
-            ),
-            Positioned(
-              top: 13,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 88,
-                  height: 26,
-                  decoration: BoxDecoration(
-                    color: Colors.black,
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 20,
-              top: 25,
-              right: 20,
-              child: Row(
-                children: [
-                  const _SpaceWordmark(text: 'HUOMAI'),
-                  const SizedBox(width: 8),
-                  _SpaceBadge(
-                    icon: Icons.radar_rounded,
-                    label: 'LIVE',
-                    color: const Color(0xFFBBA7FF),
-                  ),
-                  const Spacer(),
-                  _SpaceBadge(
-                    icon: Icons.receipt_long_rounded,
-                    label: '${stats.orderCount} 单',
-                    color: const Color(0xFFFFD0D9),
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-              left: 22,
-              top: 88,
-              right: 22,
+            Expanded(
+              flex: 7,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: compact ? 188 : 236,
-                    child: FittedBox(
-                      alignment: Alignment.centerLeft,
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'STOCK IN',
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: headlineSize,
-                          height: 0.94,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withValues(alpha: 0.48),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: compact ? 188 : 236,
-                    child: FittedBox(
-                      alignment: Alignment.centerLeft,
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        'REAL TIME',
-                        maxLines: 1,
-                        style: TextStyle(
-                          fontSize: headlineSize,
-                          height: 0.94,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          shadows: [
-                            Shadow(
-                              color: Colors.black.withValues(alpha: 0.48),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Text(
                     '今日经营',
                     style: TextStyle(
+                      color: C.t2,
                       fontSize: 12,
-                      color: Colors.white.withValues(alpha: 0.70),
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   FittedBox(
                     alignment: Alignment.centerLeft,
                     fit: BoxFit.scaleDown,
                     child: Text(
                       yuan(stats.gmv),
                       style: const TextStyle(
-                        fontSize: 48,
-                        height: 0.98,
                         color: Colors.white,
+                        fontSize: 44,
+                        height: 0.95,
                         fontWeight: FontWeight.w900,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    '毛利 ${yuan(stats.grossProfit)} · 毛利率 ${margin.toStringAsFixed(1)}%',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      height: 1.25,
-                      color: Colors.white.withValues(alpha: 0.70),
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: compact ? 188 : 208,
-                    child: _NeonCommandButton(label: '链接素材下载', onTap: onScan),
-                  ),
                 ],
               ),
             ),
-            Positioned(
-              left: 20,
-              right: 20,
-              bottom: 20,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(width: 12),
+            Expanded(
+              flex: 5,
+              child: Row(
                 children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'MY DATA',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 30,
-                            height: 0.95,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(
-                            0xFFBBA7FF,
-                          ).withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(C.radiusSm),
-                          border: Border.all(
-                            color: const Color(
-                              0xFFBBA7FF,
-                            ).withValues(alpha: 0.36),
-                          ),
-                        ),
-                        child: Text(
-                          fmtDate(DateTime.now()),
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFFE7DFFF),
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Expanded(
+                    child: _DashboardCount(
+                      label: '在售',
+                      value: '${stats.inStockCount} 台',
+                      color: C.purple,
+                    ),
                   ),
-                  const SizedBox(height: 10),
-                  _MarsDataTile(
-                    icon: Icons.account_balance_wallet_outlined,
-                    label: '库存资金',
-                    value: yuan(stats.capitalOccupied),
-                    color: const Color(0xFFEDE5FF),
-                  ),
-                  const SizedBox(height: 8),
-                  _MarsDataTile(
-                    icon: Icons.speed_rounded,
-                    label: '毛利率',
-                    value: '${margin.toStringAsFixed(1)}%',
-                    color: const Color(0xFFFFD7E0),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _PulseMetric(
-                          label: '在售',
-                          value: '${stats.inStockCount} 台',
-                          color: const Color(0xFFC6B5FF),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _PulseMetric(
-                          label: '今日毛利',
-                          value: yuan(stats.grossProfit),
-                          color:
-                              stats.grossProfit >= 0
-                                  ? const Color(0xFFA9F6DF)
-                                  : const Color(0xFFFFC3D0),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _DashboardCount(
+                      label: '待发',
+                      value: '${stats.pendingCount} 单',
+                      color: C.orange,
+                    ),
                   ),
                 ],
               ),
             ),
           ],
         ),
-      );
-    },
-  );
-}
-
-class _SpaceWordmark extends StatelessWidget {
-  final String text;
-
-  const _SpaceWordmark({required this.text});
-
-  @override
-  Widget build(BuildContext context) {
-    final top = text.length >= 3 ? text.substring(0, 3) : text;
-    final bottom = text.length > 3 ? text.substring(3) : '';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _spaced(top),
-        if (bottom.isNotEmpty) ...[const SizedBox(height: 1), _spaced(bottom)],
-      ],
-    );
-  }
-
-  Widget _spaced(String value) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      for (var i = 0; i < value.length; i++) ...[
-        Text(
-          value[i],
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.82),
-            fontSize: 10,
-            height: 1,
-            fontWeight: FontWeight.w900,
-          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _DashboardMetric(
+                label: '毛利',
+                value: yuan(stats.grossProfit),
+                color: stats.grossProfit >= 0 ? C.green : C.red,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardMetric(
+                label: '毛利率',
+                value: '${margin.toStringAsFixed(1)}%',
+                color: C.pink,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardMetric(
+                label: '库存资金',
+                value: yuan(stats.capitalOccupied),
+                color: C.blue,
+              ),
+            ),
+          ],
         ),
-        if (i != value.length - 1)
-          Container(
-            width: 10,
-            height: 1,
-            margin: const EdgeInsets.symmetric(horizontal: 4),
-            color: Colors.white.withValues(alpha: 0.22),
-          ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _DashboardAction(
+                label: '链接素材',
+                icon: Icons.link_rounded,
+                color: C.purple,
+                onTap: onScan,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardAction(
+                label: '批发行情',
+                icon: Icons.query_stats_rounded,
+                color: C.blue,
+                onTap: onPrice,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _DashboardAction(
+                label: '售出登记',
+                icon: Icons.point_of_sale_outlined,
+                color: C.green,
+                onTap: onSell,
+              ),
+            ),
+          ],
+        ),
       ],
-    ],
+    ),
   );
 }
 
-class _SpaceBadge extends StatelessWidget {
+class _DashboardBadge extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
 
-  const _SpaceBadge({
+  const _DashboardBadge({
     required this.icon,
     required this.label,
     required this.color,
@@ -767,18 +533,11 @@ class _SpaceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
     decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.24),
+      color: color.withValues(alpha: 0.13),
       borderRadius: BorderRadius.circular(C.radiusSm),
-      border: Border.all(color: color.withValues(alpha: 0.36)),
-      boxShadow: [
-        BoxShadow(
-          color: color.withValues(alpha: 0.16),
-          blurRadius: 7,
-          offset: Offset.zero,
-        ),
-      ],
+      border: Border.all(color: color.withValues(alpha: 0.28)),
     ),
     child: Row(
       mainAxisSize: MainAxisSize.min,
@@ -798,148 +557,12 @@ class _SpaceBadge extends StatelessWidget {
   );
 }
 
-class _NeonCommandButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-
-  const _NeonCommandButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) => SizedBox(
-    height: 42,
-    child: Material(
-      color: const Color(0xFF7D65FF).withValues(alpha: 0.22),
-      shape: const _HudButtonBorder(),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _HudButtonPainter(const Color(0xFFCDBDFF)),
-              ),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.link_rounded,
-                  size: 15,
-                  color: Color(0xFFF0ECFF),
-                ),
-                const SizedBox(width: 7),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFF0ECFF),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
-class _HudButtonBorder extends ShapeBorder {
-  const _HudButtonBorder();
-
-  @override
-  EdgeInsetsGeometry get dimensions => EdgeInsets.zero;
-
-  @override
-  Path getInnerPath(Rect rect, {TextDirection? textDirection}) =>
-      getOuterPath(rect.deflate(1), textDirection: textDirection);
-
-  @override
-  Path getOuterPath(Rect rect, {TextDirection? textDirection}) {
-    const notch = 9.0;
-    const cut = 5.0;
-    final path =
-        Path()
-          ..moveTo(rect.left + cut, rect.top)
-          ..lineTo(rect.right - cut, rect.top)
-          ..lineTo(rect.right, rect.top + cut)
-          ..lineTo(rect.right, rect.center.dy - notch * 0.34)
-          ..lineTo(rect.right - notch, rect.center.dy)
-          ..lineTo(rect.right, rect.center.dy + notch * 0.34)
-          ..lineTo(rect.right, rect.bottom - cut)
-          ..lineTo(rect.right - cut, rect.bottom)
-          ..lineTo(rect.left + cut, rect.bottom)
-          ..lineTo(rect.left, rect.bottom - cut)
-          ..lineTo(rect.left, rect.center.dy + notch * 0.34)
-          ..lineTo(rect.left + notch, rect.center.dy)
-          ..lineTo(rect.left, rect.center.dy - notch * 0.34)
-          ..lineTo(rect.left, rect.top + cut)
-          ..close();
-    return path;
-  }
-
-  @override
-  void paint(Canvas canvas, Rect rect, {TextDirection? textDirection}) {
-    final glow =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 4
-          ..color = const Color(0xFF9F7DFF).withValues(alpha: 0.20);
-    final line =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.2
-          ..color = const Color(0xFFD6CBFF).withValues(alpha: 0.95);
-    final path = getOuterPath(rect.deflate(2), textDirection: textDirection);
-    canvas.drawPath(path, glow);
-    canvas.drawPath(path, line);
-  }
-
-  @override
-  ShapeBorder scale(double t) => this;
-}
-
-class _HudButtonPainter extends CustomPainter {
-  final Color color;
-
-  const _HudButtonPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final line =
-        Paint()
-          ..color = color.withValues(alpha: 0.22)
-          ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(size.width * 0.20, size.height - 7),
-      Offset(size.width * 0.80, size.height - 7),
-      line,
-    );
-    canvas.drawLine(
-      Offset(size.width * 0.20, 7),
-      Offset(size.width * 0.80, 7),
-      line,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _HudButtonPainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _MarsDataTile extends StatelessWidget {
-  final IconData icon;
+class _DashboardCount extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
 
-  const _MarsDataTile({
-    required this.icon,
+  const _DashboardCount({
     required this.label,
     required this.value,
     required this.color,
@@ -947,162 +570,37 @@ class _MarsDataTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    height: 58,
-    padding: const EdgeInsets.fromLTRB(12, 9, 12, 9),
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          const Color(0xFF8C4050).withValues(alpha: 0.58),
-          const Color(0xFF5C2732).withValues(alpha: 0.54),
-        ],
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-      ),
+      color: Colors.black.withValues(alpha: 0.18),
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
-    ),
-    child: Row(
-      children: [
-        CustomPaint(
-          painter: _RadialMeterPainter(color),
-          child: SizedBox(
-            width: 38,
-            height: 38,
-            child: Icon(icon, color: color, size: 17),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.58),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 23,
-                    height: 0.95,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class _RadialMeterPainter extends CustomPainter {
-  final Color color;
-
-  const _RadialMeterPainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 3;
-    final faint =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.18);
-    final bright =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = 2
-          ..color = color.withValues(alpha: 0.90);
-    canvas.drawCircle(center, radius, faint);
-    canvas.drawCircle(center, radius * 0.54, faint);
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi * 0.72,
-      math.pi * 1.36,
-      false,
-      bright,
-    );
-    canvas.drawCircle(center, 2.1, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _RadialMeterPainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _PulseMetric extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _PulseMetric({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(11, 9, 11, 8),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.black.withValues(alpha: 0.28),
-          const Color(0xFF2B111D).withValues(alpha: 0.48),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      ),
-      borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: color.withValues(alpha: 0.28)),
+      border: Border.all(color: color.withValues(alpha: 0.22)),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          height: 18,
-          child: CustomPaint(
-            painter: _PulseLinePainter(color),
-            size: Size.infinite,
-          ),
-        ),
-        const SizedBox(height: 4),
         Text(
           label,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
+            color: C.t3,
             fontSize: 10,
-            color: Colors.white.withValues(alpha: 0.56),
+            height: 1,
             fontWeight: FontWeight.w800,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 6),
         FittedBox(
           alignment: Alignment.centerLeft,
           fit: BoxFit.scaleDown,
           child: Text(
             value,
             style: TextStyle(
-              fontSize: 22,
-              height: 0.95,
               color: color,
+              fontSize: 18,
+              height: 1,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1112,650 +610,106 @@ class _PulseMetric extends StatelessWidget {
   );
 }
 
-class _PulseLinePainter extends CustomPainter {
-  final Color color;
-
-  const _PulseLinePainter(this.color);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final grid =
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.08)
-          ..strokeWidth = 1;
-    canvas.drawLine(
-      Offset(0, size.height * 0.52),
-      Offset(size.width, size.height * 0.52),
-      grid,
-    );
-
-    final pulse =
-        Paint()
-          ..color = color
-          ..strokeWidth = 1.8
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-    final path =
-        Path()
-          ..moveTo(0, size.height * 0.55)
-          ..lineTo(size.width * 0.16, size.height * 0.55)
-          ..lineTo(size.width * 0.22, size.height * 0.30)
-          ..lineTo(size.width * 0.29, size.height * 0.75)
-          ..lineTo(size.width * 0.35, size.height * 0.20)
-          ..lineTo(size.width * 0.43, size.height * 0.56)
-          ..lineTo(size.width * 0.62, size.height * 0.56)
-          ..lineTo(size.width * 0.70, size.height * 0.38)
-          ..lineTo(size.width * 0.78, size.height * 0.62)
-          ..lineTo(size.width, size.height * 0.50);
-    canvas.drawPath(path, pulse);
-  }
-
-  @override
-  bool shouldRepaint(covariant _PulseLinePainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-class _MissionAction extends StatelessWidget {
+class _DashboardMetric extends StatelessWidget {
   final String label;
-  final String sub;
-  final IconData icon;
+  final String value;
   final Color color;
-  final bool emphasized;
-  final VoidCallback onTap;
 
-  const _MissionAction({
+  const _DashboardMetric({
     required this.label,
-    required this.sub,
-    required this.icon,
+    required this.value,
     required this.color,
-    required this.onTap,
-    this.emphasized = false,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final bg = emphasized ? C.hudDark : const Color(0xFF241E2A);
-    final fg = emphasized ? Colors.white : C.t1;
-    final subFg = emphasized ? Colors.white.withValues(alpha: 0.62) : C.t2;
-    final iconBg =
-        emphasized ? const Color(0xFFC9BBFF) : color.withValues(alpha: 0.16);
-    final iconFg = emphasized ? const Color(0xFF05050A) : color;
-    return Material(
-      color: bg,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(C.radiusLg),
-        side: BorderSide(
-          color:
-              emphasized
-                  ? const Color(0xFFBBA7FF)
-                  : color.withValues(alpha: 0.24),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.055),
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: C.t3,
+            fontSize: 10,
+            height: 1,
+            fontWeight: FontWeight.w800,
+          ),
         ),
+        const SizedBox(height: 6),
+        FittedBox(
+          alignment: Alignment.centerLeft,
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 17,
+              height: 1,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _DashboardAction extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _DashboardAction({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 46,
+    child: Material(
+      color: color.withValues(alpha: 0.11),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusMd),
+        side: BorderSide(color: color.withValues(alpha: 0.25)),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 11, 10, 11),
-          child: Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(C.radiusMd),
-                  border:
-                      emphasized
-                          ? Border.all(
-                            color: Colors.white.withValues(alpha: 0.35),
-                          )
-                          : null,
-                ),
-                child: Icon(icon, color: iconFg, size: 19),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: fg,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      sub,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: subFg,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: C.t1,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(width: 6),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: emphasized ? const Color(0xFFC9BBFF) : color,
-                size: 20,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-}
-
-class _PlanetOpsPainter extends CustomPainter {
-  const _PlanetOpsPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final bg =
-        Paint()
-          ..shader = const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1E1F2A),
-              Color(0xFF090911),
-              Color(0xFF4B202D),
-              Color(0xFF10070D),
-            ],
-            stops: [0.0, 0.42, 0.64, 1.0],
-          ).createShader(rect);
-    canvas.drawRect(rect, bg);
-
-    final topWash =
-        Paint()
-          ..shader = LinearGradient(
-            colors: [
-              const Color(0xFFF0F0F8).withValues(alpha: 0.16),
-              const Color(0xFF767D94).withValues(alpha: 0.24),
-              Colors.transparent,
-            ],
-          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height * 0.55));
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, size.width, size.height * 0.58),
-      topWash,
-    );
-
-    final starPaint = Paint()..color = Colors.white.withValues(alpha: 0.50);
-    for (var i = 0; i < 72; i++) {
-      final x = ((i * 47) % 100) / 100 * size.width;
-      final y = ((i * 31 + 17) % 100) / 100 * size.height;
-      final r = i % 9 == 0 ? 1.2 : 0.48;
-      canvas.drawCircle(Offset(x, y), r, starPaint);
-    }
-
-    final compact = size.width < 430;
-    final guide =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.08);
-    final guideCenter = Offset(size.width * 0.58, size.height * 0.18);
-    for (final radius in [170.0, 252.0, 340.0]) {
-      canvas.drawArc(
-        Rect.fromCircle(center: guideCenter, radius: radius),
-        math.pi * 0.72,
-        math.pi * 1.06,
-        false,
-        guide,
-      );
-    }
-
-    final marsTop = size.height * 0.50;
-    final marsRect = Rect.fromLTWH(
-      0,
-      marsTop,
-      size.width,
-      size.height - marsTop,
-    );
-    final mars =
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFFB75862).withValues(alpha: 0.82),
-              const Color(0xFF7C2D3B).withValues(alpha: 0.80),
-              const Color(0xFF160A11).withValues(alpha: 0.95),
-            ],
-          ).createShader(marsRect);
-    canvas.drawRect(marsRect, mars);
-
-    final planetGlow =
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              const Color(0xFFFFA0AA).withValues(alpha: 0.42),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.68, marsTop + 28),
-              radius: size.width * 0.38,
-            ),
-          );
-    canvas.drawCircle(
-      Offset(size.width * 0.68, marsTop + 28),
-      size.width * 0.38,
-      planetGlow,
-    );
-
-    final horizon =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.16);
-    for (var i = 0; i < 10; i++) {
-      final y = marsTop + 34 + i * 14;
-      final path =
-          Path()
-            ..moveTo(0, y)
-            ..cubicTo(
-              size.width * 0.22,
-              y - 18,
-              size.width * 0.40,
-              y + 15,
-              size.width * 0.62,
-              y - 5,
-            )
-            ..cubicTo(
-              size.width * 0.80,
-              y - 18,
-              size.width * 0.90,
-              y + 8,
-              size.width,
-              y - 4,
-            );
-      canvas.drawPath(path, horizon);
-    }
-
-    final chartGrid =
-        Paint()
-          ..color = Colors.white.withValues(alpha: 0.10)
-          ..strokeWidth = 1;
-    final chart = Rect.fromLTWH(
-      size.width * 0.38,
-      marsTop + 78,
-      size.width * 0.52,
-      62,
-    );
-    for (var i = 0; i <= 4; i++) {
-      final x = chart.left + chart.width * i / 4;
-      canvas.drawLine(Offset(x, chart.top), Offset(x, chart.bottom), chartGrid);
-    }
-    for (var i = 0; i <= 3; i++) {
-      final y = chart.top + chart.height * i / 3;
-      canvas.drawLine(Offset(chart.left, y), Offset(chart.right, y), chartGrid);
-    }
-    final chartGlow =
-        Paint()
-          ..color = const Color(0xFFD7CAFF).withValues(alpha: 0.30)
-          ..strokeWidth = 6
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-    final chartLine =
-        Paint()
-          ..color = const Color(0xFFF0EAFF)
-          ..strokeWidth = 2.0
-          ..strokeCap = StrokeCap.round
-          ..style = PaintingStyle.stroke;
-    final line =
-        Path()
-          ..moveTo(chart.left, chart.bottom - 9)
-          ..cubicTo(
-            chart.left + chart.width * 0.15,
-            chart.top + 10,
-            chart.left + chart.width * 0.26,
-            chart.bottom - 8,
-            chart.left + chart.width * 0.39,
-            chart.top + 18,
-          )
-          ..cubicTo(
-            chart.left + chart.width * 0.54,
-            chart.bottom - 4,
-            chart.left + chart.width * 0.68,
-            chart.top + 20,
-            chart.left + chart.width * 0.82,
-            chart.top + 12,
-          )
-          ..cubicTo(
-            chart.left + chart.width * 0.90,
-            chart.top + 8,
-            chart.left + chart.width * 0.96,
-            chart.bottom - 20,
-            chart.right,
-            chart.bottom - 18,
-          );
-    canvas.drawPath(line, chartGlow);
-    canvas.drawPath(line, chartLine);
-
-    final purpleGlow =
-        Paint()
-          ..shader = RadialGradient(
-            colors: [
-              const Color(0xFF8F63FF).withValues(alpha: 0.48),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.70, size.height * 0.28),
-              radius: 220,
-            ),
-          );
-    canvas.drawCircle(
-      Offset(size.width * 0.70, size.height * 0.28),
-      220,
-      purpleGlow,
-    );
-
-    _drawHelmet(canvas, size, compact);
-    _drawHudCorners(canvas, size);
-  }
-
-  void _drawHelmet(Canvas canvas, Size size, bool compact) {
-    final cx = size.width * (compact ? 0.80 : 0.76);
-    final cy = size.height * (compact ? 0.30 : 0.29);
-    final radius = math.min(size.width, size.height) * (compact ? 0.34 : 0.32);
-    final outerRect = Rect.fromCenter(
-      center: Offset(cx, cy),
-      width: radius * 2.55,
-      height: radius * 2.45,
-    );
-    canvas.drawOval(
-      outerRect.shift(Offset(radius * 0.14, radius * 0.14)),
-      Paint()..color = Colors.black.withValues(alpha: 0.26),
-    );
-    final helmet =
-        Paint()
-          ..shader = const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFFF2F3F8),
-              Color(0xFFC6CCD9),
-              Color(0xFF71798C),
-              Color(0xFF232938),
-            ],
-            stops: [0.0, 0.34, 0.66, 1.0],
-          ).createShader(outerRect);
-    final helmetPath =
-        Path()
-          ..moveTo(cx - radius * 1.02, cy - radius * 0.86)
-          ..cubicTo(
-            cx - radius * 0.66,
-            cy - radius * 1.22,
-            cx + radius * 0.38,
-            cy - radius * 1.10,
-            cx + radius * 0.92,
-            cy - radius * 0.62,
-          )
-          ..cubicTo(
-            cx + radius * 1.32,
-            cy - radius * 0.26,
-            cx + radius * 1.22,
-            cy + radius * 0.58,
-            cx + radius * 0.76,
-            cy + radius * 0.92,
-          )
-          ..cubicTo(
-            cx + radius * 0.30,
-            cy + radius * 1.28,
-            cx - radius * 0.64,
-            cy + radius * 1.12,
-            cx - radius * 0.98,
-            cy + radius * 0.56,
-          )
-          ..cubicTo(
-            cx - radius * 1.28,
-            cy + radius * 0.02,
-            cx - radius * 1.26,
-            cy - radius * 0.48,
-            cx - radius * 1.02,
-            cy - radius * 0.86,
-          )
-          ..close();
-    canvas.drawPath(helmetPath, helmet);
-
-    final shellStroke =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = Colors.white.withValues(alpha: 0.42);
-    canvas.drawPath(helmetPath, shellStroke);
-
-    final jawPath =
-        Path()
-          ..moveTo(cx - radius * 0.92, cy + radius * 0.40)
-          ..lineTo(cx - radius * 0.46, cy + radius * 0.93)
-          ..lineTo(cx - radius * 0.16, cy + radius * 1.18)
-          ..lineTo(cx - radius * 0.62, cy + radius * 1.04)
-          ..cubicTo(
-            cx - radius * 0.94,
-            cy + radius * 0.92,
-            cx - radius * 1.10,
-            cy + radius * 0.70,
-            cx - radius * 0.92,
-            cy + radius * 0.40,
-          )
-          ..close();
-    canvas.drawPath(
-      jawPath,
-      Paint()..color = const Color(0xFFB9C0CF).withValues(alpha: 0.76),
-    );
-    canvas.drawPath(
-      jawPath,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.1
-        ..color = Colors.black.withValues(alpha: 0.25),
-    );
-
-    final visorPath =
-        Path()
-          ..moveTo(cx - radius * 0.92, cy - radius * 0.28)
-          ..cubicTo(
-            cx - radius * 0.80,
-            cy - radius * 0.72,
-            cx - radius * 0.28,
-            cy - radius * 0.70,
-            cx + radius * 0.02,
-            cy - radius * 0.34,
-          )
-          ..cubicTo(
-            cx + radius * 0.32,
-            cy + radius * 0.05,
-            cx + radius * 0.08,
-            cy + radius * 0.55,
-            cx - radius * 0.40,
-            cy + radius * 0.62,
-          )
-          ..cubicTo(
-            cx - radius * 0.82,
-            cy + radius * 0.62,
-            cx - radius * 1.02,
-            cy + radius * 0.18,
-            cx - radius * 0.92,
-            cy - radius * 0.28,
-          )
-          ..close();
-    final visorBounds = Rect.fromCircle(
-      center: Offset(cx - radius * 0.46, cy - radius * 0.04),
-      radius: radius * 0.72,
-    );
-    final visor =
-        Paint()
-          ..shader = LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: const [
-              Color(0xFF080812),
-              Color(0xFF312064),
-              Color(0xFF7F61FF),
-              Color(0xFF110B22),
-            ],
-            stops: const [0.0, 0.42, 0.66, 1.0],
-          ).createShader(visorBounds);
-    canvas.drawPath(visorPath, visor);
-    final visorLine =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.5
-          ..color = const Color(0xFFD9CEFF).withValues(alpha: 0.62);
-    canvas.drawPath(visorPath, visorLine);
-    for (var i = 0; i < 4; i++) {
-      final y = cy - radius * 0.34 + i * radius * 0.20;
-      final path =
-          Path()
-            ..moveTo(cx - radius * 0.76, y)
-            ..cubicTo(
-              cx - radius * 0.45,
-              y - radius * 0.12,
-              cx - radius * 0.20,
-              y + radius * 0.02,
-              cx + radius * 0.02,
-              y + radius * 0.10,
-            );
-      canvas.drawPath(
-        path,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.4
-          ..color = const Color(0xFFB69DFF).withValues(alpha: 0.28),
-      );
-    }
-
-    final lensCenter = Offset(cx + radius * 0.38, cy + radius * 0.03);
-    final lensBase =
-        Paint()
-          ..shader = const RadialGradient(
-            colors: [Color(0xFFE2E4ED), Color(0xFF6D7485), Color(0xFF1F2330)],
-          ).createShader(
-            Rect.fromCircle(center: lensCenter, radius: radius * 0.30),
-          );
-    canvas.drawCircle(lensCenter, radius * 0.33, lensBase);
-    for (final scale in [0.26, 0.18, 0.10, 0.055]) {
-      canvas.drawCircle(
-        lensCenter,
-        radius * scale,
-        Paint()
-          ..style = scale == 0.07 ? PaintingStyle.fill : PaintingStyle.stroke
-          ..strokeWidth = scale == 0.055 ? 1 : 2
-          ..color =
-              scale == 0.055
-                  ? const Color(0xFF05060B)
-                  : Colors.black.withValues(alpha: 0.42),
-      );
-    }
-
-    final cableGlow =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = 8
-          ..color = const Color(0xFF8E68FF).withValues(alpha: 0.26);
-    final cable =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = 3.3
-          ..color = const Color(0xFFA47CFF);
-    for (var i = 0; i < 4; i++) {
-      final offset = i * radius * 0.11;
-      final path =
-          Path()
-            ..moveTo(cx + radius * 0.10, cy + radius * (0.54 + i * 0.12))
-            ..cubicTo(
-              cx + radius * 0.50,
-              cy + radius * 0.66 + offset,
-              cx + radius * 0.88,
-              cy + radius * 0.98 + offset,
-              cx + radius * 1.26,
-              cy + radius * (1.13 + i * 0.06),
-            );
-      canvas.drawPath(path, cableGlow);
-      canvas.drawPath(path, cable);
-    }
-
-    final panel =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1.3
-          ..color = Colors.black.withValues(alpha: 0.36);
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(cx - radius * 0.06, cy + radius * 0.02),
-        width: radius * 1.78,
-        height: radius * 1.92,
-      ),
-      -math.pi * 0.55,
-      math.pi * 0.82,
-      false,
-      panel,
-    );
-    final bolt =
-        Paint()
-          ..color = const Color(0xFF10131E)
-          ..style = PaintingStyle.fill;
-    for (final p in [
-      Offset(cx - radius * 0.82, cy - radius * 0.48),
-      Offset(cx + radius * 0.82, cy - radius * 0.18),
-      Offset(cx + radius * 0.18, cy + radius * 0.74),
-      Offset(cx - radius * 0.42, cy + radius * 0.84),
-      Offset(cx + radius * 0.56, cy + radius * 0.54),
-    ]) {
-      canvas.drawCircle(p, radius * 0.026, bolt);
-      canvas.drawCircle(
-        p,
-        radius * 0.045,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 1
-          ..color = Colors.white.withValues(alpha: 0.22),
-      );
-    }
-  }
-
-  void _drawHudCorners(Canvas canvas, Size size) {
-    final paint =
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.square
-          ..strokeWidth = 1.4
-          ..color = Colors.white.withValues(alpha: 0.36);
-    const m = 18.0;
-    const l = 20.0;
-    final bottom = size.height * 0.56 + 18;
-    canvas.drawLine(Offset(m, bottom), Offset(m + l, bottom), paint);
-    canvas.drawLine(Offset(m, bottom), Offset(m, bottom + l), paint);
-    canvas.drawLine(
-      Offset(size.width - m, bottom),
-      Offset(size.width - m - l, bottom),
-      paint,
-    );
-    canvas.drawLine(
-      Offset(size.width - m, bottom),
-      Offset(size.width - m, bottom + l),
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+    ),
+  );
 }
 
 class _CommandBadge extends StatelessWidget {
