@@ -34,15 +34,38 @@ class LineChartPainter extends CustomPainter {
     final chartH = h - padTop - padBot;
     final stepX = data.length > 1 ? w / (data.length - 1) : w;
 
-    // Grid lines
+    // HUD grid.
     final gridPaint =
         Paint()
-          ..color = C.border.withValues(alpha: 0.5)
+          ..color = C.borderGlow.withValues(alpha: C.isLight ? 0.16 : 0.10)
           ..strokeWidth = 0.5;
     for (int i = 0; i <= 3; i++) {
       final y = padTop + chartH * i / 3;
       canvas.drawLine(Offset(0, y), Offset(w, y), gridPaint);
     }
+    if (data.length > 1) {
+      final verticalStep = math.max(1, (data.length / 6).ceil());
+      for (int i = 0; i < data.length; i += verticalStep) {
+        final x = i * stepX;
+        canvas.drawLine(Offset(x, padTop), Offset(x, h - padBot), gridPaint);
+      }
+    }
+
+    final scanPaint =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              lineColor.withValues(alpha: C.isLight ? 0.26 : 0.18),
+              Colors.transparent,
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, w, 1))
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(0, padTop + chartH * 0.56),
+      Offset(w, padTop + chartH * 0.56),
+      scanPaint,
+    );
 
     // Data path
     final path = Path();
@@ -81,7 +104,16 @@ class LineChartPainter extends CustomPainter {
       canvas.drawPath(areaPath, areaPaint);
     }
 
-    // Line
+    final glowPaint =
+        Paint()
+          ..color = lineColor.withValues(alpha: C.isLight ? 0.20 : 0.16)
+          ..strokeWidth = 7
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
+    canvas.drawPath(path, glowPaint);
+
+    // Line.
     final linePaint =
         Paint()
           ..color = lineColor
@@ -90,10 +122,15 @@ class LineChartPainter extends CustomPainter {
           ..strokeCap = StrokeCap.round;
     canvas.drawPath(path, linePaint);
 
-    // Data points
+    // Data points.
     final dotPaint = Paint()..color = lineColor;
+    final dotGlow =
+        Paint()
+          ..color = lineColor.withValues(alpha: C.isLight ? 0.20 : 0.16)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     final dotBg = Paint()..color = C.isLight ? C.hudDark2 : C.bgCard;
     for (final p in points) {
+      canvas.drawCircle(p, 8, dotGlow);
       canvas.drawCircle(p, 5, dotBg);
       canvas.drawCircle(p, 3, dotPaint);
     }

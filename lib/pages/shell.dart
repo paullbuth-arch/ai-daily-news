@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import '../components/page_scaffold.dart';
@@ -123,7 +124,11 @@ class _SideDock extends StatelessWidget {
     child: Container(
       width: 96,
       decoration: BoxDecoration(
-        color: C.nav,
+        gradient: LinearGradient(
+          colors: [C.nav, C.bgCard.withValues(alpha: 0.94), C.nav],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
         border: Border(right: BorderSide(color: C.navBorder)),
       ),
       child: Padding(
@@ -134,12 +139,13 @@ class _SideDock extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: C.isLight ? C.hudDark : C.primary,
+                gradient: C.isLight ? C.purpleGradient : C.cyanGradient,
                 borderRadius: BorderRadius.circular(C.radiusLg),
+                border: Border.all(color: C.purple.withValues(alpha: 0.40)),
               ),
               child: Icon(
                 Icons.tablet_mac_rounded,
-                color: C.isLight ? C.purple : Colors.black,
+                color: C.isLight ? C.hudDark : Colors.black,
               ),
             ),
             const SizedBox(height: 22),
@@ -176,30 +182,126 @@ class _BottomDock extends StatelessWidget {
   const _BottomDock({required this.index, required this.onTap});
 
   @override
-  Widget build(BuildContext context) => DecoratedBox(
-    decoration: BoxDecoration(
-      color: C.nav,
-      border: Border(top: BorderSide(color: C.navBorder)),
-    ),
-    child: SafeArea(
-      top: false,
+  Widget build(BuildContext context) => SafeArea(
+    top: false,
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
       child: SizedBox(
-        height: 70,
-        child: Row(
-          children: List.generate(_items.length, (i) {
-            return Expanded(
-              child: _BottomNavButton(
-                item: _items[i],
-                active: index == i,
-                primary: i == 2,
-                onTap: () => onTap(i),
+        height: 88,
+        child: Material(
+          color: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(C.radiusXl),
+            side: BorderSide(color: C.borderGlow.withValues(alpha: 0.34)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [
+                        Color(0xF71E1727),
+                        Color(0xFB090811),
+                        Color(0xF734151D),
+                      ],
+                      stops: [0, 0.52, 1],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(C.radiusXl),
+                  ),
+                ),
               ),
-            );
-          }),
+              const Positioned.fill(
+                child: CustomPaint(painter: _DockPainter()),
+              ),
+              Row(
+                children: List.generate(_items.length, (i) {
+                  return Expanded(
+                    child: _BottomNavButton(
+                      item: _items[i],
+                      active: index == i,
+                      primary: i == 2,
+                      onTap: () => onTap(i),
+                    ),
+                  );
+                }),
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
+}
+
+class _DockPainter extends CustomPainter {
+  const _DockPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final grid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.055)
+          ..strokeWidth = 1;
+    for (double x = 0; x < size.width; x += size.width / 5) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
+    }
+    for (double y = 18; y < size.height; y += 22) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+
+    final scan =
+        Paint()
+          ..shader = const LinearGradient(
+            colors: [
+              Color(0x00FFFFFF),
+              Color(0x99F4EDFF),
+              Color(0x66FF907C),
+              Color(0x00FFFFFF),
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
+          ..strokeWidth = 1.4;
+    canvas.drawLine(const Offset(12, 9), Offset(size.width - 12, 9), scan);
+    canvas.drawLine(
+      Offset(size.width * 0.16, size.height - 11),
+      Offset(size.width * 0.84, size.height - 11),
+      scan,
+    );
+
+    final orbit =
+        Paint()
+          ..color = const Color(0xFFC9BBFF).withValues(alpha: 0.12)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final center = Offset(size.width * 0.50, size.height * 0.44);
+    for (final radius in [44.0, 72.0, 104.0]) {
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        math.pi * 0.05,
+        math.pi * 0.90,
+        false,
+        orbit,
+      );
+    }
+
+    final glow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF9C78FF).withValues(alpha: 0.22),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(center: center, radius: size.width * 0.28),
+          );
+    canvas.drawRect(Offset.zero & size, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _BottomNavButton extends StatelessWidget {
@@ -220,18 +322,7 @@ class _BottomNavButton extends StatelessWidget {
     final selectedFg = C.isLight ? C.purple : C.primary;
     final selectedBg =
         C.isLight ? C.selected : C.primary.withValues(alpha: 0.12);
-    final primaryBg =
-        C.isLight
-            ? active
-                ? C.hudDark
-                : Colors.transparent
-            : C.primary;
-    final primaryFg =
-        C.isLight
-            ? active
-                ? C.purple
-                : C.t3
-            : Colors.black;
+    final primaryFg = active ? C.purple : C.t2;
     final fg = active ? selectedFg : C.t3;
     return Material(
       color: Colors.transparent,
@@ -240,35 +331,69 @@ class _BottomNavButton extends StatelessWidget {
         child: Center(
           child: AnimatedContainer(
             duration: C.fast,
-            constraints: const BoxConstraints(minWidth: 54, minHeight: 52),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            constraints: BoxConstraints(
+              minWidth: primary ? 64 : 54,
+              minHeight: primary ? 66 : 56,
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 6),
             decoration: BoxDecoration(
+              gradient:
+                  primary
+                      ? LinearGradient(
+                        colors: [
+                          const Color(0xFF0A0911),
+                          (active ? C.purple : C.mars).withValues(alpha: 0.24),
+                          const Color(0xFF201018),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                      : null,
               color:
                   primary
-                      ? primaryBg
+                      ? null
                       : active
                       ? selectedBg
                       : Colors.transparent,
               borderRadius: BorderRadius.circular(C.radiusMd),
-              border:
-                  active && !primary
-                      ? Border.all(
-                        color:
-                            C.isLight
-                                ? C.purple.withValues(alpha: 0.32)
-                                : C.primary.withValues(alpha: 0.24),
-                      )
-                      : C.isLight && primary
-                      ? Border.all(color: Colors.transparent)
+              border: Border.all(
+                color:
+                    primary
+                        ? (active ? C.purple : C.mars).withValues(alpha: 0.42)
+                        : active
+                        ? C.purple.withValues(alpha: 0.38)
+                        : Colors.white.withValues(alpha: 0.08),
+              ),
+              boxShadow:
+                  active || primary
+                      ? [
+                        BoxShadow(
+                          color: (primary ? C.mars : selectedFg).withValues(
+                            alpha: active ? 0.20 : 0.10,
+                          ),
+                          blurRadius: 10,
+                          offset: Offset.zero,
+                        ),
+                      ]
                       : null,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  active ? item.activeIcon : item.icon,
-                  color: primary ? primaryFg : fg,
-                  size: primary ? 23 : 21,
+                CustomPaint(
+                  painter: _DockCellPainter(
+                    color: primary ? (active ? C.purple : C.mars) : fg,
+                    active: active || primary,
+                  ),
+                  child: SizedBox(
+                    width: primary ? 34 : 28,
+                    height: primary ? 28 : 24,
+                    child: Icon(
+                      active ? item.activeIcon : item.icon,
+                      color: primary ? primaryFg : fg,
+                      size: primary ? 22 : 20,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 3),
                 FittedBox(
@@ -289,6 +414,34 @@ class _BottomNavButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _DockCellPainter extends CustomPainter {
+  final Color color;
+  final bool active;
+
+  const _DockCellPainter({required this.color, required this.active});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (!active) return;
+    final line =
+        Paint()
+          ..color = color.withValues(alpha: 0.30)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final rect = Rect.fromLTWH(3, 3, size.width - 6, size.height - 6);
+    canvas.drawArc(rect, -math.pi * 0.12, math.pi * 1.08, false, line);
+    canvas.drawLine(
+      Offset(size.width * 0.18, size.height - 2),
+      Offset(size.width * 0.82, size.height - 2),
+      line,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _DockCellPainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.active != active;
 }
 
 class _RailButton extends StatelessWidget {
@@ -335,13 +488,14 @@ class _RailButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(C.radiusMd),
           side: BorderSide(
             color:
-                active && !primary
+                active
                     ? C.isLight
                         ? C.purple.withValues(alpha: 0.32)
                         : C.primary.withValues(alpha: 0.24)
                     : Colors.transparent,
           ),
         ),
+        shadowColor: Colors.transparent,
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,

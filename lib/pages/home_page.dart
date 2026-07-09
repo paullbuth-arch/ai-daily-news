@@ -365,15 +365,21 @@ class _OperationsDashboardCard extends StatelessWidget {
   Widget build(BuildContext context) => Material(
     color: Colors.transparent,
     shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(C.radiusLg),
-      side: BorderSide(color: C.purple.withValues(alpha: 0.38)),
+      borderRadius: BorderRadius.circular(C.radiusXl),
+      side: BorderSide(color: C.borderGlow.withValues(alpha: 0.36)),
     ),
     clipBehavior: Clip.antiAlias,
     child: Ink(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(C.radiusLg),
+        borderRadius: BorderRadius.circular(C.radiusXl),
         gradient: const LinearGradient(
-          colors: [Color(0xFF28212B), Color(0xFF15131C), Color(0xFF5A2730)],
+          colors: [
+            Color(0xFF2C2637),
+            Color(0xFF15131C),
+            Color(0xFF2A1720),
+            Color(0xFF6E313A),
+          ],
+          stops: [0, 0.42, 0.72, 1],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -382,7 +388,7 @@ class _OperationsDashboardCard extends StatelessWidget {
         children: [
           const Positioned.fill(child: CustomPaint(painter: _MarsHudPainter())),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -411,6 +417,8 @@ class _OperationsDashboardCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 12),
+                _HeroVisualModule(count: stats.inStockCount),
+                const SizedBox(height: 12),
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
@@ -420,12 +428,12 @@ class _OperationsDashboardCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'MY DATA',
+                            'BOSS DATA',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.90),
-                              fontSize: 25,
+                              fontSize: 32,
                               height: 0.95,
                               fontWeight: FontWeight.w900,
                             ),
@@ -448,7 +456,7 @@ class _OperationsDashboardCard extends StatelessWidget {
                               yuan(stats.gmv),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 46,
+                                fontSize: 54,
                                 height: 0.92,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -605,6 +613,13 @@ class _MarsHudPainter extends CustomPainter {
         grid,
       );
     }
+    for (double x = -size.width * 0.20; x < size.width; x += 42) {
+      canvas.drawLine(
+        Offset(x, size.height * 0.52),
+        Offset(x + size.width * 0.16, size.height),
+        grid,
+      );
+    }
 
     final orbit =
         Paint()
@@ -646,6 +661,60 @@ class _MarsHudPainter extends CustomPainter {
       scanner,
     );
 
+    final frame =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.24)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    const inset = 12.0;
+    const len = 28.0;
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset + len, inset),
+      frame,
+    );
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset, inset + len),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, inset),
+      Offset(size.width - inset, inset),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, inset),
+      Offset(size.width - inset, inset + len),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset - len),
+      Offset(inset, size.height - inset),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset),
+      Offset(inset + len, size.height - inset),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, size.height - inset),
+      Offset(size.width - inset, size.height - inset),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, size.height - inset - len),
+      Offset(size.width - inset, size.height - inset),
+      frame,
+    );
+
+    final pulse =
+        Paint()
+          ..color = const Color(0xFFC4A9FF).withValues(alpha: 0.18)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawCircle(Offset(size.width * 0.18, size.height * 0.38), 28, pulse);
+
     final glow =
         Paint()
           ..shader = RadialGradient(
@@ -660,6 +729,222 @@ class _MarsHudPainter extends CustomPainter {
             ),
           );
     canvas.drawRect(rect, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _HeroVisualModule extends StatelessWidget {
+  final int count;
+
+  const _HeroVisualModule({required this.count});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 164,
+    child: Material(
+      color: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(C.radiusLg),
+        side: BorderSide(color: Colors.white.withValues(alpha: 0.26)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFE3E3ED), Color(0xFF9EA2B5), Color(0xFF262230)],
+            stops: [0, 0.58, 1],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: CustomPaint(painter: _DeviceCorePainter()),
+            ),
+            Positioned(
+              left: 14,
+              top: 12,
+              child: Text(
+                'CHECK BAY',
+                style: TextStyle(
+                  color: const Color(0xFF171522).withValues(alpha: 0.84),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 12,
+              child: Container(
+                height: 34,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6D58CE).withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(C.radiusMd),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.58),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF9A78FF).withValues(alpha: 0.34),
+                      blurRadius: 10,
+                      offset: Offset.zero,
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '$count UNITS LIVE',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _DeviceCorePainter extends CustomPainter {
+  const _DeviceCorePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final glow =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF7457FF).withValues(alpha: 0.72),
+              const Color(0xFF201642).withValues(alpha: 0.46),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.32, size.height * 0.50),
+              radius: size.shortestSide * 0.42,
+            ),
+          );
+    canvas.drawRect(rect, glow);
+
+    final grain =
+        Paint()
+          ..color = const Color(0xFF323345).withValues(alpha: 0.10)
+          ..strokeWidth = 1;
+    for (double x = 10; x < size.width; x += 17) {
+      for (double y = 10; y < size.height; y += 17) {
+        canvas.drawCircle(Offset(x, y), 0.7, grain);
+      }
+    }
+
+    final shell =
+        Paint()
+          ..color = const Color(0xFFD8DAE6).withValues(alpha: 0.86)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 15
+          ..strokeCap = StrokeCap.round;
+    canvas.drawArc(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.38, size.height * 0.52),
+        width: size.width * 0.68,
+        height: size.height * 0.94,
+      ),
+      math.pi * 0.60,
+      math.pi * 1.45,
+      false,
+      shell,
+    );
+
+    final visor =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF8C72FF),
+              const Color(0xFF1A1230),
+              const Color(0xFF06050B),
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.35, size.height * 0.54),
+              radius: size.shortestSide * 0.24,
+            ),
+          );
+    canvas.drawOval(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.34, size.height * 0.54),
+        width: size.width * 0.26,
+        height: size.height * 0.42,
+      ),
+      visor,
+    );
+
+    final wire =
+        Paint()
+          ..color = const Color(0xFF7E65FF).withValues(alpha: 0.86)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3
+          ..strokeCap = StrokeCap.round;
+    for (int i = 0; i < 4; i++) {
+      final path =
+          Path()
+            ..moveTo(size.width * 0.26, size.height * (0.36 + i * 0.055))
+            ..quadraticBezierTo(
+              size.width * 0.54,
+              size.height * (0.22 + i * 0.05),
+              size.width * 0.78,
+              size.height * (0.36 + i * 0.035),
+            );
+      canvas.drawPath(path, wire);
+    }
+
+    final lens =
+        Paint()
+          ..color = const Color(0xFF14121B).withValues(alpha: 0.48)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 4;
+    final lensCenter = Offset(size.width * 0.74, size.height * 0.44);
+    canvas.drawCircle(lensCenter, size.shortestSide * 0.15, lens);
+    canvas.drawCircle(lensCenter, size.shortestSide * 0.07, lens);
+
+    final frame =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.34)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    const inset = 8.0;
+    const len = 18.0;
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset + len, inset),
+      frame,
+    );
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset, inset + len),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, inset),
+      Offset(size.width - inset, inset),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, inset),
+      Offset(size.width - inset, inset + len),
+      frame,
+    );
   }
 
   @override
@@ -687,7 +972,7 @@ class _DashboardBadge extends StatelessWidget {
       boxShadow: [
         BoxShadow(
           color: color.withValues(alpha: 0.12),
-          blurRadius: 8,
+          blurRadius: 6,
           offset: Offset.zero,
         ),
       ],
@@ -723,51 +1008,149 @@ class _DashboardCount extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
     decoration: BoxDecoration(
-      color: Colors.black.withValues(alpha: 0.25),
+      color: const Color(0xFF100D15).withValues(alpha: 0.44),
       borderRadius: BorderRadius.circular(C.radiusMd),
       border: Border.all(color: color.withValues(alpha: 0.36)),
-      boxShadow: [
-        BoxShadow(
-          color: color.withValues(alpha: 0.10),
-          blurRadius: 10,
-          offset: Offset.zero,
-        ),
-      ],
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    child: Stack(
       children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.62),
-            fontSize: 10,
-            height: 1,
-            fontWeight: FontWeight.w800,
-          ),
+        Positioned.fill(
+          child: CustomPaint(painter: _MetricFramePainter(color: color)),
         ),
-        const SizedBox(height: 6),
-        FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 18,
-              height: 1,
-              fontWeight: FontWeight.w900,
-            ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.66),
+                  fontSize: 10,
+                  height: 1,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 20,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
     ),
   );
+}
+
+class _MetricFramePainter extends CustomPainter {
+  final Color color;
+
+  const _MetricFramePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (size.width < 24 || size.height < 24) return;
+    final line =
+        Paint()
+          ..color = color.withValues(alpha: 0.24)
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
+    const inset = 6.0;
+    const len = 12.0;
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset + len, inset),
+      line,
+    );
+    canvas.drawLine(
+      const Offset(inset, inset),
+      const Offset(inset, inset + len),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, inset),
+      Offset(size.width - inset, inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, inset),
+      Offset(size.width - inset, inset + len),
+      line,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset - len),
+      Offset(inset, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(inset, size.height - inset),
+      Offset(inset + len, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset - len, size.height - inset),
+      Offset(size.width - inset, size.height - inset),
+      line,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset, size.height - inset - len),
+      Offset(size.width - inset, size.height - inset),
+      line,
+    );
+    final scan =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              color.withValues(alpha: 0.28),
+              Colors.transparent,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(Rect.fromLTWH(0, 0, 1, size.height))
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(size.width - 12, size.height * 0.22),
+      Offset(size.width - 12, size.height * 0.78),
+      scan,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.12, size.height * 0.50),
+      Offset(size.width * 0.88, size.height * 0.50),
+      scan,
+    );
+
+    final faint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.055)
+          ..strokeWidth = 1;
+    for (double x = size.width * 0.18; x < size.width; x += 28) {
+      canvas.drawLine(
+        Offset(x, size.height * 0.62),
+        Offset(x + size.width * 0.08, size.height),
+        faint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _MetricFramePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _DashboardMetric extends StatelessWidget {
@@ -783,39 +1166,48 @@ class _DashboardMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.fromLTRB(9, 8, 9, 8),
     decoration: BoxDecoration(
-      color: const Color(0xFF6D3038).withValues(alpha: 0.30),
+      color: color.withValues(alpha: 0.10),
       borderRadius: BorderRadius.circular(C.radiusMd),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
     ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
+    child: Stack(
       children: [
-        Text(
-          label,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.58),
-            fontSize: 10,
-            height: 1,
-            fontWeight: FontWeight.w800,
-          ),
+        Positioned.fill(
+          child: CustomPaint(painter: _MetricFramePainter(color: color)),
         ),
-        const SizedBox(height: 6),
-        FittedBox(
-          alignment: Alignment.centerLeft,
-          fit: BoxFit.scaleDown,
-          child: Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 17,
-              height: 1,
-              fontWeight: FontWeight.w900,
-            ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.62),
+                  fontSize: 10,
+                  height: 1,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              FittedBox(
+                alignment: Alignment.centerLeft,
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 18,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
@@ -838,9 +1230,9 @@ class _DashboardAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    height: 46,
+    height: 48,
     child: Material(
-      color: Colors.black.withValues(alpha: 0.22),
+      color: Colors.black.withValues(alpha: 0.24),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(C.radiusMd),
         side: BorderSide(color: color.withValues(alpha: 0.44)),
@@ -848,21 +1240,30 @@ class _DashboardAction extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Stack(
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 5),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: C.t1,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                ),
+            Positioned.fill(
+              child: CustomPaint(painter: _MetricFramePainter(color: color)),
+            ),
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 16, color: color),
+                  const SizedBox(width: 5),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: C.t1,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1734,61 +2135,145 @@ class _AlertTile extends StatelessWidget {
   Widget build(BuildContext context) => GlassPanel(
     padding: const EdgeInsets.all(12),
     radius: C.radiusLg,
-    color: C.bgCard,
+    gradient: LinearGradient(
+      colors: [
+        const Color(0xFF2B2434),
+        const Color(0xFF111018),
+        color.withValues(alpha: 0.22),
+        const Color(0xFF4A1E29),
+      ],
+      stops: const [0, 0.42, 0.72, 1],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    ),
+    borderColor: color.withValues(alpha: 0.26),
     onTap: onTap,
-    child: Row(
-      children: [
-        Container(
-          width: 34,
-          height: 34,
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(C.radiusSm),
+    child: SizedBox(
+      height: 104,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: _MetricFramePainter(color: color)),
           ),
-          child: Icon(icon, color: color, size: 18),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              FittedBox(
-                alignment: Alignment.centerLeft,
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  value,
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.24),
+                borderRadius: BorderRadius.circular(C.radiusMd),
+                border: Border.all(color: color.withValues(alpha: 0.34)),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withValues(alpha: 0.14),
+                    blurRadius: 8,
+                    offset: Offset.zero,
+                  ),
+                ],
+              ),
+              child: CustomPaint(
+                painter: _PulseGlyphPainter(color: color),
+                child: Icon(icon, color: color, size: 20),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 54,
+            top: 0,
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          if (subtitle != null)
+            Positioned(
+              left: 0,
+              right: 54,
+              top: 20,
+              child: Text(
+                subtitle!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: C.t3,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          Positioned(
+            left: 0,
+            right: 68,
+            bottom: 20,
+            child: FittedBox(
+              alignment: Alignment.centerLeft,
+              fit: BoxFit.scaleDown,
+              child: Text(
+                value,
+                style: TextStyle(
+                  fontSize: 32,
+                  height: 0.95,
+                  color: C.t1,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Row(
+              children: [
+                Expanded(child: _AlertSignalBars(color: color)),
+                const SizedBox(width: 10),
+                Text(
+                  'LIVE',
                   style: TextStyle(
-                    fontSize: 20,
-                    color: C.t1,
+                    color: color,
+                    fontSize: 9,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-              ),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: C.t2,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  subtitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: C.t3,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    ),
+  );
+}
+
+class _AlertSignalBars extends StatelessWidget {
+  final Color color;
+
+  const _AlertSignalBars({required this.color});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 12,
+    child: Row(
+      children: List.generate(8, (index) {
+        return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(right: index == 7 ? 0 : 4),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: index < 5 ? 0.52 : 0.12),
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: color.withValues(alpha: 0.20)),
+            ),
+          ),
+        );
+      }),
     ),
   );
 }
@@ -1818,6 +2303,13 @@ class _TrendPanelState extends State<_TrendPanel> {
     return GlassPanel(
       padding: const EdgeInsets.all(16),
       radius: C.radiusLg,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF211B2A), Color(0xFF18141D), Color(0xFF3B1724)],
+        stops: [0, 0.52, 1],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderColor: C.purple.withValues(alpha: 0.36),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1850,23 +2342,296 @@ class _TrendPanelState extends State<_TrendPanel> {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 150,
-            child: CustomPaint(
-              painter: LineChartPainter(
-                data,
-                labels,
-                lineColor: C.primary,
-                showPointLabels: true,
-              ),
-              size: Size.infinite,
+          const SizedBox(height: 8),
+          Container(
+            height: 176,
+            padding: const EdgeInsets.fromLTRB(10, 10, 10, 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.20),
+              borderRadius: BorderRadius.circular(C.radiusMd),
+              border: Border.all(color: C.purple.withValues(alpha: 0.22)),
             ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _MetricFramePainter(color: C.purple),
+                  ),
+                ),
+                Positioned(
+                  left: 2,
+                  top: 0,
+                  child: Text(
+                    'PROFIT TRACE',
+                    style: TextStyle(
+                      color: C.purple.withValues(alpha: 0.88),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 2,
+                  top: 0,
+                  child: Text(
+                    'DISTANCE: 7D',
+                    style: TextStyle(
+                      color: C.t3,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  top: 18,
+                  child: CustomPaint(
+                    painter: LineChartPainter(
+                      data,
+                      labels,
+                      lineColor: C.primary,
+                      showPointLabels: true,
+                    ),
+                    size: Size.infinite,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          _SignalReadouts(
+            total: total,
+            sampleCount: source.length,
+            positive: total >= 0,
           ),
         ],
       ),
     );
   }
+}
+
+class _SignalReadouts extends StatelessWidget {
+  final int total;
+  final int sampleCount;
+  final bool positive;
+
+  const _SignalReadouts({
+    required this.total,
+    required this.sampleCount,
+    required this.positive,
+  });
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: _SignalReadout(
+          title: 'PROFIT SIGNAL',
+          value: yuan(total),
+          state: positive ? 'NORMAL' : 'ALERT',
+          color: positive ? C.purple : C.red,
+          painter: _WaveGlyphPainter(color: positive ? C.purple : C.red),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: _SignalReadout(
+          title: 'FLOW CYCLE',
+          value: '$sampleCount',
+          state: 'WINDOW',
+          color: C.blue,
+          painter: _PulseGlyphPainter(color: C.blue),
+        ),
+      ),
+    ],
+  );
+}
+
+class _SignalReadout extends StatelessWidget {
+  final String title;
+  final String value;
+  final String state;
+  final Color color;
+  final CustomPainter painter;
+
+  const _SignalReadout({
+    required this.title,
+    required this.value,
+    required this.state,
+    required this.color,
+    required this.painter,
+  });
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: 94,
+    padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+    decoration: BoxDecoration(
+      color: Colors.black.withValues(alpha: 0.20),
+      borderRadius: BorderRadius.circular(C.radiusMd),
+      border: Border.all(color: color.withValues(alpha: 0.30)),
+    ),
+    child: Stack(
+      children: [
+        Positioned.fill(
+          child: CustomPaint(painter: _MetricFramePainter(color: color)),
+        ),
+        Positioned(
+          top: 2,
+          left: 0,
+          right: 0,
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.68),
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          bottom: 8,
+          child: SizedBox(
+            width: 76,
+            height: 32,
+            child: CustomPaint(painter: painter),
+          ),
+        ),
+        Positioned(
+          right: 0,
+          bottom: 16,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: C.t1,
+                fontSize: 25,
+                height: 0.92,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 1,
+          bottom: 0,
+          child: Text(
+            state,
+            style: TextStyle(
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _WaveGlyphPainter extends CustomPainter {
+  final Color color;
+
+  const _WaveGlyphPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final dim =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.18)
+          ..strokeWidth = 1.2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+    canvas.drawLine(
+      Offset(0, size.height * 0.70),
+      Offset(size.width, size.height * 0.70),
+      dim,
+    );
+
+    final glow =
+        Paint()
+          ..color = color.withValues(alpha: 0.25)
+          ..strokeWidth = 6
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    final line =
+        Paint()
+          ..color = color
+          ..strokeWidth = 2
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+    final path =
+        Path()
+          ..moveTo(2, size.height * 0.62)
+          ..lineTo(size.width * 0.18, size.height * 0.62)
+          ..lineTo(size.width * 0.26, size.height * 0.30)
+          ..lineTo(size.width * 0.34, size.height * 0.82)
+          ..lineTo(size.width * 0.44, size.height * 0.46)
+          ..lineTo(size.width * 0.52, size.height * 0.68)
+          ..lineTo(size.width * 0.68, size.height * 0.68)
+          ..lineTo(size.width * 0.77, size.height * 0.24)
+          ..lineTo(size.width * 0.86, size.height * 0.62)
+          ..lineTo(size.width - 2, size.height * 0.62);
+    canvas.drawPath(path, glow);
+    canvas.drawPath(path, line);
+  }
+
+  @override
+  bool shouldRepaint(covariant _WaveGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _PulseGlyphPainter extends CustomPainter {
+  final Color color;
+
+  const _PulseGlyphPainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final grid =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.14)
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
+    for (final dx in [0.22, 0.50, 0.78]) {
+      canvas.drawCircle(
+        Offset(size.width * dx, size.height * 0.58),
+        size.height * 0.18,
+        grid,
+      );
+    }
+    final glow =
+        Paint()
+          ..color = color.withValues(alpha: 0.26)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 5
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    final line =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+    final rect = Rect.fromCenter(
+      center: Offset(size.width * 0.50, size.height * 0.58),
+      width: size.width * 0.86,
+      height: size.height * 0.72,
+    );
+    canvas.drawArc(rect, -0.4, 3.8, false, glow);
+    canvas.drawArc(rect, -0.4, 3.8, false, line);
+    canvas.drawCircle(
+      Offset(size.width * 0.50, size.height * 0.58),
+      3.2,
+      Paint()..color = color,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _PulseGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _TrendToggle extends StatelessWidget {
@@ -1931,77 +2696,142 @@ class _ChannelPanel extends StatelessWidget {
     return GlassPanel(
       padding: const EdgeInsets.all(16),
       radius: C.radiusLg,
+      gradient: const LinearGradient(
+        colors: [Color(0xFF1D1826), Color(0xFF15131B), Color(0xFF331A24)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderColor: C.blue.withValues(alpha: 0.28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionTitle('渠道占比', icon: Icons.donut_large_rounded),
           const SizedBox(height: 4),
+          Container(
+            height: 78,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(C.radiusMd),
+              border: Border.all(color: C.blue.withValues(alpha: 0.24)),
+            ),
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: CustomPaint(
+                    painter: _MetricFramePainter(color: C.blue),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  child: Text(
+                    'CHANNEL DATA',
+                    style: TextStyle(
+                      color: C.blue,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  bottom: 0,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      yuan(total),
+                      style: TextStyle(
+                        color: C.t1,
+                        fontSize: 30,
+                        height: 0.95,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  bottom: 5,
+                  child: SizedBox(
+                    width: 92,
+                    height: 34,
+                    child: CustomPaint(
+                      painter: _WaveGlyphPainter(color: C.blue),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           ...entries.asMap().entries.map((e) {
             final color = colors[e.key % colors.length];
             final value = e.value.value;
             final pct = total == 0 ? 0.0 : value / total;
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(C.radiusSm),
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(C.radiusMd),
+                  border: Border.all(color: color.withValues(alpha: 0.20)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38,
+                      height: 38,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(C.radiusSm),
+                        border: Border.all(
+                          color: color.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.storefront_outlined,
+                        color: color,
+                        size: 18,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.storefront_outlined,
-                      color: color,
-                      size: 17,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                e.value.key,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: C.t1,
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 12,
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  e.value.key,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: C.t1,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Text(
-                              '${(pct * 100).toStringAsFixed(0)}%',
-                              style: TextStyle(
-                                color: C.t2,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 12,
+                              Text(
+                                '${(pct * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 13,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: pct,
-                            minHeight: 7,
-                            backgroundColor: Colors.white.withValues(
-                              alpha: 0.08,
-                            ),
-                            valueColor: AlwaysStoppedAnimation(color),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 7),
+                          _HudProgress(value: pct, color: color),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }),
@@ -2009,6 +2839,65 @@ class _ChannelPanel extends StatelessWidget {
       ),
     );
   }
+}
+
+class _HudProgress extends StatelessWidget {
+  final double value;
+  final Color color;
+
+  const _HudProgress({required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 12,
+    child: Stack(
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.055),
+              borderRadius: BorderRadius.circular(2),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+          ),
+        ),
+        FractionallySizedBox(
+          alignment: Alignment.centerLeft,
+          widthFactor: value.clamp(0.0, 1.0),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(2),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.22),
+                  blurRadius: 8,
+                  offset: Offset.zero,
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Row(
+            children: List.generate(
+              7,
+              (index) => Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Container(
+                    width: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 1),
+                    color: Colors.black.withValues(alpha: 0.25),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _AiPanel extends StatelessWidget {
@@ -2026,84 +2915,160 @@ class _AiPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasTasks = openTaskCount > 0;
     final color = criticalCount > 0 ? C.red : (hasTasks ? C.orange : C.mint);
-    final status = hasTasks ? '$openTaskCount项' : '正常';
-    final subtitle =
-        hasTasks
-            ? '${criticalCount > 0 ? '$criticalCount项急需处理 · ' : ''}今日自动巡店已生成待办'
-            : '今日没有硬风险，可继续生成经营复盘';
+    final status = hasTasks ? '$openTaskCount TASKS' : 'NORMAL';
+    final title = hasTasks ? '待处理巡店任务' : '自动巡店正常';
+    final subtitle = hasTasks ? '今日自动巡店已生成经营待办' : '今日没有硬风险，可以继续生成经营复盘';
     return GlassPanel(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       radius: C.radiusLg,
-      color: C.bgCard,
-      borderColor: color.withValues(alpha: hasTasks ? 0.30 : 0.18),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF181520), Color(0xFF111018), Color(0xFF321622)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderColor: color.withValues(alpha: hasTasks ? 0.34 : 0.22),
       onTap: onTap,
-      child: Row(
+      child: Stack(
         children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(C.radiusLg),
-            ),
-            child: Icon(
-              hasTasks ? Icons.rule_rounded : Icons.verified_outlined,
-              color: color,
-              size: 23,
-            ),
+          Positioned.fill(
+            child: CustomPaint(painter: _MetricFramePainter(color: color)),
           ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '自动巡店',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w900,
-                    color: C.t1,
+          Row(
+            children: [
+              SizedBox(
+                width: 60,
+                height: 60,
+                child: CustomPaint(
+                  painter: _AiCorePainter(color: color, active: hasTasks),
+                  child: Icon(
+                    hasTasks ? Icons.rule_rounded : Icons.verified_outlined,
+                    color: color,
+                    size: 24,
                   ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: C.t2,
-                    fontWeight: FontWeight.w700,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          Container(
-            constraints: const BoxConstraints(minWidth: 42, maxWidth: 58),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.13),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: color.withValues(alpha: 0.18)),
-            ),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                status,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AUTO PATROL',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: C.t1,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: C.t2,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    constraints: const BoxConstraints(
+                      minWidth: 58,
+                      maxWidth: 72,
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(C.radiusSm),
+                      border: Border.all(color: color.withValues(alpha: 0.24)),
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Icon(Icons.chevron_right_rounded, color: C.t2),
+                ],
+              ),
+            ],
           ),
-          Icon(Icons.chevron_right_rounded, color: C.t2),
         ],
       ),
     );
   }
+}
+
+class _AiCorePainter extends CustomPainter {
+  final Color color;
+  final bool active;
+
+  const _AiCorePainter({required this.color, required this.active});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final glow =
+        Paint()
+          ..color = color.withValues(alpha: active ? 0.24 : 0.14)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+    canvas.drawCircle(center, size.shortestSide * 0.38, glow);
+
+    final ring =
+        Paint()
+          ..color = color.withValues(alpha: 0.36)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5;
+    for (final r in [0.28, 0.42]) {
+      canvas.drawCircle(center, size.shortestSide * r, ring);
+    }
+
+    final tick =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.34)
+          ..strokeWidth = 1;
+    for (int i = 0; i < 8; i++) {
+      final angle = i * math.pi / 4;
+      final a = Offset(
+        center.dx + math.cos(angle) * size.shortestSide * 0.34,
+        center.dy + math.sin(angle) * size.shortestSide * 0.34,
+      );
+      final b = Offset(
+        center.dx + math.cos(angle) * size.shortestSide * 0.45,
+        center.dy + math.sin(angle) * size.shortestSide * 0.45,
+      );
+      canvas.drawLine(a, b, tick);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _AiCorePainter oldDelegate) =>
+      oldDelegate.color != color || oldDelegate.active != active;
 }

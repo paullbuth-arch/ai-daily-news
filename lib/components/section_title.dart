@@ -30,6 +30,7 @@ class SectionTitle extends StatelessWidget {
               border: Border.all(
                 color: C.isLight ? C.purple.withValues(alpha: 0.30) : C.border,
               ),
+              boxShadow: C.isLight ? C.glowPurple : null,
             ),
             child: Icon(
               icon,

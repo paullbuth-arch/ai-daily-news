@@ -9,19 +9,14 @@ class AppBackdrop extends StatelessWidget {
     child: DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors:
-              C.isLight
-                  ? [
-                    const Color(0xFF1D1C25),
-                    const Color(0xFF14131B),
-                    const Color(0xFF201922),
-                  ]
-                  : [
-                    const Color(0xFF081018),
-                    C.bgDeep,
-                    const Color(0xFF05070A),
-                  ],
-          begin: Alignment.topLeft,
+          colors: [
+            C.isLight ? const Color(0xFF292337) : const Color(0xFF071018),
+            C.isLight ? const Color(0xFF0B0A11) : C.bgDeep,
+            C.isLight ? const Color(0xFF201018) : const Color(0xFF05070A),
+            C.isLight ? const Color(0xFF07060B) : const Color(0xFF020406),
+          ],
+          stops: const [0, 0.42, 0.78, 1],
+          begin: Alignment.topCenter,
           end: Alignment.bottomRight,
         ),
       ),
@@ -40,13 +35,45 @@ class _OpsBackdropPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final base = Offset.zero & size;
+    final violetWash =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFF9F7DFF).withValues(alpha: isLight ? 0.20 : 0.10),
+              const Color(0xFF4D357E).withValues(alpha: isLight ? 0.08 : 0.04),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.04, size.height * 0.05),
+              radius: size.shortestSide * 0.92,
+            ),
+          );
+    canvas.drawRect(base, violetWash);
+
+    final marsWash =
+        Paint()
+          ..shader = RadialGradient(
+            colors: [
+              const Color(0xFFFF7D6C).withValues(alpha: isLight ? 0.22 : 0.10),
+              const Color(0xFFAB4A57).withValues(alpha: isLight ? 0.16 : 0.07),
+              const Color(0xFF4E1924).withValues(alpha: isLight ? 0.14 : 0.05),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * 0.98, size.height * 0.26),
+              radius: size.shortestSide * 1.05,
+            ),
+          );
+    canvas.drawRect(base, marsWash);
+
     final gridPaint =
         Paint()
-          ..color = (isLight ? const Color(0xFFB7AFFF) : C.primary).withValues(
-            alpha: isLight ? 0.045 : 0.035,
-          )
+          ..color = Colors.white.withValues(alpha: isLight ? 0.060 : 0.032)
           ..strokeWidth = 1;
-    final gap = isLight ? 108.0 : 28.0;
+    final gap = isLight ? 88.0 : 42.0;
     for (double x = 0; x <= size.width; x += gap) {
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
     }
@@ -54,107 +81,212 @@ class _OpsBackdropPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
+    final diagonal =
+        Paint()
+          ..color = const Color(
+            0xFFC8BDFF,
+          ).withValues(alpha: isLight ? 0.075 : 0.030)
+          ..strokeWidth = 1;
+    for (double x = -size.width; x < size.width * 1.7; x += 82) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x + size.width * 0.38, size.height),
+        diagonal,
+      );
+    }
+
     final horizon =
         Paint()
           ..shader = LinearGradient(
             colors: [
               Colors.transparent,
-              (isLight ? C.selected : C.primary).withValues(
-                alpha: isLight ? 0.22 : 1,
-              ),
+              const Color(0xFFE5D9FF).withValues(alpha: isLight ? 0.24 : 0.08),
               Colors.transparent,
             ],
           ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
           ..strokeWidth = 1;
+    for (final y in [0.16, 0.34, 0.68]) {
+      canvas.drawLine(
+        Offset(0, size.height * y),
+        Offset(size.width, size.height * y),
+        horizon,
+      );
+    }
+
+    final orbit =
+        Paint()
+          ..color = const Color(
+            0xFFC7B7FF,
+          ).withValues(alpha: isLight ? 0.19 : 0.06)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final center = Offset(size.width * 0.70, size.height * 0.24);
+    for (final scale in const [1.10, 1.62, 2.22, 2.96, 3.58]) {
+      final rect = Rect.fromCenter(
+        center: center,
+        width: size.shortestSide * scale,
+        height: size.shortestSide * scale * 0.58,
+      );
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(-0.28);
+      canvas.translate(-center.dx, -center.dy);
+      canvas.drawOval(rect, orbit);
+      canvas.restore();
+    }
+
+    final wideOrbit =
+        Paint()
+          ..color = const Color(
+            0xFFE2DAFF,
+          ).withValues(alpha: isLight ? 0.12 : 0.044)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
+    final wideCenter = Offset(size.width * 0.50, size.height * 0.28);
+    for (final scale in const [2.55, 3.35, 4.35, 5.20]) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: wideCenter,
+          width: size.shortestSide * scale,
+          height: size.shortestSide * scale * 0.68,
+        ),
+        wideOrbit,
+      );
+    }
+
+    final cross =
+        Paint()
+          ..color = Colors.white.withValues(alpha: isLight ? 0.075 : 0.045)
+          ..strokeWidth = 1;
+    for (final x in [0.08, 0.92]) {
+      canvas.drawLine(
+        Offset(size.width * x, 0),
+        Offset(size.width * x, size.height),
+        cross,
+      );
+    }
+
+    final frame =
+        Paint()
+          ..color = Colors.white.withValues(alpha: isLight ? 0.075 : 0.045)
+          ..strokeWidth = 1;
     canvas.drawLine(
-      Offset(0, size.height * 0.18),
-      Offset(size.width, size.height * 0.18),
-      horizon,
+      Offset(size.width * 0.03, size.height * 0.34),
+      Offset(size.width * 0.97, size.height * 0.34),
+      frame,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.19, 0),
+      Offset(size.width * 0.19, size.height),
+      frame,
     );
 
-    if (isLight) {
-      final orbit =
-          Paint()
-            ..color = const Color(0xFFC7B7FF).withValues(alpha: 0.12)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1;
-      final center = Offset(size.width * 0.58, size.height * 0.30);
-      for (final scale in const [1.18, 1.68, 2.20, 2.78]) {
-        final rect = Rect.fromCenter(
-          center: center,
-          width: size.shortestSide * scale,
-          height: size.shortestSide * scale * 0.62,
-        );
-        canvas.save();
-        canvas.translate(center.dx, center.dy);
-        canvas.rotate(-0.34);
-        canvas.translate(-center.dx, -center.dy);
-        canvas.drawOval(rect, orbit);
-        canvas.restore();
-      }
-      final redWash =
-          Paint()
-            ..shader = RadialGradient(
-              colors: [
-                const Color(0xFFFF8B7C).withValues(alpha: 0.24),
-                Colors.transparent,
-              ],
-            ).createShader(
-              Rect.fromCircle(
-                center: Offset(size.width * 0.92, size.height * 0.24),
-                radius: size.width * 0.64,
-              ),
-            );
-      canvas.drawRect(Offset.zero & size, redWash);
-      final violetWash =
-          Paint()
-            ..shader = RadialGradient(
-              colors: [
-                const Color(0xFF9F7DFF).withValues(alpha: 0.22),
-                Colors.transparent,
-              ],
-            ).createShader(
-              Rect.fromCircle(
-                center: Offset(size.width * 0.06, size.height * 0.05),
-                radius: size.width * 0.62,
-              ),
-            );
-      canvas.drawRect(Offset.zero & size, violetWash);
+    final terrain =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              const Color(0xFF7C2E38).withValues(alpha: isLight ? 0.20 : 0.06),
+              const Color(0xFF210A12).withValues(alpha: 0.34),
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ).createShader(
+            Rect.fromLTWH(
+              0,
+              size.height * 0.46,
+              size.width,
+              size.height * 0.54,
+            ),
+          );
+    canvas.drawRect(
+      Rect.fromLTWH(0, size.height * 0.46, size.width, size.height * 0.54),
+      terrain,
+    );
 
-      final cross =
-          Paint()
-            ..color = Colors.white.withValues(alpha: 0.08)
-            ..strokeWidth = 1;
-      canvas.drawLine(
-        Offset(size.width * 0.08, 0),
-        Offset(size.width * 0.08, size.height),
-        cross,
+    final contour =
+        Paint()
+          ..color = const Color(
+            0xFFFFB0B6,
+          ).withValues(alpha: isLight ? 0.07 : 0.03)
+          ..strokeWidth = 1
+          ..style = PaintingStyle.stroke;
+    for (double y = size.height * 0.56; y < size.height; y += 36) {
+      final path = Path()..moveTo(0, y);
+      path.cubicTo(
+        size.width * 0.22,
+        y - 18,
+        size.width * 0.44,
+        y + 20,
+        size.width * 0.66,
+        y + 2,
       );
-      canvas.drawLine(
-        Offset(0, size.height * 0.34),
-        Offset(size.width, size.height * 0.34),
-        cross,
+      path.cubicTo(
+        size.width * 0.82,
+        y - 12,
+        size.width * 0.94,
+        y + 10,
+        size.width,
+        y,
       );
+      canvas.drawPath(path, contour);
+    }
+
+    _drawBrand(canvas, Offset(size.width * 0.83, size.height * 0.04), 0.52);
+    _drawBrand(canvas, Offset(size.width * 0.07, size.height * 0.68), 0.42);
+
+    final speck =
+        Paint()..color = Colors.white.withValues(alpha: isLight ? 0.035 : 0.02);
+    for (int i = 0; i < 120; i++) {
+      final x = ((i * 47) % 1000) / 1000 * size.width;
+      final y = ((i * 83) % 1000) / 1000 * size.height;
+      canvas.drawCircle(Offset(x, y), i.isEven ? 0.5 : 0.8, speck);
     }
 
     final shade =
         Paint()
           ..shader = LinearGradient(
             colors: [
-              Colors.transparent,
-              isLight
-                  ? Colors.black.withValues(alpha: 0.42)
-                  : Colors.black.withValues(alpha: 0.42),
+              Colors.black.withValues(alpha: 0.02),
+              Colors.black.withValues(alpha: 0.18),
+              Colors.black.withValues(alpha: 0.48),
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-          ).createShader(Offset.zero & size);
-    canvas.drawRect(Offset.zero & size, shade);
+          ).createShader(base);
+    canvas.drawRect(base, shade);
   }
 
   @override
   bool shouldRepaint(covariant _OpsBackdropPainter oldDelegate) =>
       oldDelegate.isLight != isLight;
+
+  void _drawBrand(Canvas canvas, Offset origin, double scale) {
+    final style = TextStyle(
+      color: Colors.white.withValues(alpha: isLight ? 0.44 : 0.24),
+      fontSize: 18 * scale,
+      fontWeight: FontWeight.w900,
+      height: 1.45,
+    );
+    final tp = TextPainter(
+      text: TextSpan(text: 'S  E  A\nT  L  R', style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    tp.paint(canvas, origin);
+
+    final dash =
+        Paint()
+          ..color = Colors.white.withValues(alpha: isLight ? 0.18 : 0.10)
+          ..strokeWidth = 1;
+    for (int i = 0; i < 3; i++) {
+      final y = origin.dy + (9 + i * 16) * scale;
+      canvas.drawLine(
+        Offset(origin.dx + 42 * scale, y),
+        Offset(origin.dx + 72 * scale, y),
+        dash,
+      );
+    }
+  }
 }
 
 class GlassPanel extends StatelessWidget {
@@ -195,7 +327,13 @@ class GlassPanel extends StatelessWidget {
         gradient ??
         (C.isLight && resolvedColor == null
             ? const LinearGradient(
-              colors: [Color(0xFF30293A), Color(0xFF1F1C28), Color(0xFF4A242E)],
+              colors: [
+                Color(0xFF30283B),
+                Color(0xFF14121B),
+                Color(0xFF2B1520),
+                Color(0xFF5F2932),
+              ],
+              stops: [0, 0.43, 0.76, 1],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             )
@@ -218,7 +356,10 @@ class GlassPanel extends StatelessWidget {
               if (C.isLight)
                 Positioned.fill(
                   child: CustomPaint(
-                    painter: _LightPanelPainter(color: borderColor ?? C.border),
+                    painter: _LightPanelPainter(
+                      color: borderColor ?? C.border,
+                      accent: C.mars,
+                    ),
                   ),
                 ),
               Padding(padding: padding, child: child),
@@ -239,24 +380,53 @@ bool _isLegacyDarkSurface(Color color) {
 
 class _LightPanelPainter extends CustomPainter {
   final Color color;
+  final Color accent;
 
-  const _LightPanelPainter({required this.color});
+  const _LightPanelPainter({required this.color, required this.accent});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (size.width < 28 || size.height < 28) return;
+    final wash =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              accent.withValues(alpha: 0.11),
+              const Color(0xFF120810).withValues(alpha: 0.26),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, wash);
+
+    final terrain =
+        Paint()
+          ..color = accent.withValues(alpha: 0.13)
+          ..strokeWidth = 1;
+    for (double y = size.height * 0.54; y < size.height; y += 20) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), terrain);
+    }
+    for (double x = -size.width * 0.4; x < size.width * 1.1; x += 42) {
+      canvas.drawLine(
+        Offset(x, size.height * 0.50),
+        Offset(x + size.width * 0.18, size.height),
+        terrain,
+      );
+    }
+
     final line =
         Paint()
-          ..color = color.withValues(alpha: 0.52)
+          ..color = color.withValues(alpha: 0.68)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
-    final accent =
+    final glow =
         Paint()
-          ..color = C.purple.withValues(alpha: 0.34)
+          ..color = accent.withValues(alpha: 0.32)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1;
     const inset = 7.0;
-    const len = 14.0;
+    const len = 18.0;
     canvas.drawLine(
       const Offset(inset, inset),
       const Offset(inset + len, inset),
@@ -298,15 +468,54 @@ class _LightPanelPainter extends CustomPainter {
       line,
     );
     canvas.drawLine(
-      Offset(size.width * 0.62, 0),
-      Offset(size.width * 0.92, 0),
-      accent,
+      Offset(size.width * 0.62, inset),
+      Offset(size.width * 0.92, inset),
+      glow,
+    );
+    canvas.drawLine(
+      Offset(size.width - inset * 2, size.height * 0.38),
+      Offset(size.width - inset * 2, size.height * 0.82),
+      glow,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.08, size.height - inset),
+      Offset(size.width * 0.34, size.height - inset),
+      glow,
+    );
+
+    final hatch =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.045)
+          ..strokeWidth = 1;
+    for (double x = 18; x < size.width; x += 38) {
+      canvas.drawLine(
+        Offset(x, size.height * 0.58),
+        Offset(x + size.width * 0.10, size.height),
+        hatch,
+      );
+    }
+
+    final scan =
+        Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Colors.transparent,
+              Colors.white.withValues(alpha: 0.20),
+              accent.withValues(alpha: 0.16),
+              Colors.transparent,
+            ],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, 1))
+          ..strokeWidth = 1;
+    canvas.drawLine(
+      Offset(size.width * 0.10, size.height * 0.44),
+      Offset(size.width * 0.88, size.height * 0.44),
+      scan,
     );
   }
 
   @override
   bool shouldRepaint(covariant _LightPanelPainter oldDelegate) =>
-      oldDelegate.color != color;
+      oldDelegate.color != color || oldDelegate.accent != accent;
 }
 
 class RoundIconButton extends StatelessWidget {
