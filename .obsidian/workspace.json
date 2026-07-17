@@ -184,6 +184,7 @@
   "lastOpenFiles": [
     "01-roadmap-学习路线.md",
     "10-Foundation-基础/C-Advanced-C语言进阶/compile-link-startup-编译链接与启动流程.md",
+    "10-Foundation-基础/OS-Concepts-操作系统/interrupt-concurrency-中断并发同步.md",
     "10-Foundation-基础/C-Advanced-C语言进阶/c-core-C语言核心.md",
     "40-LinuxDriver-Linux驱动/DriverModel-驱动模型/platform-driver-外设驱动框架.md",
     "10-Foundation-基础/moc-基础目录.md",
@@ -207,7 +208,6 @@
     "40-LinuxDriver-Linux驱动/CharDevice-Input/char-device-字符设备驱动.md",
     "30-BSP-板级支持/Power-Pinmux/power-pinmux-电源与引脚复用.md",
     "30-BSP-板级支持/Kernel-Build/kernel-build-Kernel编译与裁剪.md",
-    "30-BSP-板级支持/Firmware-OTA-固件升级/boot-ota-启动流程与OTA升级.md",
     "20-HardwareProtocol-硬件协议/ADC-DAC-Analog-模拟接口",
     "20-HardwareProtocol-硬件协议/PWM-Timer-定时器与PWM",
     "80-Debug-调试/Serial-JTAG-SWD",
