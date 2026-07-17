@@ -11,9 +11,39 @@ aliases: [WQ Protocol, 0x5751, 物奇帧协议]
 
 WQ Protocol (物奇音频协议) 就像**快递公司的标准包装箱**：不管里面装的是音频、指令还是传感器数据，外面都套同一个格式的箱子——箱子上印着 `0x5751`（"WQ"两个字母的 ASCII 码）作为品牌标识，贴着寄件人编号 (seq)、业务类型 (service_type) 和内容清单 (command_id)。
 
+## 30 秒先看懂
+
+WQ Protocol 是 reGlasses 项目中所有 BLE 业务数据的统一封装格式，无论传输的是控制指令、音频流还是遥测数据，都使用相同的帧结构。就像快递公司不管寄什么物品都用统一规格的纸箱，纸箱上印着公司标识、寄件编号和物品清单。初学者先记住：WQ Protocol 帧以 0x5751 开头，依次是校验和、帧类型、序列号、服务类型、命令 ID 和载荷，总帧头 11 字节，有效载荷上限 233 字节。
+
+## 学完以后应该能做什么
+
+1. 能在 Source Insight 中找到 `wq_protocol.h` 并说出 `frame_header_t` 每个字段的含义。
+2. 能解释 sync_word = 0x5751 的意义。
+3. 能区分 REQ/RSP/IND/ACK 四种帧类型的用途。
+4. 能说出已有 4 类 Service 和新增 4 类 Service 的编号。
+5. 能解释 BLE 传输时的分片机制（233B 上限）。
+
 ## 为什么重要
 
 WQ Protocol 是**所有业务数据的封装格式**。你在 BLE GATT 里发的每一包数据、在 [[STTP 协议]] 里转发的每一条指令，**里面装的都是 WQ Protocol 帧**。不懂它，你就不知道数据打开后里面长什么样。
+
+## 前置知识
+
+- 理解 BLE GATT 的基本概念（Service、Characteristic、Notify/Write）；可先看 [[ble-gatt-BLE-GATT]]。
+- 知道 reGlasses 的 GATT Service 设计；可先看 [[reglasses-gatt-service-reGlasses-GATT设计]]。
+- 了解 reGlasses 的扩展命令集；可先看 [[reglasses-ext-commands-reGlasses扩展命令集]]。
+- 如果要写代码实现打包解包，需要 [[snippet-wq-protocol-WQ-Protocol打包解包]]。
+
+## 术语先讲清楚
+
+| 术语 | 英文 | 在 WQ Protocol 中具体指什么 |
+|---|---|---|
+| 同步字 | sync_word | 帧起始标志，固定为 0x5751（ASCII "WQ"），解包时首先检查 |
+| 帧类型 | frame_type | 标识帧的角色：REQ（请求）、RSP（响应）、IND（通知）、ACK（确认） |
+| 服务类型 | service_type | 标识命令属于哪个服务类别。SDK 内置 4 类，reGlasses 新增 4 类 |
+| 命令 ID | command_id | 每个服务类型下的具体命令编号，0x00-0x7F 为请求，0x80-0xFF 为响应 |
+| 校验和 | checksum | 从 msg_header 到 payload 结束的字节累加和，取低 8 位 |
+| 分片 | fragmentation | 当 payload 超过 233 字节时，拆分成多个帧传输，按 seq 排序重组 |
 
 ## 第一步：在 Source Insight 中找到帧定义
 
@@ -164,6 +194,34 @@ BLE GATT 协商后 MTU = 247 → payload = 244B → 减去帧头 11B = **233B �
 - [ ] 能区分 REQ/RSP/IND/ACK 四种帧类型
 - [ ] 能说出已有 4 类 Service 和新增 4 类 Service 的编号
 - [ ] 能解释 BLE 传输时的分片机制 (233B 上限)
+
+## 练习
+
+### 练习一：解析帧头
+
+给定原始字节：`57 51 3A 00 09 01 05 02 01 10 00`，解析出 sync_word、checksum、frame_type、need_ack、seq_number、service_type、command_id 和 payload_len 的值。
+
+**通过标准**：能对照帧结构逐字段解析，并判断这是什么类型的帧（REQ/RSP/IND/ACK）。
+
+### 练习二：打包一个控制帧
+
+手机需要发送"开始录制"指令，已知 camera_mask=0x01、max_duration_s=60、audio_enable=1。请写出调用 `wq_proto_pkt_pack` 的完整参数，并画出打包后的帧结构。
+
+**通过标准**：参数填写正确，能够计算出 payload_len 和 checksum。
+
+## 自测题
+
+1. **WQ Protocol 的 sync_word 是什么？占几个字节？**
+   - 0x5751（ASCII "WQ"），占 2 字节（uint16_t）。它是帧的起始标识，解包时首先检查。
+
+2. **frame_type=3 (IND) 和 frame_type=1 (REQ) 的区别？**
+   - REQ 是"请帮我做一件事"，需要对方回复 RSP。IND 是"通知你一下"，单向推送（如音频流），不需要回复。
+
+3. **BLE 传输时 WQ Protocol 的有效载荷上限是多少？怎么算的？**
+   - 233 字节。算法：MTU(247) - ATT头(3) - 帧头(11) = 233B。超过需分片。
+
+4. **已有 4 类 Service 的编号是什么？**
+   - UTILS(0x00)、TRANS_DOWN(0x01)、TRANS_UP(0x02)、RECORD(0x03)。
 
 ## 下一步
 

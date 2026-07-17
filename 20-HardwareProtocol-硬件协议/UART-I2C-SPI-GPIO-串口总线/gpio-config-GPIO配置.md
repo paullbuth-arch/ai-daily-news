@@ -9,6 +9,10 @@ aliases: [GPIO, General Purpose Input/Output, 通用IO, 引脚配置]
 
 > **一句话结论**：GPIO（General Purpose Input/Output，通用输入输出）不是"设为输出就能控 LED"这么简单，它是一组由方向控制、推挽/开漏输出结构、上下拉电阻、引脚复用（pinmux）、边沿/电平中断、去抖、驱动强度、资源占用和低功耗唤醒共同组成的引脚管理系统。真正会用 GPIO，意味着你能从芯片手册的引脚矩阵、SDK 的 claim/release 机制和中断回调一直追到真实的板级信号行为。
 
+## 30 秒先看懂
+
+GPIO 解决的是"芯片引脚怎么用"的问题，就像配电箱里的可编程开关——可以设为输出（控制灯亮灭）或输入（读按键状态）。但引脚的电气行为（推挽还是开漏、要不要上拉、能不能触发中断）远比想象中复杂。初学者先记住：输入引脚不能浮空（必须配上拉或下拉），输出引脚要先设电平再切方向，否则会有毛刺。
+
 本篇的代码锚点来自两个真实工程：
 
 - **WQ7036AX**：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/common/hal/gpio/wq_gpio.h`、`wq_gpio.c`，以及 I2C/SPI/UART 等驱动中调用 `wq_gpio_*` 和 `gpio_claim_*` 的实际使用点。

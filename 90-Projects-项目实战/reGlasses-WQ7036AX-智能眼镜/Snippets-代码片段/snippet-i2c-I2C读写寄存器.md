@@ -7,6 +7,8 @@ aliases: [I2C 模板, I2C 代码]
 
 # Snippet - I2C 读写寄存器
 
+本代码片段展示了如何在 WQ7036AX SDK 中通过 I2C 总线读写设备寄存器，包括单字节读写、多字节连续读写、设备初始化流程和中断处理。在 reGlasses 项目中，这段代码用于操作 ELM2713 光传感器和 TCA9539 GPIO 扩展器。SDK 参考路径：`wqcore/driver/periph/common/hal/i2c/wq_i2c.h`、`wq-adk/examples/glass/acore/app/src/app_light_sensor.c`。
+
 > 通用的 I2C 寄存器操作模板，适用于 [[elm2713-ELM2713光传感器 和充电 IC]]。
 
 ## 写寄存器

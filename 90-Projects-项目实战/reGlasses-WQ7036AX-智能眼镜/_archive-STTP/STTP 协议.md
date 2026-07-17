@@ -7,7 +7,7 @@ aliases: [STTP, SigmaStar Transparent Transfer Protocol]
 
 # STTP 协议
 
-> ⚠️ **已弃用**：commit `36c99d85` 已将 STTP 替换为 [[uart-basics-UART基础 (app_uart_cmd)]]。本笔记保留作为历史参考和设计对比。当前项目实际使用的是 [[uart-basics-UART基础。
+> ⚠️ **已弃用**：STTP 因项目实际只需要传语音指令，其 256 通道、三次握手连接和 CRC16 校验过于复杂，已被更轻量的 [[uart-basics-UART基础 (app_uart_cmd)]] 替代。当前项目使用 UART 命令协议（5 种固定命令 + XOR 校验 + 心跳检测）。本笔记保留作为历史参考和设计对比。
 
 ## 一句话理解
 

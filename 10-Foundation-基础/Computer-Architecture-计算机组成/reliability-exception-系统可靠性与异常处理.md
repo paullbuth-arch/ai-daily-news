@@ -1,45 +1,90 @@
-# 系统可靠性与异常处理
-
-**一句话结论（20% 核心）**：可靠性就是让系统在"出错的时候还能活下来"——核心手段是**看门狗**（程序跑飞就复位）、**异常处理**（崩溃时保留现场）、**降级运行**（主功能坏了保核心功能）、**日志记录**（事后能复盘）。
-
+---
+type: concept
+tags: [embedded, reliability, watchdog, exception, fault-handling, crc]
+aliases: [系统可靠性, 异常处理, 看门狗, 降级运行]
 ---
 
-## 第一层：核心认知
+# 系统可靠性与异常处理
 
-### 1.1 费曼类比：汽车安全系统
+## 一句话结论
+
+可靠性就是让系统在"出错的时候还能活下来"——核心手段是**看门狗**（程序跑飞就复位）、**异常处理**（崩溃时保留现场）、**降级运行**（主功能坏了保核心功能）、**日志记录**（事后能复盘）。
+
+## 30秒先看懂
+
+- 可靠的嵌入式系统需要四层保护：看门狗（检测到程序跑飞后自动复位）、异常处理（HardFault 发生时保存 PC/LR 等关键寄存器）、降级运行（主功能失效时保留核心功能，如蓝牙断开后切换本地控制）和日志记录（崩溃后能读取复位原因和最后状态）。看门狗不能放在定时器中断里喂——因为中断可能正常但主循环已经卡死。多任务系统中，所有关键任务都完成后才喂狗，不是单个任务喂。HardFault 发生后最重要的事是保存 PC 和 LR 寄存器，这样复位后可以通过 addr2line 定位到崩溃的代码行。
+
+## 学完以后应该能做什么
+
+**第一遍看完后可以：**
+- 正确配置看门狗，避免在中断里喂狗
+- 编写 HardFault_Handler 保存崩溃现场
+- 实现简单的降级运行策略
+- 使用复位原因寄存器诊断重启原因
+
+**进阶后可以：**
+- 设计多任务看门狗喂狗策略
+- 实现 CRC 校验保护通信数据
+- 搭建故障树分析（FTA）系统可靠性
+- 设计 A/B 分区 OTA 回滚机制
+
+## 前置知识
+
+- 中断的基本概念（中断向量表、ISR）
+- 栈的概念（栈帧、压栈、出栈）
+- 定时器的基本原理
+
+## 术语先讲清楚
+
+| 中文 | 英文 | 具体含义 |
+|------|------|---------|
+| 看门狗 | Watchdog / WDT | 硬件定时器，超时未喂狗则复位系统 |
+| 硬件错误 | HardFault | CPU 执行非法操作（如访问非法地址、除零）时触发的异常 |
+| 断言 | Assert | 运行时条件检查，条件不满足时触发错误处理 |
+| 降级运行 | Graceful Degradation | 主功能失败时保留核心功能继续运行 |
+| 心跳 | Heartbeat | 定期发出的信号，证明系统仍然存活 |
+| 故障树分析 | FTA | Fault Tree Analysis，从上到下分析系统失效的原因 |
+| 失效模式与影响分析 | FMEA | Failure Mode and Effects Analysis，逐个分析组件失效的影响 |
+| 循环冗余校验 | CRC | Cyclic Redundancy Check，检测数据传输/存储错误 |
+| 欠压复位 | Brown-Out Reset | 供电电压过低时自动复位 |
+| 复位原因 | Reset Reason | 记录上次复位来源的寄存器 |
+
+## 第一层：费曼心智模型
+
+### 类比：汽车安全系统
 
 可靠性就像汽车的安全系统：
 
 | 汽车安全 | 嵌入式可靠性 |
-|---|---|
-| 安全带 | **看门狗（Watchdog）**——出事时把你拉住（复位） |
-| 安全气囊 | **异常处理（Exception Handler）**——碰撞发生时保护人 |
-| 备胎 | **降级运行（Graceful Degradation）**——主轮坏了还能慢慢开 |
-| 行车记录仪 | **日志记录（Crash Log）**——出事后能复盘 |
-| 仪表盘报警灯 | **断言和健康检查**——问题刚出现就提醒 |
+|---------|-------------|
+| 安全带 | 看门狗（Watchdog）——出事时把你拉住（复位） |
+| 安全气囊 | 异常处理（Exception Handler）——碰撞发生时保护人 |
+| 备胎 | 降级运行（Graceful Degradation）——主轮坏了还能慢慢开 |
+| 行车记录仪 | 日志记录（Crash Log）——出事后能复盘 |
+| 仪表盘报警灯 | 断言和健康检查——问题刚出现就提醒 |
 
-### 1.2 核心机制速查表
+**边界：**
+- 看门狗不是万能药——它只能复位，不能修复硬件损坏
+- 降级运行需要提前设计——临时想"出了问题怎么办"往往来不及
+- 过多日志影响性能——日志系统和业务逻辑需要平衡
 
-| 机制 | 作用 | 关键设计 |
-|---|---|---|
-| **看门狗** | 程序跑飞时自动复位 | 定期"喂狗"，不喂就复位 |
-| **断言（Assert）** | 提前发现不可接受的错误 | 开发阶段崩在原地 |
-| **异常向量表** | 统一管理 HardFault、NMI 等 | 在 Handler 中保存现场 |
-| **心跳检测** | 证明系统还活着 | 定时翻转 GPIO / 发日志 |
-| **降级策略** | 主功能失败时保留核心功能 | 蓝牙断了还能本地控制 |
-| **CRC/校验** | 数据完整性保护 | 通信/存储数据都要校验 |
+### 场景演练：程序跑飞
 
-### 1.3 如果只记得一件事
+1. 某个指针意外变成空指针，`memcpy(buf, src, len)` 中 `buf` 为 NULL
+2. CPU 访问地址 0，触发 HardFault 异常
+3. HardFault_Handler 被执行：
+   - 保存 PC 寄存器的值（崩溃地址）
+   - 保存 LR 寄存器的值（调用者地址）
+   - 保存栈指针 SP
+   - 把崩溃信息写入 .noinit 段（复位后不会丢失）
+4. 系统复位
+5. 启动代码读取复位原因，发现是 HardFault 引起的复位
+6. 输出崩溃信息到串口：PC=0x00001234
+7. 用 `addr2line -e app.elf 0x00001234` 定位到具体的 C 代码行
 
-> 可靠的嵌入式系统 = 出错了能检测到 + 检测到能恢复 + 恢复不了能复位 + 复位后能记日志。
+## 第二层：原理/时序/约束
 
----
-
-## 第二层：实战理解
-
-### 2.1 看门狗（Watchdog）详解
-
-看门狗是一个硬件定时器。软件必须定期"喂狗"（重置计时器），如果不喂，计时器到 0 就会触发系统复位。
+### 看门狗原理
 
 ```
 正常运行：
@@ -49,35 +94,7 @@
 软件卡在死循环里，忘记喂狗 → 计时器到 0 → 系统复位
 ```
 
-```c
-// 看门狗配置示例（伪代码）
-
-void system_init(void) {
-    // 配置看门狗：超时时间 2 秒
-    watchdog_init(2000);  // 2000ms
-    watchdog_enable();
-}
-
-// 在主循环或定时任务中定期喂狗
-void main_loop(void) {
-    for (;;) {
-        process_tasks();
-        watchdog_feed();   // 喂狗（重置计时器）
-        vTaskDelay(pdMS_TO_TICKS(100));
-    }
-}
-```
-
-**喂狗策略的关键问题**：
-
-| 问题 | 错误做法 | 正确做法 |
-|---|---|---|
-| 喂狗位置 | 放在定时器中断里 | 放在主循环中（中断正常不代表主循环正常） |
-| 喂狗频率 | 和看门狗超时时间一样长 | 至少是超时时间的 1/2~1/3 |
-| 多任务喂狗 | 只在一个任务里喂 | 所有关键任务都完成后才喂 |
-| 调试时 | 开着看门狗断点调试 | 开发阶段关闭看门狗 |
-
-**多任务系统的喂狗模式**：
+### 多任务喂狗模式
 
 ```c
 // 每个关键任务完成后设置标志
@@ -104,128 +121,147 @@ void watchdog_task(void *p) {
     for (;;) {
         if (task_health == (BIT(0) | BIT(1))) {
             watchdog_feed();
-            task_health = 0;  // 重置
+            task_health = 0;
         }
         vTaskDelay(pdMS_TO_TICKS(500));
     }
 }
 ```
 
-### 2.2 HardFault 处理：保存崩溃现场
+### 复位原因
 
-HardFault 发生时，最重要的是**保留现场**，让工程师事后能分析崩溃原因。
+| 复位原因 | 说明 | 处理方式 |
+|---------|------|---------|
+| Power-On Reset | 上电复位 | 正常启动 |
+| Watchdog Reset | 看门狗超时 | 输出日志，检查程序是否卡死 |
+| Software Reset | 软件主动复位 | 正常重启流程 |
+| External Reset | 外部引脚触发 | 检查外部复位电路 |
+| Brown-Out Reset | 电压过低 | 检查电源供电 |
+
+## 第三层：真实 SDK 代码
+
+### WQ7036A 看门狗驱动
+
+看门狗驱动在 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/common/hal/wdt/wq_wdt.h`：
 
 ```c
-void HardFault_Handler(void)
-{
-    // 1. 保存关键寄存器到 Flash 或固定 RAM 区域
-    __asm volatile(
-        "push {lr}           \n"
-        "mrs r0, psp         \n"  // 取进程栈指针
-        "bl  save_fault_info \n"
-        "pop {lr}            \n"
-    );
+// 初始化看门狗
+void wq_wdt_init(void);
 
-    // 2. 尝试记录崩溃信息（不能阻塞）
-    // save_fault_info() 会把 PC、LR、SP、调用栈写入固定 RAM 地址
+// 喂狗（重置计时器）
+void wq_wdt_do_feed(void);
 
-    // 3. 复位系统
-    NVIC_SystemReset();
-}
+// 设置喂狗周期（秒）
+void wq_wdt_set_feed_period(uint32_t period);
 
-// 保存崩溃信息的函数
-void save_fault_info(uint32_t *stack_ptr)
-{
-    fault_info_t info;
-    info.pc = stack_ptr[6];     // PC（崩溃地址）
-    info.lr = stack_ptr[5];     // LR（调用者）
-    info.sp = (uint32_t)stack_ptr;
-    info.timestamp = get_tick();
+// 检查是否需要喂狗
+bool wq_wdt_need_feed(void);
 
-    // 写到固定 RAM 地址（复位后仍可读取）
-    *(fault_info_t **)FAULT_INFO_ADDR = &info;
-}
+// 复位系统
+void wq_wdt_do_reset(void);
+
+// 禁用所有看门狗
+void wq_wdt_disable_all(void);
+
+// 检查看门狗超时
+uint32_t wq_wdt_check_timeout(void);
 ```
 
-**复位后读取上次崩溃信息**：
+### 复位原因分析
+
+参考 `/home/ys/wq7036a/wq-audio/wqcore/components/startup/boot/src/boot_reason.c`：
 
 ```c
 void main(void) {
-    // 检查是否有上次的崩溃记录
-    if (is_watchdog_reset() || is_hardfault_reset()) {
-        fault_info_t *info = *(fault_info_t **)FAULT_INFO_ADDR;
-        if (info && info->pc != 0xFFFFFFFF) {
-            log_error("Previous crash: PC=0x%08X, LR=0x%08X",
-                      info->pc, info->lr);
-        }
+    uint32_t reason = read_reset_reason();
+
+    if (reason & RESET_REASON_WDT) {
+        LOG_WARN("Previous reset: Watchdog timeout");
+    } else if (reason & RESET_REASON_BOR) {
+        LOG_WARN("Previous reset: Brown-out (voltage drop)");
+    } else if (reason & RESET_REASON_POR) {
+        LOG_INFO("Normal power-on reset");
     }
+
+    clear_reset_reason();
     // ... 正常启动 ...
 }
 ```
 
-### 2.3 降级运行策略
-
-当某个模块出错时，不是直接崩溃，而是保留核心功能：
-
-| 场景 | 正常模式 | 降级模式 |
-|---|---|---|
-| 蓝牙断开 | 手机 APP 控制 | 本地按键控制 |
-| 音频 DSP 崩溃 | 高质量音频 | 直通音频（跳过 DSP） |
-| 传感器故障 | 精确测量 | 使用上次有效值 / 默认值 |
-| Flash 写入失败 | OTA 升级 | 继续使用旧版本 |
+### HardFault 处理
 
 ```c
-void bt_connection_handler(bt_event_t evt) {
-    if (evt == BT_DISCONNECTED) {
-        // 蓝牙断了，不崩溃，切换到本地控制模式
-        LOG_WARN("BT disconnected, switching to local mode");
-        switch_to_local_control();
-        // 同时尝试重连
-        bt_reconnect_start();
-    }
-}
+void HardFault_Handler(void) {
+    // 保存崩溃信息到固定的 RAM 地址（.noinit 段，复位后不丢失）
+    crash_info_t *crash = (crash_info_t *)CRASH_INFO_ADDR;
+    crash->pc = __get_PC();    // 崩溃时的程序计数器
+    crash->lr = __get_LR();    // 返回地址
+    crash->sp = __get_SP();    // 栈指针
+    crash->timestamp = get_tick();
 
-int read_sensor(uint16_t *value) {
-    int ret = i2c_read(sensor_addr, value);
-    if (ret != 0) {
-        // I2C 读取失败，不崩溃，返回上次有效值
-        LOG_WARN("Sensor read failed, using cached value");
-        *value = last_valid_value;
-        return -1;  // 返回错误码但不崩溃
-    }
-    last_valid_value = *value;
-    return 0;
+    NVIC_SystemReset();  // 复位
 }
 ```
 
-### 2.4 心跳检测与健康监控
+## 第四层：正常/异常路径
+
+### 正常路径
+
+系统启动 → 配置看门狗 → 主循环中定期喂狗 → 正常执行
+
+### 异常路径
+
+| 异常场景 | 现象 | 原因 | 处理方式 |
+|---------|------|------|---------|
+| 看门狗超时复位 | 系统反复重启 | 程序卡死或看门狗周期太短 | 检查喂狗位置，确保主循环中喂狗 |
+| HardFault 崩溃 | 程序突然停止 | 空指针、除零、访问非法地址 | 保存崩溃现场，复位后分析 PC 值 |
+| 数据 CRC 校验失败 | 通信数据错乱 | 线路干扰或 Flash 存储损坏 | 请求重发或使用备份数据 |
+| 栈溢出 | 变量被意外覆盖 | 递归太深或局部变量太大 | 增大栈空间或检查递归 |
+| 降级运行 | 功能受限但不崩溃 | 某个模块异常 | 切换到备用方案，记录日志 |
+
+## 第五层：调试方法
+
+### 看门狗调试
 
 ```c
-// 心跳 LED：每秒翻转一次，肉眼可观察系统是否活着
-void heartbeat_task(void *p) {
-    for (;;) {
-        gpio_toggle(HEARTBEAT_LED);
-        vTaskDelay(pdMS_TO_TICKS(500));
-    }
+// 开发阶段：关闭看门狗，方便断点调试
+void debug_init(void) {
+    wq_wdt_disable_all();  // 开发阶段关闭看门狗
 }
 
-// 系统健康监控
-typedef struct {
-    uint32_t free_heap;
-    uint32_t min_stack[8];  // 每个任务的栈水位线
-    uint32_t error_count;
-    uint32_t uptime_seconds;
-} health_info_t;
+// 查看喂狗次数
+uint32_t feed_cnt = wq_wdt_get_feed_cnt();
+printf("Watchdog feed count: %lu\n", feed_cnt);
+```
 
+### 崩溃分析
+
+```bash
+# 从 crashdump 地址定位代码
+riscv64-unknown-elf-addr2line -e build/acore/app_acore.elf -f 崩溃PC地址
+
+# 反汇编查看崩溃附近的代码
+riscv64-unknown-elf-objdump -d build/acore/app_acore.elf | grep -A20 "崩溃PC地址:"
+
+# 查看栈回溯
+(gdb) target remote :3333
+(gdb) backtrace full
+(gdb) info registers
+```
+
+### 健康监控
+
+```c
 void health_monitor_task(void *p) {
     for (;;) {
-        health_info_t info;
-        info.free_heap = xPortGetFreeHeapSize();
-        // ... 收集各任务栈水位线 ...
-        
-        // 定期检查
-        if (info.free_heap < MIN_HEAP_THRESHOLD) {
-            LOG_ERROR("Low heap: %lu", info.free_heap);
+        uint32_t free_heap = xPortGetFreeHeapSize();
+        uint32_t watermark = uxTaskGetStackHighWaterMark(NULL);
+
+        if (free_heap < MIN_HEAP_THRESHOLD) {
+            LOG_ERROR("Low heap: %lu bytes", free_heap);
+        }
+        if (watermark < MIN_STACK_THRESHOLD) {
+            LOG_ERROR("Stack low: %lu words remaining", watermark);
         }
 
         vTaskDelay(pdMS_TO_TICKS(60000));  // 每分钟检查一次
@@ -233,138 +269,64 @@ void health_monitor_task(void *p) {
 }
 ```
 
-### 2.5 项目中的应用
+## 第六层：实战练习
 
-WQ7036A 项目中的可靠性设计：
+### 练习 1：看门狗实验（基础）
 
-- **看门狗**：ACORE 主循环中喂狗，如果应用卡死则复位。
-- **蓝牙断线重连**：BT 断开不崩溃，自动重连。
-- **音频管道降级**：DSP 出错时切换到直通模式。
-- **IPC 超时重试**：核间通信超时不崩溃，重试或降级。
-- **OTA 回滚**：新固件启动失败自动回退旧版本（见 [[boot-ota-启动流程与OTA升级）]]。
+实现一个看门狗驱动的闪烁 LED 程序：
+1. 初始化看门狗，超时时间设为 3 秒
+2. 主循环中每 500ms 喂狗一次
+3. LED 每 500ms 翻转一次
+4. 故意取消喂狗，观察 LED 熄灭（系统复位）
+5. 复位后读取复位原因，确认是看门狗复位
 
----
+### 练习 2：实现多任务喂狗（进阶）
 
-## 第三层：深入扩展
+在多任务系统中实现健壮的喂狗策略：
+1. 创建 3 个任务（音频、蓝牙、显示）
+2. 每个任务完成后设置对应的健康标志位
+3. 创建喂狗任务，检查所有标志位都置位后才喂狗
+4. 模拟其中一个任务卡死，观察看门狗是否触发
+5. 记录哪个任务没有及时完成
 
-### 3.1 故障树分析（FTA, Fault Tree Analysis）
+### 练习 3：阅读看门狗源码（深入）
 
-从上到下分析"系统失效"的所有可能原因：
+阅读 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/common/hal/wdt/wq_wdt.h` 和相关实现，回答：
+1. WQ7036A 有几个看门狗？分别属于哪个核？
+2. 全局看门狗和系统看门狗的区别是什么？
+3. `wq_wdt_auto_feed()` 的作用是什么？
+4. 看门狗超时后的处理方式是什么？
 
-```
-系统崩溃
-├── 硬件故障
-│   ├── 电源异常
-│   ├── 时钟故障
-│   └── Flash 损坏
-├── 软件故障
-│   ├── 栈溢出
-│   ├── 空指针
-│   ├── 死锁
-│   └── 数据竞争
-└── 外部异常
-    ├── 通信中断
-    ├── 电磁干扰
-    └── 温度过高
-```
+## 自测与验收
 
-### 3.2 FMEA（失效模式与影响分析）
+1. 看门狗为什么不能放在定时器中断里喂？
+2. HardFault 发生后最重要的事是什么？
+3. 什么是降级运行？请举一个具体的例子。
+4. CRC 和 MD5/SHA 的区别是什么？CRC 用在什么场景？
+5. 多任务系统中如何设计正确的喂狗策略？
+6. 复位原因寄存器有什么用？常见的复位原因有哪些？
+7. 什么是 FTA（故障树分析）？如何用它对系统做可靠性分析？
 
-| 组件 | 失效模式 | 影响 | 严重度 | 检测方法 | 缓解措施 |
-|---|---|---|---|---|---|
-| UART | 数据丢失 | 命令未执行 | 高 | CRC 校验 | 超时重发 |
-| Flash | 写入失败 | OTA 中断 | 高 | 回读验证 | A/B 分区 |
-| 蓝牙 | 断连 | 控制失效 | 中 | 心跳检测 | 自动重连 |
-| I2S | 时钟漂移 | 音频杂音 | 中 | 采样率检测 | 重新初始化 |
+## 延伸阅读
 
-### 3.3 复位原因寄存器
+- [[debug-methodology-嵌入式调试方法论]] — HardFault 定位的详细方法
+- [[boot-ota-启动流程与OTA升级]] — OTA 失败回滚
+- [[interrupt-concurrency-中断并发同步]] — 数据竞争和死锁
+- [[low-power-低功耗设计]] — 低功耗下看门狗的处理
 
-大多数 MCU 都有复位原因寄存器，复位后可以读取"上次是因为什么复位的"：
+## #flashcard
 
-| 复位原因 | 说明 |
-|---|---|
-| Power-On Reset | 上电复位 |
-| Watchdog Reset | 看门狗超时 |
-| Software Reset | 软件主动复位 |
-| External Reset | 外部引脚触发 |
-| Brown-Out Reset | 电压过低自动复位 |
+**Q: 看门狗为什么不能放在定时器中断里喂？**
+A: 因为定时器中断可能正常运行但主循环已经卡死，这时看门狗不会超时，起不到保护作用。
 
-```c
-void main(void) {
-    uint32_t reason = read_reset_reason();
-    
-    if (reason & RESET_REASON_WDT) {
-        LOG_WARN("Previous reset: Watchdog timeout");
-    } else if (reason & RESET_REASON_BOR) {
-        LOG_WARN("Previous reset: Brown-out (voltage drop)");
-    }
-    
-    // 清除复位原因，避免下次误读
-    clear_reset_reason();
-    
-    // ... 正常启动 ...
-}
-```
+**Q: HardFault 发生后最重要的事是什么？**
+A: 保存 PC 和 LR 寄存器，定位崩溃的代码行。
 
-### 3.4 CRC 校验与数据完整性
+**Q: 什么是降级运行？**
+A: 主功能失效时保留核心功能，而不是整个系统崩溃。例如蓝牙断开后切换本地控制。
 
-```c
-// CRC-32 校验（通信和存储中最常用）
-uint32_t crc32(const uint8_t *data, size_t len)
-{
-    uint32_t crc = 0xFFFFFFFF;
-    for (size_t i = 0; i < len; i++) {
-        crc ^= data[i];
-        for (int j = 0; j < 8; j++) {
-            if (crc & 1)
-                crc = (crc >> 1) ^ 0xEDB88320;
-            else
-                crc >>= 1;
-        }
-    }
-    return ~crc;
-}
+**Q: 可靠的嵌入式系统四层保护是什么？**
+A: 看门狗（复位）+ 异常处理（保存现场）+ 降级运行（保核心）+ 日志记录（事后复盘）。
 
-// 使用：发送端附加 CRC，接收端验证
-void send_packet(uint8_t *data, size_t len) {
-    uint32_t crc = crc32(data, len);
-    memcpy(data + len, &crc, 4);  // CRC 附加在数据末尾
-    uart_send(data, len + 4);
-}
-
-bool receive_packet(uint8_t *data, size_t len) {
-    uint32_t received_crc;
-    memcpy(&received_crc, data + len, 4);
-    uint32_t calc_crc = crc32(data, len);
-    return (received_crc == calc_crc);  // 不匹配说明数据损坏
-}
-```
-
-### 3.5 常见问题
-
-- **看门狗为什么不能放在定时器中断里喂？** 因为定时器中断可能正常运行但主循环已经卡死，这时看门狗不会超时，起不到保护作用。
-- **HardFault 发生后最重要的事是什么？** 保存 PC 和 LR 寄存器，定位崩溃的代码行。
-- **什么是降级运行？** 主功能失效时保留核心功能，而不是整个系统崩溃。
-- **CRC 和 MD5/SHA 的区别？** CRC 用于检测传输错误（快速、简单），MD5/SHA 用于检测数据篡改（安全、防碰撞）。
-
-### 3.6 核心术语表
-
-| 英文 | 中文 | 说明 |
-|---|---|---|
-| Watchdog | 看门狗 | 超时自动复位 |
-| HardFault | 硬件错误 | CPU 执行非法操作 |
-| Assert | 断言 | 运行时条件检查 |
-| Graceful Degradation | 降级运行 | 主功能失败保留核心功能 |
-| Heartbeat | 心跳 | 定期信号证明系统存活 |
-| FTA | 故障树分析 | Fault Tree Analysis |
-| FMEA | 失效模式与影响分析 | Failure Mode and Effects Analysis |
-| CRC | 循环冗余校验 | Cyclic Redundancy Check |
-| Brown-Out Reset | 欠压复位 | 电压过低时自动复位 |
-| Reset Reason | 复位原因 | 上次复位的来源 |
-
-### 3.7 延伸阅读
-
-- [[debug-methodology-嵌入式调试方法论]] —— HardFault 定位的详细方法
-- [[boot-ota-启动流程与OTA升级]] —— OTA 失败回滚
-- [[interrupt-concurrency-中断并发同步]] —— 数据竞争和死锁
-- [[low-power-低功耗设计]] —— 低功耗下看门狗的处理
+**Q: CRC 的作用是什么？**
+A: 检测数据传输或存储中的错误，快速、简单，适合嵌入式通信场景。

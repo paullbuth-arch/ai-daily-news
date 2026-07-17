@@ -9,6 +9,10 @@ aliases: [SPI, Serial Peripheral Interface, 串行外设接口]
 
 > **一句话结论**：SPI（Serial Peripheral Interface，串行外设接口）不是"四根线各发各的"，它是一套由推挽电气结构、时钟极性和相位（CPOL/CPHA）、帧格式、片选时序、FIFO 缓冲和 DMA 链式传输共同组成的高速全双工总线协议。真正会用 SPI，意味着你能从 CPOL/CPHA 配置、波形、SDK API 和 DMA 回调一直追到外部芯片的寄存器读写结果。
 
+## 30 秒先看懂
+
+SPI 解决的是"高速短距离通信"问题，就像工厂里一条双向传送带，控制器按启动键（拉低片选）后传送带开始运转，节拍器（时钟）决定速度。控制器发数据的同时外设也在回数据，这叫全双工。初学者先记住：SPI 有四根线，用推挽输出所以跑得快，但每个外设需要一根独立的片选线，因此外设多了线就多。
+
 本篇的代码锚点来自一个真实工程：
 
 - **WQ7036AX**：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/common/hal/spi/wq_spi.h`、`wq_spi.c`，`wqcore/driver/periph/bbb/hw/spi.h/.c`，`wq-adk/components/ext_trans/src/ext_trans_dev_spi.c`，以及 `wq-adk/examples/ext_loopback/acore/app/src/app_spi_trans.c`。

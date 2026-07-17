@@ -9,6 +9,10 @@ aliases: [UART, 串口, Universal Asynchronous Receiver-Transmitter]
 
 > **一句话结论**：UART（Universal Asynchronous Receiver-Transmitter，通用异步收发器）不是"约定好波特率就能通信"这么简单，它是一套由异步采样时钟恢复、起始/停止位帧定界、FIFO（先进先出缓冲）和中断阈值、DMA 传输、流控（RTS/CTS）以及共享 I/O 半双工共同组成的异步串行协议。真正会用 UART，意味着你能从波特率误差、帧格式、中断状态机和 DMA 回调一直追到芯片间可靠通信的每一字节。
 
+## 30 秒先看懂
+
+UART 解决的是"两个设备在没有时钟线的情况下通信"的问题，就像两个人用对讲机通话，约定好语速（波特率），一方开始说话前先按一下通话键（起始位）让对方准备好。因为没有时钟线，双方必须靠各自的时钟按约定速度采样，所以速度不能太快。初学者先记住：UART 只需要两根线，点对点通信，不需要时钟，但双方波特率必须一致。
+
 本篇的代码锚点来自两个真实工程：
 
 - **WQ7036AX**：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/common/hal/uart/wq_uart.h`、`wq_uart.c`，`wqcore/driver/periph/bbb/hw/uart.h/.c`，以及 `wq-adk/components/ext_trans/src/ext_trans_dev_uart.c`。

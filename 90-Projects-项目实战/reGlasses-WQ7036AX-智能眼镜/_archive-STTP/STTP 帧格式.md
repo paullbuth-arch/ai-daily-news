@@ -7,7 +7,7 @@ aliases: [STTP Frame, STTP 帧结构]
 
 # STTP 帧格式
 
-> ⚠️ **已弃用**：STTP 已被 [[uart-basics-UART基础 (app_uart_cmd)]] 替代]]。本笔记保留作为历史参考。
+> ⚠️ **已弃用**：STTP 因项目只需要传语音指令，其复杂的帧格式（4 字节 Header + 可扩展长度 + CRC16 + 结束标志）已被更轻量的 [[uart-basics-UART基础 (app_uart_cmd)]] 替代。当前项目使用 UART 命令协议（4 字节帧头 + XOR 校验）。本笔记保留作为历史参考。
 
 ## 是什么
 

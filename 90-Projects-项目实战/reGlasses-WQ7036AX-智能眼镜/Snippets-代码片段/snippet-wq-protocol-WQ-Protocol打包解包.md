@@ -7,6 +7,8 @@ aliases: [WQ 帧模板, 打包解包代码]
 
 # Snippet - WQ Protocol 帧打包解包
 
+本代码片段展示了如何在 WQ7036AX SDK 中打包和解包 WQ Audio Protocol 帧，包括帧构造（`wq_proto_pkt_pack`）、帧解析（`wq_proto_pkt_unpack`）、响应发送和基于 service_type 的消息分发。在 reGlasses 项目中，这段代码用于处理手机和眼镜之间的所有 BLE 数据通信。SDK 参考路径：`apps/common/wq_protocol/inc/wq_protocol.h`、`wq-adk/components/apps/acore/src/app_trans.c`。
+
 > 参考 `apps/common/wq_protocol/inc/wq_protocol.h`。
 
 ## 打包 (发送方)

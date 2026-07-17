@@ -6,6 +6,10 @@ tags: [obsidian, 工作流, 学习, 嵌入式]
 
 # Obsidian 嵌入式学习工作流指南
 
+## 30 秒先看懂
+
+本文介绍如何使用 Obsidian 进行嵌入式系统学习，核心工作流是"读资料、写原子笔记、链接已有知识、图谱梳理、间隔复习、AI 问答巩固"。Obsidian 的价值不在于存笔记，而在于写和链接的过程中强迫自己理解。初学者先记住：一条笔记只写一个概念，每条笔记至少链接两条已有笔记，记了就要复习，否则等于没记。
+
 ## 一、核心理念
 
 ```
@@ -136,7 +140,7 @@ General Purpose Input/Output，通用输入输出口。
 
 ### 6.1 解释代码 / 概念
 ```
-选中一段代码 → Copilot Chat → 
+选中一段代码 → Copilot Chat →
 "解释这段代码的逻辑"
 ```
 或直接问：
@@ -227,7 +231,7 @@ mklink /J "D:\02-Obsidian\yuan\Projects\stm32-project" "D:\code\stm32-project"
 2. Daily Notes 写今天的日志
 3. 把你最近学的知识点写成 3 条原子笔记
    → Concepts/MCU/GPIO.md
-   → Concepts/MCU/定时器.md  
+   → Concepts/MCU/定时器.md
    → Concepts/MCU/PWM.md
 4. 打开 Copilot Chat → "帮我检查一下这些笔记之间的关联"
 5. 加 #flashcard 标记，开始复习

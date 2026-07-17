@@ -9,6 +9,10 @@ aliases: [PDM, Pulse Density Modulation, DMIC, 数字麦克风]
 
 > **一句话结论**：PDM（Pulse Density Modulation，脉冲密度调制）不是"CLK+DATA 两根线传音频"这么简单，它是一套由高频过采样时钟（通常 1-3 MHz）、1-bit 密度编码（'1'的密度正比于信号幅度）、抽取滤波器（decimation filter，PDM→PCM 转换）、L/R 边沿分时复用和麦克风偏置电压（MICBIAS）共同组成的数字麦克风接口。真正会用 PDM，意味着你能从 CLK 频率推导出 PCM 输出采样率，在逻辑分析仪上从 DATA 线上区分左/右声道麦克风的 1-bit 流，并追踪从声波到 PCM 缓冲区的完整信号链。
 
+## 30 秒先看懂
+
+PDM 解决的是"数字麦克风怎么把声音传给芯片"的问题，就像一个鼓手用鼓点记录音乐——鼓点密集表示声音大，鼓点稀疏表示声音小，均匀敲击表示无声。接收方统计一段时间内鼓点的密集程度，就能还原出原始声音。初学者先记住：PDM 只需要两根线（时钟和数据），一根数据线上可以同时传两路麦克风，但接收端需要抽取滤波器把一比特流转换成 PCM 才能用。
+
 本篇的代码锚点来自两个真实工程：
 
 - **WQ7036AX**：`/home/ys/wq7036a/wq-audio/wqcore/driver/audio/declare/wq_pdm_declare.h`（API 声明）、`wqcore/components/audsys/device/aud_pdm.c`（音频设备层）、`wqcore/driver/audio/bbb/hal/pdm/`（硬件抽象层）。

@@ -1,24 +1,89 @@
-# 外设驱动通用框架
-
-**一句话结论（20% 核心）**：所有外设驱动的本质都是五步：使能时钟 → 配置引脚 → 设置工作模式 → 启动外设 → 读写数据。不管是 GPIO、UART、I2C、SPI 还是 ADC，流程都一样，只是寄存器和参数不同。
-
+---
+type: concept
+tags: [LinuxDriver, 驱动框架, Platform Driver, 外设驱动, probe, 设备模型, WQ7036A]
+aliases: [platform driver, 外设驱动框架, 驱动模型, 设备驱动, probe, platform]
 ---
 
-## 第一层：核心认知
+# 外设驱动通用框架
 
-### 1.1 费曼类比
+## 一句话结论
 
-外设就像家里的电器：
+所有外设驱动的本质都是五步：使能时钟 → 配置引脚 → 设置工作模式 → 启动外设 → 读写数据。不管是 GPIO、UART、I2C、SPI 还是 ADC，流程都一样，只是寄存器和参数不同。
+
+## 30秒先看懂
+
+- 任何外设驱动的初始化都可以归纳为五步：开时钟、配引脚、设模式、使能、读写数据，这个流程在任何芯片平台上都通用。
+- 数据传输有三种方式：轮询（CPU 循环查状态）、中断（硬件通知 CPU）、DMA（外设直接搬数据到内存），选择依据是数据量和实时性要求。
+- 好的驱动代码分为三层：硬件驱动层（HAL，操作寄存器）、驱动抽象层（API，统一接口）、应用层（业务逻辑），层间解耦便于移植。
+- 外设选择的黄金法则：调试用 UART，多低速传感器共享用 I2C，高速数据传输用 SPI。
+- WQ7036A 的驱动代码在 `wqcore/driver/periph/` 下，按芯片系列（bbb/hornet/emu）分目录组织。
+
+## 学完以后应该能做什么
+
+**第一遍**
+- 能说出外设初始化的通用五步流程
+- 能区分轮询、中断、DMA 三种传输方式的选择场景
+- 能读懂 WQ7036A SDK 中的 UART/I2C/GPIO 驱动代码
+
+**进阶**
+- 能自己写一个外设驱动（从寄存器手册到 API 封装）
+- 能设计驱动分层架构，实现代码复用
+- 能用逻辑分析仪调试外设通信问题
+
+## 前置知识
+
+- C 语言基础：指针、结构体、位操作
+- 计算机组成：寄存器、中断、内存映射
+- GPIO 基础概念：输入、输出、复用功能
+
+## 术语先讲清楚
+
+| 中文 | 英文 | 具体含义 |
+|------|------|----------|
+| 通用输入输出 | GPIO (General Purpose I/O) | 最基本的引脚控制，可以读输入电平或写输出电平 |
+| 引脚复用 | Pin Mux (Pin Multiplexing) | 一个引脚可以配置为多种功能，通过寄存器选择 |
+| 时钟使能 | Clock Enable | 外设必须有时钟才能工作，不使能时钟则寄存器读写无效 |
+| 波特率 | Baud Rate | UART 每秒传输的符号数，单位 bps（bits per second） |
+| 中断服务程序 | ISR (Interrupt Service Routine) | 硬件触发中断时 CPU 自动执行的函数 |
+| 直接内存访问 | DMA (Direct Memory Access) | 外设直接读写内存，不需要 CPU 逐字节搬运 |
+| 硬件抽象层 | HAL (Hardware Abstraction Layer) | 封装底层寄存器操作的中间层，方便驱动在不同芯片间移植 |
+| 推挽输出 | Push-Pull Output | 可以输出高电平或低电平的 GPIO 模式 |
+| 开漏输出 | Open Drain Output | 只能拉低不能拉高，需要外部上拉电阻的 GPIO 模式 |
+
+## 第一层：费曼心智模型
+
+### 类比：家电使用流程
+
+外设就像家里的电器，使用流程完全一致：
 
 | 步骤 | 电器类比 | MCU 外设 |
-|---|---|---|
+|------|---------|----------|
 | 1. 使能时钟 | 打开空气开关 | `clk_enable(UART1)` |
-| 2. 配置引脚 | 把电器插到正确的插座 | `gpio_set_af(PIN, AF_UART)` |
+| 2. 配置引脚 | 把电器插到正确的插座 | `pin_set_func(PIN, FUNC_UART)` |
 | 3. 配置模式 | 设置电器的档位（温度/风速） | `uart_init(115200, 8N1)` |
 | 4. 使能外设 | 按下电源按钮 | `uart_enable(UART1)` |
 | 5. 读写数据 | 真正使用电器 | `uart_send('A')` |
 
-### 1.2 通用初始化流程
+### 边界在哪里
+
+- 驱动代码不处理业务逻辑——它只负责让硬件正确工作，业务逻辑在应用层
+- 驱动层和应用层的接口要保持稳定——换芯片时只改底层 HAL，不改变上层 API
+- 轮询、中断、DMA 不是互斥的——可以混合使用（如 DMA 传大数据，中断处理完成事件）
+- 外设初始化顺序很重要——某些外设依赖其他外设先初始化（如 I2C 设备依赖 I2C 控制器）
+
+### 场景演练：WQ7036A 初始化 UART1 与 V881 通信
+
+1. 查阅芯片手册，找到 UART1 的基地址（`APB_UART1_BASEADDR`）和时钟 ID（`APB_CLK_UART1`）
+2. 调用 `clk_enable(APB_CLK_UART1)` 使能 UART1 时钟
+3. 调用 `pin_set_func(tx_pin, FUNC_UART1_TX)` 和 `pin_set_func(rx_pin, FUNC_UART1_RX)` 配置引脚
+4. 调用 `uart_init(UART1, 115200, 8, UART_PARITY_NONE, 1)` 设置波特率 115200、8 数据位、无校验、1 停止位
+5. 调用 `uart_enable(UART1)` 使能 UART1
+6. 调用 `uart_send_byte(UART1, 'A')` 发送数据
+7. 调用 `uart_read_byte(UART1)` 接收数据（或注册中断回调）
+
+## 第二层：原理/时序/约束
+
+### 通用初始化流程
 
 ```
 ┌───────────────────┐
@@ -36,84 +101,10 @@
 └───────────────────┘
 ```
 
-### 1.3 核心概念速查表
-
-| 术语 | 中文 | 含义 |
-|---|---|---|
-| GPIO | 通用输入输出 | General Purpose I/O，最基本的引脚控制 |
-| Pin Mux | 引脚复用 | 一个引脚可以有多个功能，通过寄存器选择 |
-| Clock Enable | 时钟使能 | 外设必须有clock才能工作 |
-| Baud Rate | 波特率 | UART 每秒传输的符号数 |
-| Master/Slave | 主/从 | SPI/I2C 中的角色 |
-| ISR | 中断服务程序 | Interrupt Service Routine |
-| DMA | 直接内存访问 | 外设直接搬数据，不经 CPU |
-
-### 1.4 最小代码示例
-
-```c
-// 以 UART 为例（伪代码）
-
-// 第 1 步：使能时钟
-clk_enable(CLK_UART1);
-
-// 第 2 步：配置引脚复用
-gpio_set_mode(GPIO_PIN_9,  GPIO_MODE_AF);    // TX 引脚
-gpio_set_af(GPIO_PIN_9,    GPIO_AF_UART1);   // 选择 UART1 功能
-gpio_set_mode(GPIO_PIN_10, GPIO_MODE_AF);    // RX 引脚
-gpio_set_af(GPIO_PIN_10,   GPIO_AF_UART1);
-
-// 第 3 步：配置工作模式
-uart_init(UART1, 115200, 8, UART_PARITY_NONE, 1);  // 波特率、数据位、校验、停止位
-
-// 第 4 步：使能外设
-uart_enable(UART1);
-
-// 第 5 步：发送数据
-uart_send_byte(UART1, 'H');
-uart_send_byte(UART1, 'i');
-```
-
-### 1.5 如果只记得一件事
-
-> 不管什么外设，初始化都是：开时钟 → 配引脚 → 设模式 → 使能 → 读写。区别只在具体寄存器和参数。
-
----
-
-## 第二层：实战理解
-
-### 2.1 GPIO 详解
-
-GPIO（General Purpose I/O）是最基础的外设，每个引脚可以配置为：
-
-| 模式 | 说明 | 典型用途 |
-|---|---|---|
-| 输入（Input） | 读取引脚电平 | 按键、传感器 |
-| 输出（Output） | 控制引脚高低 | LED、蜂鸣器 |
-| 复用功能（AF） | 连接到内部外设 | UART TX/RX、SPI CLK |
-| 模拟（Analog） | 连接 ADC/DAC | 模拟传感器 |
-| 开漏（Open Drain） | 只能拉低，不能拉高 | I2C 总线 |
-
-```c
-// GPIO 输出：点亮 LED
-gpio_set_mode(LED_PIN, GPIO_MODE_OUTPUT);
-gpio_write(LED_PIN, GPIO_HIGH);
-
-// GPIO 输入：读按键
-gpio_set_mode(BTN_PIN, GPIO_MODE_INPUT);
-gpio_set_pull(BTN_PIN, GPIO_PULL_UP);  // 内部上拉
-if (gpio_read(BTN_PIN) == GPIO_LOW) {
-    // 按键按下（按下时接地，低电平）
-}
-
-// GPIO 中断：按键触发中断
-gpio_set_mode(BTN_PIN, GPIO_MODE_INPUT);
-gpio_set_irq(BTN_PIN, GPIO_IRQ_FALLING, button_isr);  // 下降沿触发
-```
-
-### 2.2 UART / I2C / SPI 对比
+### UART / I2C / SPI 对比
 
 | 特性 | UART | I2C | SPI |
-|---|---|---|---|
+|------|------|-----|-----|
 | 线数 | 2（TX/RX） | 2（SDA/SCL） | 4+（MOSI/MISO/CLK/CS） |
 | 速度 | 低（9600~115200 常见） | 中（100k/400k/1M） | 高（可达数十 MHz） |
 | 主从 | 点对点（无主从概念） | 多从（7位/10位地址） | 一主多从（CS 选择） |
@@ -121,48 +112,15 @@ gpio_set_irq(BTN_PIN, GPIO_IRQ_FALLING, button_isr);  // 下降沿触发
 | 全双工 | 是（TX/RX 独立） | 半双工（SDA 双向） | 全双工（MOSI/MISO 独立） |
 | 典型用途 | 调试打印、模块通信 | 传感器、EEPROM | Flash、显示屏、高速 ADC |
 
-**怎么选？**
-
-- 调试打印、与 PC 通信 → **UART**
-- 多个低速传感器共享两条线 → **I2C**
-- 高速数据传输（Flash、屏幕） → **SPI**
-
-### 2.3 轮询 vs 中断 vs DMA：数据收发方式选择
+### 轮询 vs 中断 vs DMA
 
 | 方式 | 工作方式 | CPU 占用 | 适用场景 |
-|---|---|---|---|
-| **轮询（Polling）** | CPU 循环查"有数据吗？" | 高 | 初始化、简单场景 |
-| **中断（Interrupt）** | 有数据时硬件通知 CPU | 低 | 中低速、事件驱动 |
-| **DMA** | 外设直接搬数据到内存 | 极低 | 高速、大数据量 |
+|------|---------|---------|----------|
+| **轮询 (Polling)** | CPU 循环查"有数据吗？" | 高 | 初始化、简单场景 |
+| **中断 (Interrupt)** | 有数据时硬件通知 CPU | 低 | 中低速、事件驱动 |
+| **DMA** | 外设直接搬数据到内存 | 极低 | 高速、大数据量（音频/ADC） |
 
-```c
-// 方式 1：轮询
-while (uart_rx_ready(UART1) == false);  // 一直等
-uint8_t data = uart_read(UART1);
-
-// 方式 2：中断
-uart_enable_rx_irq(UART1);  // 配置一次
-// 有数据时自动触发 uart_isr()
-
-void uart_isr(void) {
-    uint8_t data = uart_read(UART1);
-    rbuf_put(&rx_ring, data);  // 放入环形缓冲区
-}
-
-// 方式 3：DMA
-dma_config(DMA_CH1, .src = &UART1_DR, .dst = buf, .size = 1024);
-dma_start(DMA_CH1);
-// 1024 字节收完后触发 DMA 中断
-```
-
-**选择策略**：
-- 数据量 < 几个字节、对实时性不敏感 → 轮询
-- 数据量中等、事件驱动 → 中断
-- 数据量大、持续流（音频/ADC） → DMA + 双缓冲
-
-### 2.4 驱动分层设计
-
-好的驱动代码分为三层，便于移植和复用：
+### 驱动分层设计
 
 ```
 ┌─────────────────────┐
@@ -174,8 +132,90 @@ dma_start(DMA_CH1);
 └─────────────────────┘
 ```
 
+## 第三层：真实 SDK 代码
+
+### WQ7036AX 的 UART 驱动
+
+文件路径：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/uart.c`
+
 ```c
-// 驱动抽象层接口
+// UART 基地址表（每个端口对应一个寄存器基地址）
+static uart_reg_t *const uart_bases[WQ_UART_PORT_MAX] = {
+    (uart_reg_t *)APB_UART0_BASEADDR,
+    (uart_reg_t *)APB_UART1_BASEADDR,
+    (uart_reg_t *)APB_UART2_BASEADDR,
+    (uart_reg_t *)APB_UART3_BASEADDR,
+};
+
+// UART 时钟表（每个端口对应的 APB 时钟）
+static const APB_CLK uart_apb_clk[WQ_UART_PORT_MAX] = {
+    APB_CLK_UART0,
+    APB_CLK_UART1,
+    APB_CLK_UART2,
+    APB_CLK_UART3,
+};
+```
+
+文件路径：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/uart.h`
+
+```c
+// UART 数据位配置
+typedef enum {
+    UART_DATA_BITS_5 = 0,
+    UART_DATA_BITS_6 = 1,
+    UART_DATA_BITS_7 = 2,
+    UART_DATA_BITS_8 = 3,
+} UART_DATA_BITS;
+
+// UART 校验配置
+typedef enum {
+    UART_PARITY_NONE,
+    UART_PARITY_EVEN,
+    UART_PARITY_ODD,
+} UART_PARITY;
+
+// UART 停止位配置
+typedef enum {
+    UART_STOP_BITS_1 = 1,
+    UART_STOP_BITS_1_5 = 2,
+    UART_STOP_BITS_2 = 3,
+} UART_STOP_BITS;
+```
+
+### WQ7036AX 的 I2C 驱动
+
+文件路径：`/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/i2c.c`
+
+```c
+// I2C 基地址表
+static i2c_master_reg_t *const i2c_bases[] = {
+    (i2c_master_reg_t *)I2C0_BASEADDR,
+    (i2c_master_reg_t *)I2C1_BASEADDR,
+    (i2c_master_reg_t *)I2C2_BASEADDR,
+    (i2c_master_reg_t *)I2C3_BASEADDR,
+};
+
+// I2C 时钟表
+static const APB_CLK i2c_apb_clk[WQ_I2C_PORT_MAX] = {
+    APB_CLK_IIC0,
+    APB_CLK_IIC1,
+    APB_CLK_IIC2,
+    APB_CLK_IIC3,
+};
+
+// I2C 中断向量表
+static const uint32_t i2c_int_vector[WQ_I2C_PORT_MAX] = {
+    I2C0_2_INT,
+    I2C1_3_INT,
+    I2C0_2_INT,
+    I2C1_3_INT,
+};
+```
+
+### 驱动抽象层接口设计
+
+```c
+// 驱动抽象层接口（设备无关）
 typedef struct {
     int  (*init)(void *config);
     int  (*read)(uint8_t *buf, uint32_t len);
@@ -189,128 +229,115 @@ sensor->init(&config);
 sensor->read(buf, len);
 ```
 
-### 2.5 常见坑
+## 第四层：正常/异常路径
 
-1. **忘记使能时钟**：外设寄存器读写全是 0 或 0xFF，但不会报错。
-2. **引脚复用配错**：同一个引脚被两个外设抢，行为不确定。
-3. **波特率不匹配**：UART 通信收到乱码，首先检查两端波特率是否一致。
-4. **I2C 没有上拉电阻**：I2C 是开漏总线，SDA/SCL 必须外接上拉电阻。
-5. **SPI 片选（CS）忘记控制**：每次通信前要拉低 CS，通信完拉高 CS。
+### 正常路径
 
-### 2.6 项目中的应用
+1. 时钟使能成功 → 外设寄存器可正常读写
+2. 引脚配置正确 → 功能正常，无冲突
+3. 模式配置与外设匹配 → 通信正常
+4. 中断/DMA 配置正确 → 数据收发高效
 
-WQ7036A 项目中涉及的外设：
+### 异常路径
 
-| 外设 | 用途 | 通信对象 |
-|---|---|---|
-| UART1 | MCU ↔ V881 芯片通信 | UART 命令协议 (app_uart_cmd) |
-| I2C | 连接光传感器 ELM2713 | 寄存器读写 |
-| I2S | 音频数据传输 | MAX98357A 功放 |
-| GPIO | LED 控制、按键检测 | 板载外设 |
-| SPI | Flash 读写 | 外部 SPI Flash |
+| 问题 | 现象 | 根因 | 排查方法 |
+|------|------|------|----------|
+| 忘记使能时钟 | 外设寄存器读写全是 0 或 0xFF | 没调 clk_enable() | 检查初始化代码中是否有时钟使能 |
+| 引脚复用配错 | 同一个引脚被两个外设抢，行为不确定 | 引脚功能表选错 | 检查芯片手册，确认该引脚支持的功能 |
+| 波特率不匹配 | UART 通信收到乱码 | 两端波特率不一致 | 用示波器测 TX 引脚波形，计算波特率 |
+| I2C 无上拉电阻 | I2C 总线无响应，SDA/SCL 空闲低电平 | I2C 是开漏总线，需要外部上拉 | 万用表测 SDA/SCL 空闲电平（应为高） |
+| SPI 片选忘记控制 | 通信失败，设备无响应 | 每次通信前没有拉低 CS | 检查通信代码中 CS 控制逻辑 |
+| SPI 模式不匹配 | 数据全错 | 主从的 CPOL/CPHA 配置不一致 | 检查 datasheet 确定设备支持的 SPI 模式 |
 
----
+## 第五层：调试方法
 
-## 第三层：深入扩展
-
-### 3.1 I2C 协议深入
-
-I2C（Inter-Integrated Circuit）是最常用的低速总线：
-
-```
-      SDA（数据线，双向）
-      │   │   │   │
-MCU ──┤   ├───┤   ├── 温度传感器 (0x48)
-      │   │   │   │
-SCL ──┘   └───┘   └── 加速度计 (0x68)
-（时钟线）
-```
-
-**通信时序**：
-1. START 条件：SCL 高时 SDA 下降沿
-2. 发送 7 位从机地址 + 1 位 R/W
-3. 等待 ACK（从机拉低 SDA 表示应答）
-4. 发送/接收数据字节
-5. STOP 条件：SCL 高时 SDA 上升沿
-
-**I2C 常见调试方法**：
-- 用逻辑分析仪抓 SDA/SCL 波形，检查地址是否正确、是否有 ACK。
-- 用万用表测 SDA/SCL 空闲时是否都是高电平（上拉电阻是否接好）。
-
-### 3.2 SPI 协议深入
-
-SPI（Serial Peripheral Interface）是高速同步全双工总线：
-
-```
-        MOSI（主出从入）
-MCU ──────────→ Flash
-        MISO（主入从出）
-MCU ←────────── Flash
-        CLK（时钟）
-MCU ──────────→ Flash
-        CS（片选，低有效）
-MCU ──────────→ Flash
-```
-
-**SPI 四种模式**（CPOL/CPHA 组合）：
-
-| 模式 | CPOL | CPHA | CLK 空闲电平 | 采样边沿 |
-|---|---|---|---|---|
-| Mode 0 | 0 | 0 | 低 | 上升沿 |
-| Mode 1 | 0 | 1 | 低 | 下降沿 |
-| Mode 2 | 1 | 0 | 高 | 下降沿 |
-| Mode 3 | 1 | 1 | 高 | 上升沿 |
-
-**调试要点**：SPI 模式必须主从一致，否则数据全错。看 Datasheet 中的 CPOL/CPHA 要求。
-
-### 3.3 设备驱动框架设计（Device Driver Framework）
-
-大型项目中常用的驱动框架模式：
+### GPIO 调试
 
 ```c
-// 设备注册
-typedef struct device {
-    const char *name;
-    const device_ops_t *ops;
-    void *priv;              // 驱动私有数据
-    struct device *next;     // 链表
-} device_t;
-
-device_t *device_find(const char *name);
-int device_open(device_t *dev);
-int device_read(device_t *dev, void *buf, uint32_t len);
-int device_write(device_t *dev, const void *buf, uint32_t len);
-int device_close(device_t *dev);
+// 用 GPIO 示波替代——在关键代码路径上翻转 GPIO 引脚
+// 用示波器看 GPIO 波形，可以精确测量代码执行时间
+gpio_write(DEBUG_PIN, GPIO_HIGH);
+// ... 待测量的代码段 ...
+gpio_write(DEBUG_PIN, GPIO_LOW);
 ```
 
-WQ7036A 的 `wqcore/driver/` 目录下就采用了类似的分层设计。
+### 寄存器调试
 
-### 3.4 常见问题
+```c
+// 直接读取外设寄存器确认状态
+uint32_t status = *(volatile uint32_t *)(UART1_BASEADDR + UART_SR_OFFSET);
+// 检查状态寄存器中的 TX_EMPTY、RX_FULL 等标志位
+```
 
-- **I2C 和 SPI 的主要区别？** I2C 两线半双工低速多从、SPI 四线全双工高速。
-- **为什么 I2C 需要上拉电阻？** 因为 I2C 是开漏（Open Drain）输出，只能拉低不能拉高，需要外部上拉提供高电平。
-- **UART 的波特率误差容忍范围？** 通常 ±2% 以内可以正常通信。
-- **GPIO 的推挽输出和开漏输出有什么区别？** 推挽可以输出高/低电平；开漏只能输出低电平，高电平需要外部上拉。
+### 逻辑分析仪调试
 
-### 3.5 核心术语表
+```bash
+# 抓取 I2C/SPI/UART 波形
+# 用逻辑分析仪（如 Saleae、PulseView）连接信号线和 GND
+# 设置适当的采样率（至少信号频率的 4 倍）
+# 观察：
+# - UART: 波特率、数据位、停止位是否正确
+# - I2C: 地址是否正确、是否有 ACK、SCL 频率
+# - SPI: 模式（CPOL/CPHA）、CS 时序、数据内容
+```
 
-| 英文 | 中文 | 说明 |
-|---|---|---|
-| GPIO | 通用输入输出 | General Purpose I/O |
-| Pin Mux | 引脚复用 | 一个引脚多个功能 |
-| UART | 通用异步收发器 | Universal Asynchronous Receiver/Transmitter |
-| I2C | 集成电路总线 | Inter-Integrated Circuit |
-| SPI | 串行外设接口 | Serial Peripheral Interface |
-| Baud Rate | 波特率 | 每秒传输的符号数 |
-| Full Duplex | 全双工 | 可以同时收发 |
-| Half Duplex | 半双工 | 同一时刻只能收或发 |
-| Open Drain | 开漏输出 | 只能拉低，需外部上拉 |
-| Push-Pull | 推挽输出 | 可以输出高/低电平 |
-| HAL | 硬件抽象层 | Hardware Abstraction Layer |
+## 第六层：实战练习
 
-### 3.6 延伸阅读
+### 练习 1：阅读 WQ7036A 的 UART 驱动代码
 
-- [[c-core-C语言核心]] —— 位运算、volatile、寄存器操作
-- [[interrupt-concurrency-中断并发同步]] —— 外设中断的使用
-- [[memory-dma-内存管理与DMA]] —— DMA 传输
-- [[debug-tools-常用调试工具链]] —— 用逻辑分析仪抓外设波形
+阅读 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/uart.c` 和 `uart.h`，回答：
+- UART 驱动如何管理多个端口（UART0-UART3）？
+- 波特率是如何配置的？找到波特率寄存器设置代码
+- 中断处理函数在哪里注册？支持哪些中断类型？
+
+### 练习 2：实现一个 GPIO 按键驱动
+
+写一个 GPIO 按键驱动（伪代码），要求：
+- 支持按键消抖（按下后等待 20ms 再确认）
+- 支持下降沿中断触发
+- 按键按下时打印"KEY_PRESSED"，释放时打印"KEY_RELEASED"
+- 包含完整的五步初始化流程
+
+### 练习 3：I2C 传感器读写
+
+假设你有一个 I2C 温度传感器，地址 0x48，温度寄存器地址 0x00（16 位，大端），写一个函数 `int read_temperature(int i2c_port, float *temp)`，返回温度值。提示：`i2c_smbus_read_word_data()`。
+
+### 练习 4：分析 WQ7036A 的 I2C 驱动数据流
+
+阅读 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/i2c.c`，回答：
+- I2C 中断处理函数如何处理收发完成事件？
+- TX FIFO 和 RX FIFO 的阈值设置是多少？
+- 不支持 SMBus 的 I2C 从设备时，驱动如何兼容？
+
+## 自测与验收
+
+1. 外设初始化的通用五步流程是什么？每一步的作用是什么？
+2. 轮询、中断、DMA 三种数据传输方式的区别是什么？分别适用于什么场景？
+3. 驱动分层设计中，HAL 层、API 层、应用层各负责什么？
+4. I2C 为什么需要上拉电阻？SPI 为什么不需要？
+5. UART 通信收到乱码时，最可能的原因是什么？如何排查？
+
+## 延伸阅读
+
+- [[c-core-C语言核心]] — 位运算、volatile、寄存器操作
+- [[interrupt-concurrency-中断并发同步]] — 外设中断的使用
+- [[memory-dma-内存管理与DMA]] — DMA 传输
+- [[debug-tools-常用调试工具链]] — 用逻辑分析仪抓外设波形
+- [[i2c-spi-gpio-subsys-I2C-SPI-GPIO子系统]] — Linux 子系统封装
+
+## #flashcard
+
+Q: 外设初始化的通用五步流程是什么？
+A: 使能时钟 → 配置引脚（Pin Mux）→ 设置工作模式（波特率/采样率等）→ 配置中断/DMA（可选）→ 使能外设 → 读写数据。
+
+Q: 轮询、中断、DMA 三种方式分别适用于什么场景？
+A: 轮询：初始化、数据量小、低实时性；中断：中低速、事件驱动；DMA：高速、大数据量（音频/ADC/显示）。
+
+Q: 驱动分层设计的三层是什么？各层职责是什么？
+A: HAL 层（硬件驱动层）：操作寄存器，与具体芯片相关；API 层（驱动抽象层）：统一接口，设备无关；应用层：业务逻辑。
+
+Q: 为什么 I2C 需要上拉电阻而 SPI 不需要？
+A: I2C 是开漏（Open Drain）总线，引脚只能拉低不能拉高，需要外部上拉电阻提供高电平。SPI 是推挽输出，可以直接输出高/低电平。
+
+Q: UART 乱码的最可能原因是什么？
+A: 两端波特率不一致。用示波器测量 TX 引脚波形，计算一个 bit 的宽度，反推实际波特率。

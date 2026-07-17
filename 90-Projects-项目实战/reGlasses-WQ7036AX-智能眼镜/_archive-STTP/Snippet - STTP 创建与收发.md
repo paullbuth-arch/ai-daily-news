@@ -7,7 +7,7 @@ aliases: [STTP 模板, STTP 代码]
 
 # Snippet - STTP 创建与收发
 
-> ⚠️ **已弃用**：STTP 已被 [[uart-basics-UART基础 (app_uart_cmd)]] 替代。当前项目请使用 [[Snippet - UART 命令收发模板]]。
+> ⚠️ **已弃用**：STTP 因项目只需要传语音指令，其复杂的实例创建、通道注册和主循环处理流程已被更轻量的 [[uart-basics-UART基础 (app_uart_cmd)]] 替代。当前项目请使用 [[Snippet - UART 命令收发模板]]。本笔记保留作为历史参考。
 
 > 参考 `glass/acore/app/app_customer_ext_trans/` 下的实现。
 

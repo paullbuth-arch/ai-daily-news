@@ -7,6 +7,8 @@ aliases: [GATT 模板, BLE Service 代码]
 
 # Snippet - BLE GATT Service 注册模板
 
+本代码片段展示了如何在 WQ7036AX SDK 中注册 BLE GATT Service 和 Characteristic，包括 Service 创建、Characteristic 属性配置（Write/Notify/Read）、Write 回调处理和 Notify 发送。在 reGlasses 项目中，这段代码用于实现 [[reglasses-gatt-service-reGlasses-GATT设计]] 中定义的 7 个 Characteristic。SDK 参考路径：`wqcore/components/ble/gatts/` 和 `wq-adk/components/ota/src/ota_transport_ble.c`。
+
 > 参考 SDK 中 `ota_transport_ble.c` → `ble_init()` 的已有实现。
 
 ## 完整模板

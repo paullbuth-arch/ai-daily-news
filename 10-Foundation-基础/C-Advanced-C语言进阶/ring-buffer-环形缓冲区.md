@@ -1,60 +1,134 @@
-# Snippet - 环形缓冲区实现
-
-一句话结论：环形缓冲区是 ISR 与任务之间最高效的数据交换方式之一，关键在于用位掩膜简化下标回绕。
-
+---
+type: concept
+created: 2026-07-17
+tags: [data-structure, ring-buffer, circular-buffer, ISR, 环形缓冲区, 生产者消费者]
+aliases: [环形缓冲区, ring buffer, circular buffer, 循环队列]
 ---
 
-## 代码
+# 环形缓冲区：ISR 与任务之间的数据桥梁
 
-```c
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+> **一句话结论**：环形缓冲区（ring buffer）用一块固定大小的内存和两个指针（head/tail），实现"一头写、一头读"的无锁数据管道。head 只由生产者（ISR）移动，tail 只由消费者（任务）移动——这是嵌入式系统中 ISR 和任务之间传递数据最高效的方式，前提是缓冲区大小必须是 2 的幂次（用位掩膜 `& (SIZE-1)` 代替取模 `% SIZE`）。
 
-#define RBUF_SIZE 256
-#define RBUF_MASK (RBUF_SIZE - 1)
+## 30 秒先看懂
 
-typedef struct {
-    uint8_t  buf[RBUF_SIZE];
-    volatile uint32_t head;
-    volatile uint32_t tail;
-} rbuf_t;
+环形缓冲区解决的核心问题：**ISR 不能等，任务不能丢数据。** 当 UART 收到一个字节时，ISR 必须在几微秒内处理完，不能做耗时操作。环形缓冲区让 ISR 只需"写入一个字节，移动 head 指针"，然后立即退出。任务在空闲时批量读取缓冲区中的数据。
 
-static inline bool rbuf_is_empty(rbuf_t *rb)
-{
-    return rb->head == rb->tail;
-}
+类比：一个圆形的传送带，上面有固定数量的槽位。ISR 在传送带前端放零件（写数据），任务在传送带后端取零件（读数据）。如果 ISR 放得太快（head 追上 tail），缓冲区满了——要么丢弃新数据，要么覆盖旧数据。
 
-static inline bool rbuf_is_full(rbuf_t *rb)
-{
-    return ((rb->head - rb->tail) & RBUF_MASK) == 0 && rb->head != rb->tail;
-}
+## 学完以后应该能做什么
 
-bool rbuf_put(rbuf_t *rb, uint8_t data)
-{
-    if (rbuf_is_full(rb)) {
-        return false;
-    }
-    rb->buf[rb->head & RBUF_MASK] = data;
-    rb->head++;
-    return true;
-}
+**第一遍**：能解释 head/tail 指针的作用，说出为什么环形缓冲区适合 ISR 场景。
 
-bool rbuf_get(rbuf_t *rb, uint8_t *data)
-{
-    if (rbuf_is_empty(rb)) {
-        return false;
-    }
-    *data = rb->buf[rb->tail & RBUF_MASK];
-    rb->tail++;
-    return true;
-}
+**进阶后**：能实现一个支持多生产者/多消费者的环形缓冲区，理解为什么必须用 2 的幂次大小，能在 WQ SDK 中找到环形缓冲区的实际使用。
+
+## 前置知识
+
+- 理解指针和 `volatile` 关键字；可先看 [[c-core-C语言核心]]
+- 理解 ISR 的基本约束（不能阻塞、不能等）；可先看 [[interrupt-concurrency-中断并发同步]]
+
+## 术语先讲清楚
+
+| 术语 | 英文 | 在环形缓冲区中具体指什么 |
+|---|---|---|
+| 环形缓冲区 | ring buffer / circular buffer | 一块固定大小的内存 + 两个指针（head 写、tail 读），逻辑上首尾相连形成环。写满则覆盖或丢弃，读空则等待 |
+| 生产者 | producer | 写入数据的一方，通常是 ISR。只移动 head 指针，不读也不修改 tail |
+| 消费者 | consumer | 读取数据的一方，通常是任务。只移动 tail 指针，不写也不修改 head |
+| 位掩膜 | bitmask | 用 `& (SIZE - 1)` 代替 `% SIZE` 做下标回绕。要求 SIZE 必须是 2 的幂次（256/512/1024），否则回绕会出错 |
+| 满/空判断 | full/empty detection | head == tail 时缓冲区为空；head 领先 tail 正好一圈时缓冲区为满。如果用"head 和 tail 之间至少留一个空位"的策略，则判断更简单但浪费一个槽位 |
+| `volatile` | volatile | 告诉编译器"这个变量的值可能在任何时刻被 ISR 改变"，禁止编译器优化掉看似无用的读写操作 |
+
+## 第一层：费曼式心智模型
+
+### 1.1 环形缓冲区像圆形传送带
+
+把环形缓冲区想成一条**圆形传送带**，上面有 256 个固定槽位。ISR 站在传送带 12 点钟位置（head），任务站在 6 点钟位置（tail）。传送带本身不转，是 ISR 和任务各自沿着传送带顺时针移动。
+
+- ISR 在 head 位置放一个零件，然后 head 往前走一格。如果 head 走了一圈追上了 tail（传送带满了），ISR 停止放零件。
+- 任务在 tail 位置取一个零件，然后 tail 往前走一格。如果 tail 追上了 head（传送带空了），任务等待。
+- 关键：ISR 只动 head，任务只动 tail——**互不干扰对方的指针**，不需要锁。
+
+这个类比的关键边界：
+
+1. **环形是"逻辑上的"，内存是线性的。** 下标 `head & 255` 让 head 在 0-255 之间循环，而不是真的在圆形内存上移动。
+2. **ISR 和任务的速度不匹配。** ISR 以 UART 波特率的速度写入（如 115200 bps = 每 86.8 μs 一个字节），任务以操作系统的调度周期读取（如每 1 ms 一次）。缓冲区必须足够大，能容纳调度周期内 ISR 产生的所有数据。
+3. **满和空的判断需要技巧。** `head == tail` 既可能表示"空"也可能表示"满"（当 head 绕了一圈追上 tail）。通常用"head 和 tail 之间至少留一个空槽"来区分。
+
+### 1.2 完整场景演算：UART ISR 写入环形缓冲区
+
+假设环形缓冲区大小 = 256，UART 收到 3 个字节：0x41, 0x42, 0x43。
+
+```text
+初始状态：head = 0, tail = 0, 缓冲区为空。
+
+ISR 第 1 次触发（收到 0x41）：
+  buf[0 & 255] = buf[0] = 0x41
+  head = 1
+  状态：head=1, tail=0, 缓冲区有 1 个字节：[0x41]
+
+ISR 第 2 次触发（收到 0x42）：
+  buf[1 & 255] = buf[1] = 0x42
+  head = 2
+  状态：head=2, tail=0, 缓冲区有 2 个字节：[0x41, 0x42]
+
+ISR 第 3 次触发（收到 0x43）：
+  buf[2 & 255] = buf[2] = 0x43
+  head = 3
+  状态：head=3, tail=0, 缓冲区有 3 个字节：[0x41, 0x42, 0x43]
+
+任务被调度（读取数据）：
+  rbuf_get → buf[0 & 255] = buf[0] = 0x41, tail = 1
+  rbuf_get → buf[1 & 255] = buf[1] = 0x42, tail = 2
+  rbuf_get → buf[2 & 255] = buf[2] = 0x43, tail = 3
+  状态：head=3, tail=3, 缓冲区为空。
+
+head 到达 256 时：
+  buf[256 & 255] = buf[0]（回绕到开头）
+  head = 257
+  只要 tail 不是 1（即在 head 回绕前读取了数据），就不会覆盖。
 ```
 
----
+## 第二层：原理与约束
 
-## 使用注意
+### 2.1 为什么 SIZE 必须是 2 的幂次
 
-- `RBUF_SIZE` 必须是 2 的幂次，才能用位掩膜。
-- 生产者（通常是 ISR）和消费者（任务）需要正确同步，必要时关中断保护 `head` 或 `tail`。
-- 与项目关联：[[uart-basics-UART基础 中的 UART 数据收发（`app_uart_cmd.c` 使用环形缓冲区）]]、 [[interrupt-concurrency-中断并发同步 中的生产者/消费者模型]]。
+位掩膜 `& (SIZE - 1)` 等价于 `% SIZE`，但快 10-100 倍（一次 AND 指令 vs 除法指令）。但如果 SIZE 不是 2 的幂次，`& (SIZE-1)` 和 `% SIZE` 的结果不同——下标回绕会出错。
+
+```text
+SIZE = 256 (0x100)：SIZE-1 = 255 (0xFF)
+  257 & 255 = 1 ✓ 等价于 257 % 256 = 1 ✓
+
+SIZE = 250（不是 2 的幂次）：SIZE-1 = 249 (0xF9)
+  257 & 249 = 1 ✗ 但 257 % 250 = 7 ← 不一致！
+```
+
+### 2.2 并发安全：谁动哪个指针
+
+环形缓冲区的"无锁"特性依赖于一个关键假设：**head 只有一个写入者，tail 只有一个读取者。** 如果多个 ISR 同时写同一个缓冲区，head++ 不是原子操作（读-改-写），需要关中断保护。
+
+**WQ 真实代码**：WQ UART 的 `wq_uart_rx_int_handler`（wq_uart.c:786-795）从 FIFO 读取数据后调用用户注册的回调 `rx.callback(buffer, read_size)`。应用层的环形缓冲区就放在这个回调中——ISR 上下文写入，任务上下文读取。
+
+## 第三层：实战练习
+
+1. **实现环形缓冲区**：用 C 语言实现一个支持任意大小（不限于 2 的幂次）的环形缓冲区，用 `%` 做回绕。比较和位掩膜版本的性能差异。
+2. **追踪 WQ UART 的使用**：在 `wq_uart.c` 中找到 `wq_uart_rx_int_handler`，画出 ISR 读取数据到应用层环形缓冲区的完整调用链。
+3. **设计故障实验**：故意让 ISR 写入速度远超任务读取速度，观察缓冲区满时的行为，验证你的满判断逻辑是否正确。
+
+## 自测题
+
+1. **环形缓冲区为什么适合 ISR 场景？** head 只由 ISR 写，tail 只由任务读，不需要锁。
+2. **为什么 SIZE 必须是 2 的幂次？** 位掩膜 `& (SIZE-1)` 等价于 `% SIZE`，速度快但要求 SIZE 是 2 的幂次。
+3. **head 和 tail 什么时候相等？意味着什么？** head == tail 时缓冲区为空（tail 追上 head）。如果用了"留一个空槽"策略，head+1 == tail 时缓冲区为满。
+4. **`volatile` 在环形缓冲区中的作用？** 防止编译器优化掉对 head/tail 的重复读取。ISR 可能在任何时刻修改这些变量。
+5. **如果 ISR 写入速度是 115200 bps，任务每 1 ms 读取一次，缓冲区至少需要多大？** 1 ms 内 ISR 最多写入 115200/1000 ≈ 115 字节。缓冲区至少需要 128 字节（2 的幂次）。
+
+## 参考资料
+
+- [[uart-basics-UART基础]] — UART 数据收发使用环形缓冲区
+- [[interrupt-concurrency-中断并发同步]] — 生产者/消费者模型与 ISR 约束
+- [[memory-dma-内存管理与DMA]] — DMA 和环形缓冲区的配合
+
+#flashcard
+问：环形缓冲区的 head 和 tail 分别由谁操作？
+答：head 由生产者（通常是 ISR）写入数据后移动，tail 由消费者（通常是任务）读取数据后移动。各自动各自的指针，不需要锁。
+问：为什么 SIZE 必须是 2 的幂次？
+答：位掩膜 `& (SIZE-1)` 等价于 `% SIZE` 但快得多。如果 SIZE 不是 2 的幂次，位掩膜回绕会出错。

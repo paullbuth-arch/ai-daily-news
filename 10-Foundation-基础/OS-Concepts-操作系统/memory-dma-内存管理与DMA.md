@@ -1,12 +1,57 @@
-# 内存管理与 DMA
-
-**一句话结论（20% 核心）**：内存管理就是决定数据放哪里、怎么放、怎么搬；DMA（Direct Memory Access，直接内存访问）就是让外设自己搬数据，不用 CPU 一件件搬——CPU 只需发号施令，DMA 控制器负责搬运，搬完中断通知 CPU。
-
+---
+type: concept
+tags: [embedded, memory, dma, heap, stack, cache, wq7036a]
+aliases: [内存管理, DMA, 直接内存访问, 栈, 堆]
 ---
 
-## 第一层：核心认知
+# 内存管理与 DMA
 
-### 1.1 费曼类比
+## 一句话结论
+
+内存管理就是决定数据放哪里、怎么放、怎么搬；DMA（Direct Memory Access，直接内存访问）就是让外设自己搬数据，不用 CPU 一件件搬——CPU 只需发号施令，DMA 控制器负责搬运，搬完中断通知 CPU。
+
+## 30秒先看懂
+
+- 嵌入式程序的内存布局从低地址到高地址依次是：.text（代码段）、.rodata（只读数据）、.data（已初始化全局变量）、.bss（未初始化全局变量）、heap（堆，向高地址增长）、stack（栈，向低地址增长）。栈溢出是嵌入式最常见的内存问题——递归太深、局部变量太大、调用链太深都会导致栈溢出。嵌入式里尽量少用 malloc，因为碎片化、执行时间不确定、没有 MMU 保护。DMA 让外设自己搬运数据，不占用 CPU 时间，有三种传输模式：内存到内存、内存到外设、外设到内存。DMA 双缓冲（Double Buffer）是音频场景的标准模式——DMA 写缓冲区 A 时 CPU 处理缓冲区 B，交替进行避免冲突。
+
+## 学完以后应该能做什么
+
+**第一遍看完后可以：**
+- 理解嵌入式程序的内存布局和各段的作用
+- 检测和预防栈溢出
+- 知道为什么嵌入式里尽量少用 malloc
+- 理解 DMA 的基本工作原理和三种传输模式
+
+**进阶后可以：**
+- 实现内存池（Memory Pool）替代动态分配
+- 配置 DMA 双缓冲处理音频数据流
+- 解决 DMA 的 Cache 一致性问题
+- 使用 MPU 保护关键内存区域
+
+## 前置知识
+
+- C 语言的变量存储类型（全局、静态、局部）
+- 指针和地址的概念
+- 中断的基本工作原理
+
+## 术语先讲清楚
+
+| 中文 | 英文 | 具体含义 |
+|------|------|---------|
+| 直接内存访问 | DMA | Direct Memory Access，硬件在外设和内存之间直接搬运数据 |
+| 堆 | Heap | 运行时动态分配的内存区域，由 malloc/free 管理 |
+| 栈 | Stack | 函数调用时自动分配和释放的临时存储区域 |
+| 栈溢出 | Stack Overflow | 栈空间不足，覆盖了相邻的内存区域 |
+| 双缓冲 | Double Buffer | 两个缓冲区交替使用，DMA 写一个 CPU 处理另一个 |
+| 内存池 | Memory Pool | 预分配固定大小的内存块，避免动态分配碎片 |
+| 缓存一致性 | Cache Coherency | Cache 和 RAM 数据保持同步，避免读到旧数据 |
+| 内存保护单元 | MPU | Memory Protection Unit，给内存区域设置访问权限 |
+| 描述符链 | Descriptor Chain | DMA 多段传输的配置链表 |
+| 内存碎片 | Memory Fragmentation | 频繁分配释放导致的内存空洞 |
+
+## 第一层：费曼心智模型
+
+### 类比：大办公楼
 
 把 MCU 的内存想象成一个大办公楼：
 
@@ -16,7 +61,24 @@
 - **栈（每人的背包）**：进函数时打开背包装东西（局部变量），出函数时合上背包（自动释放）。
 - **DMA（快递小哥）**：你告诉他"从 A 搬到 B，搬 N 件"，他就自己搬，搬完打电话通知你。
 
-### 1.2 内存分区详解
+**边界：**
+- 堆和栈是相向增长的——堆向上，栈向下，相遇时内存耗尽
+- DMA 不是万能的——小数据量（几十字节）用 CPU 搬反而更快（DMA 初始化开销大）
+- 内存池不是随处可用——固定大小在某些场景浪费空间
+
+### 场景演练：DMA 搬运音频数据
+
+1. I2S 接口收到音频数据，触发 DMA 请求
+2. DMA 控制器自动把数据从 I2S 的 RX 寄存器搬到内存缓冲区 A
+3. CPU 在 DMA 搬运期间处理其他任务
+4. 缓冲区 A 写满，DMA 触发半传输中断
+5. ISR 中交换缓冲区指针：DMA 写入缓冲区 B，CPU 处理缓冲区 A
+6. CPU 对缓冲区 A 中的音频数据进行算法处理
+7. 缓冲区 B 写满，DMA 触发全传输中断，再次交换
+
+## 第二层：原理/时序/约束
+
+### 内存布局
 
 ```
 低地址
@@ -31,27 +93,16 @@
 └─ 栈顶 = RAM 最高地址
 ```
 
-| 区域 | 分配方式 | 生命周期 | 典型内容 |
-|---|---|---|---|
-| .text | 编译时固定 | 永久 | 函数代码 |
-| .rodata | 编译时固定 | 永久 | 字符串常量、const 数组 |
-| .data | 编译时固定 | 程序运行期间 | 有初值的全局变量 |
-| .bss | 编译时固定 | 程序运行期间 | 无初值的全局变量 |
-| heap | 运行时 malloc/free | 手动管理 | 动态缓冲区 |
-| stack | 进入/退出函数自动 | 函数生命周期 | 局部变量、返回地址 |
-
-### 1.3 DMA 是什么？
-
-**没有 DMA 的情况**（CPU 搬运）：
+### 栈溢出检测
 
 ```c
-// CPU 一个字节一个字节地从 UART 搬到内存
-for (int i = 0; i < 1024; i++) {
-    buf[i] = UART_DR;  // 每次都要 CPU 参与
-}
+// FreeRTOS 高水位线检测
+UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+// watermark = 运行以来栈剩余的最小值（word），接近 0 就危险了
+printf("Stack watermark: %lu words\n", watermark);
 ```
 
-**有 DMA 的情况**（DMA 搬运）：
+### DMA 配置示例
 
 ```c
 // 配置 DMA：从 UART 数据寄存器搬到 buf，搬 1024 字节
@@ -59,117 +110,13 @@ dma_config(DMA_CH1,
            .src  = &UART_DR,       // 源地址（UART 数据寄存器）
            .dst  = buf,            // 目标地址（内存缓冲区）
            .size = 1024,           // 搬运数量
-           .src_inc = false,       // 源地址不自增（始终是同一个寄存器）
+           .src_inc = false,       // 源地址不自增
            .dst_inc = true);       // 目标地址自增
 dma_start(DMA_CH1);
-
 // CPU 去做别的事，DMA 搬完后触发中断通知 CPU
 ```
 
-### 1.4 最小代码示例
-
-```c
-uint8_t src[64] = {1, 2, 3, 4, 5};
-uint8_t dst[64] = {0};
-
-// 配置 DMA 通道 1：从 src 搬到 dst，64 字节
-dma_config_t cfg = {
-    .src_addr  = (uint32_t)src,
-    .dst_addr  = (uint32_t)dst,
-    .size      = 64,
-    .direction = DMA_MEM_TO_MEM,
-    .src_inc   = true,
-    .dst_inc   = true,
-};
-dma_init(DMA_CH1, &cfg);
-dma_start(DMA_CH1);
-
-// CPU 可以做其他事情
-// ...
-
-// 等待 DMA 完成（轮询方式）
-while (!dma_is_done(DMA_CH1));
-
-// 或者等待 DMA 完成中断（中断方式）
-// DMA 完成后会触发 dma_isr()
-```
-
-### 1.5 如果只记得一件事
-
-> CPU 搬数据慢且占用 CPU 时间，DMA 搬数据快且不占 CPU。音频、UART、ADC 等需要大量搬运数据的场景，优先用 DMA。
-
----
-
-## 第二层：实战理解
-
-### 2.1 栈溢出：最常见的内存问题
-
-**栈溢出**发生在任务使用的栈空间超过了分配的大小，会覆盖相邻的内存（堆、其他任务的栈、全局变量），导致不可预测的崩溃。
-
-**常见原因**：
-
-1. **递归太深**：每层递归都在栈上分配空间。
-2. **局部变量太大**：`char buf[4096]` 这种大数组直接定义在函数里。
-3. **调用链太深**：A → B → C → D → E，每层都有局部变量。
-4. **中断嵌套**：ISR 里又调用了很多函数。
-
-**检测方法**：
-
-```c
-// 方法 1：启动时把栈区域填充为特定值（如 0xA5）
-// 运行一段时间后检查还有多少 0xA5 没被覆盖
-
-// 方法 2：FreeRTOS 提供的高水位线检测
-UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
-// watermark = 运行以来栈剩余的最小值（word），接近 0 就危险了
-printf("Stack watermark: %lu words\n", watermark);
-```
-
-**解决方法**：
-- 增大队栈大小。
-- 把大的局部变量改为 `static` 或放到堆上。
-- 减少递归，改用循环。
-
-### 2.2 堆管理：为什么嵌入式里尽量少用 malloc？
-
-| 问题 | 说明 |
-|---|---|
-| 碎片化 | 频繁 malloc/free 导致内存碎片，大块连续内存分配失败 |
-| 不确定性 | malloc 的执行时间不可预测（需要搜索空闲块） |
-| 无 MMU 保护 | 嵌入式通常没有虚拟内存，堆溢出直接踩坏其他数据 |
-| 忘记 free | 内存泄漏在长时间运行的嵌入式设备中是致命的 |
-
-**替代方案**：
-
-```c
-// 方案 1：静态分配（推荐）
-static uint8_t buffer[1024];  // 编译时固定大小
-
-// 方案 2：内存池（固定大小的块）
-typedef struct {
-    uint8_t pool[16][256];     // 16 个 256 字节的块
-    uint32_t used;             // 位图标记哪些块被占用
-} mem_pool_t;
-
-void *pool_alloc(mem_pool_t *p) {
-    for (int i = 0; i < 16; i++) {
-        if (!(p->used & (1U << i))) {
-            p->used |= (1U << i);
-            return p->pool[i];
-        }
-    }
-    return NULL;
-}
-
-void pool_free(mem_pool_t *p, void *ptr) {
-    int idx = ((uint8_t *)ptr - p->pool[0]) / 256;
-    p->used &= ~(1U << idx);
-}
-```
-
-### 2.3 DMA 双缓冲：音频场景的标准模式
-
-当 DMA 在往缓冲区 A 写数据时，CPU 处理缓冲区 B 的数据。DMA 写完 A 后切换到 B，CPU 开始处理 A。这样 DMA 和 CPU 永远不会同时操作同一块缓冲区。
+### DMA 双缓冲
 
 ```c
 uint8_t buf_a[512];
@@ -178,181 +125,196 @@ uint8_t buf_b[512];
 volatile uint8_t *dma_buf  = buf_a;   // DMA 正在写这个
 volatile uint8_t *proc_buf = buf_b;   // CPU 正在处理这个
 
-// DMA 完成中断
 void dma_half_complete_isr(void) {
-    // buf_a 写完了，交换
-    swap(dma_buf, proc_buf);
-    // 通知处理任务
-    xSemaphoreGiveFromISR(sem, NULL);
-}
-
-void dma_full_complete_isr(void) {
-    // buf_b 写完了，交换
     swap(dma_buf, proc_buf);
     xSemaphoreGiveFromISR(sem, NULL);
 }
-
-// 处理任务
-void process_task(void *p) {
-    for (;;) {
-        xSemaphoreTake(sem, portMAX_DELAY);
-        // 安全处理 proc_buf 中的数据
-        audio_process(proc_buf, 512);
-    }
-}
 ```
 
-### 2.4 DMA 缓存一致性问题
+## 第三层：真实 SDK 代码
 
-当 MCU 有 Cache（L1/L2）时，CPU 写数据到 Cache 而不直接写 RAM。如果此时 DMA 从 RAM 读数据，读到的是旧数据（Cache 里的修改还没写回 RAM）。
+### DMA 硬件寄存器
 
-```
-CPU 写数据 → Cache（还没写回 RAM）
-DMA 从 RAM 读 → 读到旧数据！
-```
-
-**解决方法**：
+WQ7036A 的 DMA 控制器寄存器定义在 `/home/ys/wq7036a/wq-audio/wqcore/chipset/bbb/regs/dma_reg.h`：
 
 ```c
-// 在启动 DMA 之前，把 Cache 中的修改写回 RAM（Clean）
-cache_clean_range(src, size);
+// DMA 通道控制寄存器
+#define DMA_CH_CTRL(ch)      (DMA_BASE + 0x00 + (ch) * 0x20)
+#define DMA_CH_SRC(ch)       (DMA_BASE + 0x04 + (ch) * 0x20)
+#define DMA_CH_DST(ch)       (DMA_BASE + 0x08 + (ch) * 0x20)
+#define DMA_CH_SIZE(ch)      (DMA_BASE + 0x0C + (ch) * 0x20)
 
-// DMA 写完后，让 Cache 中的旧数据失效（Invalidate）
-// 这样 CPU 下次读会从 RAM 重新取
-cache_invalidate_range(dst, size);
+// DMA 控制位
+#define DMA_CTRL_START       (1 << 0)
+#define DMA_CTRL_CIRCULAR    (1 << 1)
+#define DMA_CTRL_SRC_INC     (1 << 2)
+#define DMA_CTRL_DST_INC     (1 << 3)
 ```
 
-**什么时候会遇到这个问题？**
-- WQ7036A 的 DCORE（DSP）通过 DMA 搬运音频数据到共享 RAM。
-- ACORE 的 CPU 在 Cache 中缓存了这段 RAM。
-- DSP 的 DMA 修改了 RAM 数据，但 ACORE 的 Cache 还是旧的。
+### DMA 驱动接口
 
-### 2.5 DMA 循环模式
-
-对于持续不断的音频流，DMA 可以配置为**循环模式（Circular Mode）**：搬到末尾后自动回到开头继续搬，不需要 CPU 重新配置。
+DMA 驱动接口在 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/dma.h`：
 
 ```c
-dma_config_t cfg = {
-    .mode = DMA_CIRCULAR,  // 循环模式
-    .size = 1024,          // 缓冲区总大小
-    // DMA 会在搬到 512 和 1024 时各触发一次中断（半传输 / 全传输）
-};
+// DMA 初始化
+void dma_init(uint8_t ch, dma_config_t *cfg);
+
+// 启动 DMA 传输
+void dma_start(uint8_t ch);
+
+// 停止 DMA 传输
+void dma_stop(uint8_t ch);
+
+// 检查 DMA 完成
+bool dma_is_done(uint8_t ch);
+
+// 注册 DMA 完成中断回调
+void dma_register_callback(uint8_t ch, dma_callback_t cb, void *arg);
 ```
 
-### 2.6 项目中的应用
-
-WQ7036A 音频管道中 DMA 的典型使用：
-
-```
-PDM 麦克风 → [DMA] → PCM 缓冲区 → DSP 处理（KWS/降噪）
-                                          ↓
-                                    [DMA] → I2S 输出 → 功放 → 扬声器
-```
-
-详见 [[audio-system-音频系统基础]] 和 [[wq7036ax-audio-pipeline-WQ7036AX音频管道]]。
-
----
-
-## 第三层：深入扩展
-
-### 3.1 DMA 传输模式详解
-
-| 模式 | 说明 | 典型场景 |
-|---|---|---|
-| Memory → Memory | 内存拷贝 | 大块数据拷贝 |
-| Memory → Peripheral | 内存到外设 | UART 发送、I2S 播放 |
-| Peripheral → Memory | 外设到内存 | UART 接收、ADC 采样 |
-| Peripheral → Peripheral | 外设到外设 | 少见 |
-
-### 3.2 DMA 描述符链与 Scatter-Gather
-
-高级 DMA 控制器支持**描述符链（Descriptor Chain）**：一次配置多个传输任务，DMA 自动按链执行。
+### 内存池替代方案
 
 ```c
-// 描述符链示例
-dma_desc_t desc[3] = {
-    { .src = buf1, .dst = UART_DR, .size = 100, .next = &desc[1] },
-    { .src = buf2, .dst = UART_DR, .size = 200, .next = &desc[2] },
-    { .src = buf3, .dst = UART_DR, .size = 50,  .next = NULL },
-};
-dma_start_chain(DMA_CH1, &desc[0]);
-// DMA 会自动依次传输三段数据
-```
+// 固定大小内存池
+#define POOL_BLOCK_SIZE 256
+#define POOL_BLOCK_COUNT 16
 
-### 3.3 内存保护单元（MPU）
+static uint8_t pool[POOL_BLOCK_COUNT][POOL_BLOCK_SIZE];
+static uint32_t pool_used = 0;  // 位图
 
-MPU（Memory Protection Unit，内存保护单元）可以给内存区域设置访问权限：
-
-| 权限 | 说明 |
-|---|---|
-| 可读 / 可写 / 可执行 | 基本权限 |
-| 特权级访问 | 只有内核模式才能访问 |
-| 禁止执行 | .data/.bss 区域不可执行代码（防栈溢出攻击） |
-
-**FreeRTOS 中 MPU 的典型用法**：
-
-```c
-// 给任务栈设置"栈溢出保护区"
-// 栈底部 32 字节设为不可读写
-// 如果任务栈溢出踩到这块区域，触发 MemFault 异常
-MPU_Region_Config(0, stack_bottom, 32, MPU_NO_ACCESS);
-```
-
-### 3.4 动态内存分配器的设计
-
-如果确实需要动态分配，嵌入式中常用的简单分配器：
-
-**首次适配（First Fit）**：
-```c
-typedef struct block {
-    size_t size;
-    bool   free;
-    struct block *next;
-} block_t;
-
-void *my_malloc(size_t size) {
-    block_t *b = heap_start;
-    while (b) {
-        if (b->free && b->size >= size) {
-            b->free = false;
-            return (void *)(b + 1);  // 返回 block 头之后的空间
+void *pool_alloc(void) {
+    for (int i = 0; i < POOL_BLOCK_COUNT; i++) {
+        if (!(pool_used & BIT(i))) {
+            pool_used |= BIT(i);
+            return pool[i];
         }
-        b = b->next;
     }
-    return NULL;
+    return NULL;  // 池空了
+}
+
+void pool_free(void *ptr) {
+    int idx = ((uint8_t *)ptr - pool[0]) / POOL_BLOCK_SIZE;
+    pool_used &= ~BIT(idx);
 }
 ```
 
-**最佳实践**：嵌入式中优先用静态分配或固定大小内存池，避免通用 malloc。
+## 第四层：正常/异常路径
 
-### 3.5 常见问题
+### 正常路径
 
-- **栈和堆的区别？** 栈自动管理、速度快、空间小；堆手动管理、速度慢、空间大。
-- **DMA 传输期间 CPU 能做什么？** 可以执行不访问 DMA 正在使用的 RAM 区域的代码。如果 CPU 访问同一块 RAM，会被总线仲裁器挂起。
-- **为什么 DMA 要求地址对齐？** 很多 DMA 控制器要求传输地址按 4 字节或更大边界对齐，否则传输效率下降或报错。
-- **Cache 一致性问题怎么解决？** 在 DMA 启动前 Clean Cache（写回），DMA 完成后 Invalidate Cache（失效）。
-- **什么是 Scatter-Gather DMA？** 用描述符链让 DMA 自动执行多段不连续的传输。
+DMA：配置传输参数 → 启动 DMA → DMA 自行搬运 → 完成中断通知 CPU
 
-### 3.6 核心术语表
+### 异常路径
 
-| 英文 | 中文 | 说明 |
-|---|---|---|
-| DMA | 直接内存访问 | Direct Memory Access |
-| Heap | 堆 | 动态分配的内存区域 |
-| Stack | 栈 | 函数调用的临时存储 |
-| Stack Overflow | 栈溢出 | 栈空间不足 |
-| Memory Fragmentation | 内存碎片 | 频繁分配/释放导致的不连续空闲块 |
-| Memory Pool | 内存池 | 固定大小的预分配块 |
-| Double Buffer | 双缓冲 | DMA 和 CPU 交替使用两块内存 |
-| Circular Buffer | 循环缓冲 | 首尾相接的缓冲区 |
-| Cache Coherency | 缓存一致性 | Cache 和 RAM 数据保持同步 |
-| MPU | 内存保护单元 | Memory Protection Unit |
-| Descriptor Chain | 描述符链 | DMA 的多段传输配置 |
+| 异常场景 | 现象 | 原因 | 处理方式 |
+|---------|------|------|---------|
+| 栈溢出 | 变量被意外覆盖，程序崩溃 | 递归太深或局部变量太大 | 增大栈或检查递归 |
+| 堆碎片化 | malloc 返回 NULL | 频繁分配释放导致碎片 | 改用内存池 |
+| DMA 地址未对齐 | 传输错误或效率低 | 源/目标地址不是 DMA 对齐要求 | 检查地址对齐 |
+| Cache 不一致 | DMA 读到旧数据 | CPU Cache 中的修改未写回 RAM | DMA 前 Clean，DMA 后 Invalidate |
+| DMA 缓冲溢出 | 数据丢失 | 搬运速度超过处理速度 | 增大缓冲区或提高处理速度 |
 
-### 3.7 延伸阅读
+## 第五层：调试方法
 
-- [[c-core-C语言核心]] —— 内存布局、指针
-- [[compile-link-startup-编译链接与启动流程]] —— .data/.bss 的拷贝和清零
-- [[interrupt-concurrency-中断并发同步]] —— DMA 中断与任务的同步
-- [[audio-system-音频系统基础]] —— 音频 DMA 的实际应用
-- [[ring-buffer-环形缓冲区]] —— ISR 与任务间的数据缓冲
+### 内存检测
+
+```c
+// 栈高水位线检测
+void check_stack_usage(void) {
+    UBaseType_t watermark = uxTaskGetStackHighWaterMark(NULL);
+    if (watermark < 50) {
+        printf("WARNING: Stack low! Only %lu words remaining\n", watermark);
+    }
+}
+
+// 堆使用量检测
+void check_heap_usage(void) {
+    printf("Free heap: %lu\n", xPortGetFreeHeapSize());
+    printf("Min free heap: %lu\n", xPortGetMinimumEverFreeHeapSize());
+}
+```
+
+### DMA 调试
+
+```c
+// 打印 DMA 通道状态
+void dma_dump_channel(uint8_t ch) {
+    printf("DMA CH%u:\n", ch);
+    printf("  SRC: 0x%08lX\n", dma_get_src(ch));
+    printf("  DST: 0x%08lX\n", dma_get_dst(ch));
+    printf("  SIZE: %lu\n", dma_get_size(ch));
+    printf("  DONE: %s\n", dma_is_done(ch) ? "YES" : "NO");
+}
+
+// 用 GPIO 翻转测量 DMA 传输时间
+void dma_measure_time(void) {
+    GPIO_SET(HIGH);  // 开始
+    dma_start(DMA_CH1);
+    while (!dma_is_done(DMA_CH1));
+    GPIO_SET(LOW);   // 结束
+    // 用示波器看 GPIO 高电平宽度
+}
+```
+
+## 第六层：实战练习
+
+### 练习 1：栈溢出检测（基础）
+
+编写一个程序故意触发栈溢出，然后检测：
+1. 写一个递归函数，递归深度逐渐增加
+2. 每层递归在栈上分配 256 字节的局部数组
+3. 用 `uxTaskGetStackHighWaterMark` 监测栈使用量
+4. 观察栈溢出时程序的崩溃现象
+5. 调整栈大小，找到安全阈值
+
+### 练习 2：实现 DMA 内存拷贝（进阶）
+
+使用 DMA 实现内存到内存的拷贝，对比 CPU 拷贝的性能：
+1. 分配两个 1024 字节的缓冲区
+2. 使用 DMA 从源缓冲区搬运到目标缓冲区
+3. 使用 `memcpy` 做同样的拷贝
+4. 用 GPIO 翻转测量两者耗时
+5. 测试不同数据量（64/256/1024/4096 字节）的耗时对比
+
+### 练习 3：阅读 DMA 驱动源码（深入）
+
+阅读 `/home/ys/wq7036a/wq-audio/wqcore/driver/periph/bbb/hw/dma.h` 和相关实现，回答：
+1. WQ7036A 有几个 DMA 通道？
+2. DMA 支持哪些传输模式（内存到内存、内存到外设、外设到内存）？
+3. 循环模式（Circular Mode）是如何配置的？
+4. DMA 完成中断是如何触发的？
+
+## 自测与验收
+
+1. 嵌入式程序的内存布局从低到高依次是什么？
+2. 栈和堆的区别是什么？（至少 3 点）
+3. 为什么嵌入式里尽量少用 malloc？
+4. DMA 的三种传输模式是什么？各用在什么场景？
+5. 什么是 DMA 双缓冲？它解决了什么问题？
+6. 什么是 Cache 一致性问题？如何解决？
+7. 什么是内存池？它比 malloc 好在哪里？
+
+## 延伸阅读
+
+- [[c-core-C语言核心]] — 内存布局、指针
+- [[compile-link-startup-编译链接与启动流程]] — .data/.bss 的拷贝和清零
+- [[interrupt-concurrency-中断并发同步]] — DMA 中断与任务的同步
+- [[audio-system-音频系统基础]] — 音频 DMA 的实际应用
+- [[ring-buffer-环形缓冲区]] — ISR 与任务间的数据缓冲
+
+## #flashcard
+
+**Q: 嵌入式内存布局从低到高依次是什么？**
+A: .text → .rodata → .data → .bss → heap → stack（堆向上增长，栈向下增长）。
+
+**Q: 为什么嵌入式里尽量少用 malloc？**
+A: 碎片化、执行时间不确定、无 MMU 保护、忘记 free 导致泄漏。
+
+**Q: DMA 双缓冲解决了什么问题？**
+A: 避免 CPU 和 DMA 同时操作同一块内存，CPU 处理一块时 DMA 写另一块，交替进行。
+
+**Q: 什么是 Cache 一致性问题？**
+A: CPU 写数据到 Cache 但还没写回 RAM，DMA 从 RAM 读数据时读到旧数据。
+
+**Q: 如何解决 DMA 的 Cache 一致性问题？**
+A: DMA 启动前 Clean Cache（写回 RAM），DMA 完成后 Invalidate Cache（让 CPU 重新从 RAM 读）。
