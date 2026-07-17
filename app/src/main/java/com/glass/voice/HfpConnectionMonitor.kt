@@ -2,57 +2,46 @@ package com.glass.voice
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothHeadset
 import android.bluetooth.BluetoothProfile
 import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 
 class HfpConnectionMonitor(private val context: Context) {
 
-    enum class State { DISCONNECTED, CONNECTING, CONNECTED }
+    companion object {
+        private const val WQ_MAC_PREFIX = "B0:A1:87"
+    }
 
-    private val _state = MutableStateFlow(State.DISCONNECTED)
-    val state: StateFlow<State> = _state
-
-    @Volatile var headset: BluetoothHeadset? = null
     @Volatile var wqDevice: BluetoothDevice? = null
 
-    suspend fun waitForConnection(macPrefix: String = "B0:A1:87", timeoutMs: Long = 8000): BluetoothDevice? {
-        Log.i("HfpMonitor", "Waiting for HFP connection...")
+    /**
+     * Find WQ device among bonded devices by MAC prefix.
+     * Waits for HFP profile to show connected state.
+     */
+    suspend fun waitForDevice(timeoutMs: Long = 30000): BluetoothDevice? {
         val adapter = BluetoothAdapter.getDefaultAdapter() ?: return null
-
-        // Get proxy
-        val proxy = kotlinx.coroutines.suspendCancellableCoroutine<BluetoothHeadset?> { cont ->
-            @Suppress("DEPRECATION")
-            adapter.getProfileProxy(context, object : BluetoothProfile.ServiceListener {
-                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile?) {
-                    if (profile == BluetoothProfile.HEADSET) cont.resume(proxy as? BluetoothHeadset) {}
-                }
-                override fun onServiceDisconnected(profile: Int) {}
-            }, BluetoothProfile.HEADSET)
-        }
-
-        headset = proxy ?: return null
-
-        // Poll until HFP connected
         val deadline = System.currentTimeMillis() + timeoutMs
+
+        Log.i("HfpMonitor", "Looking for WQ device (MAC $WQ_MAC_PREFIX)...")
+
         while (System.currentTimeMillis() < deadline) {
-            val devices = headset?.connectedDevices ?: emptyList()
-            val found = devices.find { it.address.regionMatches(0, macPrefix, 0, 3, true) }
-            if (found != null) {
-                _state.value = State.CONNECTED
-                wqDevice = found
-                Log.i("HfpMonitor", "HFP connected: ${found.address}")
-                return found
+            @Suppress("MissingPermission")
+            val bonded = adapter.bondedDevices
+            for (d in bonded) {
+                if (d.address.regionMatches(0, WQ_MAC_PREFIX, 0, 3, true)) {
+                    wqDevice = d
+                    Log.i("HfpMonitor", "Found WQ: ${d.address} (bonded)")
+                    // Brief wait for HFP to actually connect
+                    delay(3000)
+                    return d
+                }
             }
-            delay(500)
+            delay(2000)
         }
-        Log.w("HfpMonitor", "HFP connection timeout")
+        Log.w("HfpMonitor", "WQ device not found in bonded list")
         return null
     }
 
-    fun isConnected(): Boolean = _state.value == State.CONNECTED && wqDevice != null
+    fun isConnected(): Boolean = wqDevice != null
 }

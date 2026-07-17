@@ -1,8 +1,13 @@
 package com.glass.voice
 
 import android.app.*
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.os.IBinder
 import android.util.Log
 import kotlinx.coroutines.*
@@ -14,9 +19,6 @@ class HfpVoiceService : Service() {
         private const val NOTIFICATION_ID = 1
         private const val CHANNEL_ID = "glass_voice"
 
-        private val _state = java.util.concurrent.atomic.AtomicReference(ServiceState.IDLE)
-        enum class ServiceState { IDLE, CONNECTING, READY, LISTENING }
-
         fun start(context: Context) {
             context.startForegroundService(Intent(context, HfpVoiceService::class.java))
         }
@@ -27,121 +29,94 @@ class HfpVoiceService : Service() {
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private lateinit var hfpMonitor: HfpConnectionMonitor
     private lateinit var scoCapture: ScoCaptureManager
     private lateinit var asrClient: BaiduAsrClient
-    private val sppChannel = SppCommandChannel(scope)
-
     private var voiceActive = false
+    private var scoReceiver: BroadcastReceiver? = null
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        hfpMonitor = HfpConnectionMonitor(this)
         scoCapture = ScoCaptureManager(this, scope)
 
         asrClient = BaiduAsrClient(
             apiKey = "g1AH0YiytsW1CFMs1R5qpSoS",
             secretKey = "kXnHfBWhnG8qWjaQXXPGj8gQpFyWyCx2"
         )
-
         asrClient.onResult = { text, isFinal ->
             Log.i(TAG, "ASR ${if (isFinal) "FINAL" else "PARTIAL"}: $text")
             if (isFinal && text.isNotBlank()) {
-                sppChannel.sendResult(text)
-                // Auto-stop after getting final result (single-shot mode)
+                Log.i(TAG, "=== ASR RESULT: $text ===")
                 stopVoiceCapture()
             }
         }
-
-        asrClient.onError = { err ->
-            Log.e(TAG, "ASR error: $err")
-            sppChannel.sendResult("ERROR:$err")
-            stopVoiceCapture()
-        }
-
+        asrClient.onError = { err -> Log.e(TAG, "ASR error: $err"); stopVoiceCapture() }
         asrClient.onReady = { Log.i(TAG, "ASR ready") }
 
-        sppChannel.onVoiceStart = { scope.launch { startVoiceCapture() } }
-        sppChannel.onVoiceStop = { stopVoiceCapture() }
-
+        // WQ KEY_1 → SCO 连接 → 本广播触发 → ASR
+        registerScoReceiver()
         Log.i(TAG, "Service created")
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForeground(NOTIFICATION_ID, buildNotification("就绪"))
-        scope.launch { runSetup() }
+        startForeground(
+            NOTIFICATION_ID,
+            buildNotification("等待语音指令"),
+            android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
+        )
         return START_STICKY
     }
 
-    private suspend fun runSetup() {
-        _state.set(ServiceState.CONNECTING)
-        updateNotification("等待 WQ 连接...")
+    private fun registerScoReceiver() {
+        if (scoReceiver != null) return
+        scoReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                val state = intent?.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_STATE, -1) ?: return
+                val prevState = intent?.getIntExtra(AudioManager.EXTRA_SCO_AUDIO_PREVIOUS_STATE, -1)
+                val device = intent?.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
+                Log.i(TAG, "SCO: $prevState → $state  dev=${device?.address}")
 
-        // 1. Wait for HFP
-        val device = hfpMonitor.waitForConnection()
-        if (device == null) {
-            Log.w(TAG, "HFP connection failed, stopping")
-            stopSelf()
-            return
+                when (state) {
+                    AudioManager.SCO_AUDIO_STATE_CONNECTED -> {
+                        if (!voiceActive) {
+                            updateNotification("正在识别...")
+                            scope.launch { startVoiceCapture() }
+                        }
+                    }
+                    AudioManager.SCO_AUDIO_STATE_DISCONNECTED -> {
+                        stopVoiceCapture()
+                        updateNotification("等待语音指令")
+                    }
+                }
+            }
         }
-
-        _state.set(ServiceState.CONNECTING)
-        updateNotification("连接 SPP...")
-
-        // 2. Connect SPP command channel
-        val sppOk = sppChannel.connect(device)
-        if (!sppOk) {
-            Log.w(TAG, "SPP connection failed")
-            stopSelf()
-            return
-        }
-
-        _state.set(ServiceState.READY)
-        updateNotification("Glass Voice 就绪")
-        Log.i(TAG, "Service ready — waiting for KEY_1 trigger")
+        registerReceiver(scoReceiver, IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_UPDATED))
     }
 
     private suspend fun startVoiceCapture() {
         if (voiceActive) return
         voiceActive = true
-        _state.set(ServiceState.LISTENING)
-        updateNotification("正在识别...")
 
-        val device = hfpMonitor.wqDevice ?: return
-        val hs = hfpMonitor.headset ?: return
+        Log.i(TAG, "Starting ASR via SCO...")
 
-        Log.i(TAG, "Starting SCO + ASR...")
+        val ok = scoCapture.capture(null)
+        if (!ok) {
+            Log.e(TAG, "SCO capture failed")
+            voiceActive = false
+            return
+        }
 
-        // Start SCO capture
+        asrClient.start()
         scope.launch {
-            val ok = scoCapture.capture(device, hs)
-            if (!ok) {
-                Log.e(TAG, "SCO capture failed")
-                sppChannel.sendResult("ERROR:SCO_FAILED")
-                stopVoiceCapture()
-                return@launch
-            }
-
-            // Start ASR
-            asrClient.start()
-
-            // Feed PCM to ASR
-            launch {
-                scoCapture.pcmFrames.collect { pcm -> asrClient.feedPcm(pcm) }
-            }
+            scoCapture.pcmFrames.collect { pcm -> asrClient.feedPcm(pcm) }
         }
     }
 
     private fun stopVoiceCapture() {
         if (!voiceActive) return
         voiceActive = false
-
         asrClient.stop()
         scoCapture.stop()
-
-        _state.set(ServiceState.READY)
-        updateNotification("Glass Voice 就绪")
         Log.i(TAG, "Voice capture stopped")
     }
 
@@ -149,11 +124,8 @@ class HfpVoiceService : Service() {
 
     override fun onDestroy() {
         stopVoiceCapture()
-        sppChannel.disconnect()
-        hfpMonitor.headset?.let {
-            android.bluetooth.BluetoothAdapter.getDefaultAdapter()
-                ?.closeProfileProxy(android.bluetooth.BluetoothProfile.HEADSET, it)
-        }
+        scoReceiver?.let { try { unregisterReceiver(it) } catch (_: Exception) {} }
+        scoReceiver = null
         scope.cancel()
         Log.i(TAG, "Service destroyed")
         super.onDestroy()
@@ -162,7 +134,7 @@ class HfpVoiceService : Service() {
     // ---- Notification ----
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(CHANNEL_ID, "Glass Voice", NotificationManager.IMPORTANCE_LOW).apply {
+        val channel = NotificationChannel(CHANNEL_ID, "Glass Voice", NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = "WQ voice assistant status"
             setShowBadge(false)
         }

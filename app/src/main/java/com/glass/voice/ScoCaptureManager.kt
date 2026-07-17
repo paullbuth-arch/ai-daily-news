@@ -29,11 +29,8 @@ class ScoCaptureManager(private val context: Context, private val scope: Corouti
 
     @Volatile var sampleRate = 0
 
-    suspend fun capture(device: BluetoothDevice, headset: BluetoothHeadset): Boolean {
+    suspend fun capture(device: BluetoothDevice?): Boolean {
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-
-        @Suppress("DEPRECATION")
-        headset.startVoiceRecognition(device)
 
         // Route to BT SCO (API 31+)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -48,7 +45,7 @@ class ScoCaptureManager(private val context: Context, private val scope: Corouti
         @Suppress("DEPRECATION")
         audioManager.setBluetoothScoOn(true)
 
-        delay(300) // brief wait for SCO setup
+        delay(500)
 
         return buildAudioRecord()
     }

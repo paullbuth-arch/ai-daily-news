@@ -32,7 +32,7 @@ class SppCommandChannel(private val scope: CoroutineScope) {
     suspend fun connect(device: BluetoothDevice): Boolean = withContext(Dispatchers.IO) {
         try {
             @Suppress("MissingPermission")
-            val s = device.createRfcommSocketToServiceRecord(SPP_UUID)
+            val s = device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
             s.connect()
             socket = s
             input = s.inputStream
