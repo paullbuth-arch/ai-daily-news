@@ -1,345 +1,248 @@
 # 编译链接与启动流程
 
-**一句话结论（20% 核心）**：编译链接就是把 C 文件经过预处理→编译→汇编→链接四步变成机器码；启动流程就是芯片上电后从 Reset Vector 取第一条指令，搬 .data、清 .bss，最后跑到 main() 的全过程。
+**一句话结论（20% 核心）**：你写的 C 代码要变成芯片上跑的固件，需要两步：**编译链接**（C → 机器码）和**启动**（芯片上电后把机器码跑起来）。编译链接是翻译过程，启动是"把舞台搭好，让 C 代码能在上面表演"。
 
 ---
 
-## 第一层：核心认知
+## 第一层：核心认知（必须先看懂）
 
-### 1.1 从 C 代码到芯片运行的全过程
+### 1.1 费曼类比：快递包裹的全过程
 
-```
-源文件 (.c/.h)
-   ↓ [1. 预处理 Preprocessing]
-预处理后的纯 C (.i)
-   ↓ [2. 编译 Compilation]
-汇编文件 (.s)
-   ↓ [3. 汇编 Assembly]
-目标文件 (.o)
-   ↓ [4. 链接 Linking]
-ELF / BIN 文件
-   ↓ [5. 烧录 + 上电启动]
-芯片跑起来
-```
+把你写代码到芯片运行，想象成**寄快递**：
 
-| 步骤 | 工具 | 做什么 | 输出 |
-|---|---|---|---|
-| 预处理 | cpp（预处理器） | 展开 `#include`、`#define`、`#ifdef` | `.i` 文件 |
-| 编译 | gcc -S | 把 C 翻译成汇编 | `.s` 文件 |
-| 汇编 | as | 把汇编翻译成机器码 | `.o` 目标文件 |
-| 链接 | ld | 合并多个 .o，分配地址，生成可执行文件 | ELF / BIN |
+| 你做的事情 | 对应步骤 | 实际发生了什么 |
+|-----------|---------|---------------|
+| 你写 C 代码 | 源文件 | `main.c`、`uart.c` 等 |
+| 快递员打包 | **编译** | 每个 `.c` 文件独立翻译成 `.o`（机器码） |
+| 快递员贴快递单 | **链接** | 把所有 `.o` 拼成一个完整程序，给每个函数/变量分配地址 |
+| 包裹送到目的地 | **烧录** | 把最终的 `.bin` 文件写入芯片的 Flash |
+| 收件人拆包裹 | **启动** | 芯片上电，把 Flash 里的代码搬到 RAM 里跑起来 |
 
-### 1.2 生活类比
+**关键理解**：你做了 1 和 5（写代码 + 看结果），编译器帮你做了 2-4。理解 2-4 是为了出问题时知道在哪一步出错了。
 
-把编译链接想象成"出版一本书"：
-
-1. **预处理**：把手稿里的引用（参考文献、脚注）全部展开替换成实际内容。
-2. **编译**：把中文手稿翻译成英文（C → 汇编/机器码）。
-3. **汇编**：把英文排版成印刷版（.o 文件，每章独立排版）。
-4. **链接**：把所有章节拼成一本完整的书，加上目录和页码（地址分配）。
-
-### 1.3 程序在内存中的样子
-
-链接完成后，ELF 文件里包含了多个**段（Section）**，每个段在上电后被放到不同的内存区域：
+### 1.2 编译链接的四步：一张图看懂
 
 ```
-低地址
-├─ .text ──── 代码段（程序指令，只读）
-├─ .rodata ── 只读数据（常量字符串、const 全局变量）
-├─ .data ──── 已初始化的全局/静态变量（启动时从 Flash 拷贝到 RAM）
-├─ .bss ───── 未初始化的全局/静态变量（启动时清零）
-├─ heap ───── 堆（malloc 从这里分配，向高地址增长）
-│              ↓
-│              ↑
-└─ stack ──── 栈（局部变量、函数参数、返回地址，向低地址增长）
-高地址
+main.c ─┐                                ┌─→ main.o ─┐
+uart.c ─┤─ ①预处理 → ②编译 → ③汇编 ─→ ├─→ uart.o ─┤─ ④链接 → app.elf
+app.h  ─┘                                └─→ ...     ─┘
+                                                        │
+                                                    ⑤ 烧录到 Flash
+                                                        │
+                                                    ⑥ 上电启动
 ```
 
-**为什么堆和栈相对增长？**
+每步到底做了什么，用一句话说清楚：
 
-这样设计可以让堆和栈各自最大化利用剩余空间，互不干扰。如果它们都从同一端增长，就会更早碰撞。
+| 步骤 | 输入 | 输出 | 一句话 |
+|------|------|------|--------|
+| **① 预处理** | `.c` + `.h` | `.i` | 把头文件和宏展开，变成一份纯 C 代码 |
+| **② 编译** | `.i`（纯 C） | `.s`（汇编） | 把 C 翻译成汇编语言 |
+| **③ 汇编** | `.s`（汇编） | `.o`（机器码） | 把汇编翻译成 CPU 认识的二进制指令 |
+| **④ 链接** | 多个 `.o` | `.elf`（可执行文件） | 把所有 .o 拼起来，给每个函数分配最终地址 |
 
-### 1.4 最小代码示例
+**你不需要手动做任何一步**——`gcc main.c -o app` 一条命令自动完成 ①-④。
+
+### 1.3 链接到底做了什么？——最重要的一步
+
+链接是初学者最容易困惑的步骤。用一句话解释：**编译把每个 `.c` 变成独立的 `.o`，但它们之间互相调用的函数还不知道彼此的地址。链接就是把它们拼在一起，告诉每个函数"你调用的那个函数在地址 0x00001234"。**
 
 ```c
-// 这几个变量分别存在哪个段？
-const int MAX = 100;        // .rodata（只读数据段）
-int initialized = 42;       // .data（已初始化数据段）
-int uninitialized;          // .bss（未初始化数据段）
-static int counter = 0;     // .data
+// main.c 中调用了 uart_init()，但 uart_init 在 uart.c 中
+// 编译 main.c 时，编译器不知道 uart_init 在哪
+// 它只在 main.o 里留了一个"占位符"：这里需要填入 uart_init 的地址
 
-void my_function(void)      // .text（代码段）
-{
-    int local_var = 10;     // 栈（stack）
-    int *p = malloc(100);   // 堆（heap）
-}
+// 链接时，链接器看到了 main.o 和 uart.o：
+//   main.o 里有个占位符"需要 uart_init 的地址"
+//   uart.o 里有个函数 uart_init，地址是 0x00001234
+// → 链接器把占位符填成 0x00001234
 ```
 
-### 1.5 如果只记得一件事
+### 1.4 程序在芯片里怎么存放？
 
-> 编译链接 = 把文字变成机器码的四步翻译；启动 = 把 .data 搬到 RAM、.bss 清零、初始化栈指针、跳到 main()。
+链接完成后，程序被分成几个"段"，每个段放在 Flash 或 RAM 的不同位置：
+
+```
+Flash（断电不丢）                    RAM（断电清零）
+┌──────────────┐                   ┌──────────────┐
+│  .text       │  ← 你的代码        │  .data       │  ← 有初值的全局变量
+│  (机器指令)   │                   │  (从 Flash 搬来)│
+├──────────────┤                   ├──────────────┤
+│  .rodata     │  ← 常量字符串      │  .bss        │  ← 无初值的全局变量
+│  ("hello")   │                   │  (启动时清零)  │
+├──────────────┤                   ├──────────────┤
+│  .data 的    │  ← 全局变量的初值   │  heap        │  ← malloc 从这分
+│  初始值副本   │     存放在 Flash   │  ↓           │
+└──────────────┘                   │  ↑           │
+                                   │  stack       │  ← 局部变量在这
+                                   └──────────────┘
+```
+
+**为什么 .data 要存两份？** 因为全局变量需要在 RAM 里才能读写（Flash 只能读不能随便写），但 RAM 断电就丢。所以初值存在 Flash 里，启动时拷贝到 RAM。
+
+### 1.5 芯片上电后发生了什么？
+
+```
+按下电源键
+    │
+    ▼
+CPU 从 Flash 地址 0 读第一条指令（这是硬件固化的行为）
+    │
+    ▼
+启动代码（startup.S）执行：
+  ① 设置栈指针 SP           ← 没有栈，C 函数无法调用（局部变量没地方放）
+  ② 把 .data 从 Flash 拷到 RAM ← 全局变量需要初值
+  ③ 把 .bss 清零              ← C 标准规定未初始化全局变量必须是 0
+  ④ 调用 main()               ← 终于进入你的代码！
+```
+
+**这就是为什么你写 `int count = 0;` 和 `int count;` 行为不同**——前者存在 .data 里（从 Flash 拷贝初值 0），后者存在 .bss 里（启动时统一清零）。结果一样，但存放位置不同。
+
+### 1.6 如果只记得一件事
+
+> 编译 = 每个 .c 翻译成 .o，链接 = 把所有 .o 拼起来并分配地址。芯片上电 → 启动代码搬 .data、清 .bss → 跳到 main()。你的全局变量能用，是因为启动代码帮你把初值从 Flash 搬到了 RAM。
 
 ---
 
 ## 第二层：实战理解
 
-### 2.1 预处理阶段详解
+### 2.1 遇到"编译错误"和"链接错误"怎么区分？
 
-预处理是编译的第一步，处理所有以 `#` 开头的指令：
+```
+编译错误（编译阶段失败）：
+  main.c:10:5: error: 'count' undeclared
+  → 语法错误、变量未定义、类型不匹配
+  → 看错误信息里的文件名和行号，改代码
+
+链接错误（链接阶段失败）：
+  undefined reference to `uart_init'
+  → 你调用了 uart_init()，但链接器在所有 .o 里都找不到这个函数
+  → 可能原因：忘了包含 .c 文件、函数名拼错、库没链接
+```
+
+### 2.2 预处理到底是干什么的？——一个具体例子
 
 ```c
-// 原始代码
-#define LED_PIN 5
-#include "gpio.h"
+// ===== 原始代码 (main.c) =====
+#include "gpio.h"       // gpio.h 里定义了 #define LED_PIN 5
+#define DELAY_MS 100
 
-#ifdef DEBUG
-    printf("debug mode\n");
-#endif
+void main(void) {
+    gpio_set(LED_PIN);  // 控制 LED
+    delay(DELAY_MS);
+}
 
-void init(void) {
-    gpio_set(LED_PIN);  // 预处理后变成 gpio_set(5);
+// ===== 预处理后 (main.i) =====
+// gpio.h 的内容被原样插入到这里...
+// ... 几千行头文件内容 ...
+
+void main(void) {
+    gpio_set(5);        // LED_PIN 被替换成了 5
+    delay(100);         // DELAY_MS 被替换成了 100
 }
 ```
 
-| 指令 | 作用 |
-|---|---|
-| `#include` | 把文件内容原样插入 |
-| `#define` | 文本替换（宏定义） |
-| `#ifdef / #endif` | 条件编译，控制哪些代码参与编译 |
-| `#pragma` | 编译器特殊指令 |
+### 2.3 链接脚本：告诉链接器"内存怎么划分"
 
-**常见坑**：`#define MAX(a,b) ((a)>(b)?(a):(b))` —— 参数必须加括号，否则 `MAX(x+1, y)` 会展开错误。
-
-### 2.2 链接脚本（Linker Script）：.ld 文件
-
-链接脚本告诉链接器"每个段放在哪个地址、多大空间"。
+你不需要写链接脚本（SDK 已经写好了），但需要看得懂。核心就一句话：**定义 Flash 和 RAM 的起始地址和大小，然后决定每个段放在哪。**
 
 ```ld
-/* 简化的链接脚本示例 */
 MEMORY
 {
-    FLASH (rx)  : ORIGIN = 0x00000000, LENGTH = 512K
-    SRAM  (rwx) : ORIGIN = 0x20000000, LENGTH = 128K
-}
-
-SECTIONS
-{
-    .text : {
-        *(.text*)      /* 所有 .text 段放这里 */
-    } > FLASH
-
-    .rodata : {
-        *(.rodata*)
-    } > FLASH
-
-    .data : {
-        _sdata = .;
-        *(.data*)
-        _edata = .;
-    } > SRAM AT > FLASH  /* 运行在 SRAM，但初始值存在 FLASH */
-
-    .bss : {
-        _sbss = .;
-        *(.bss*)
-        _ebss = .;
-    } > SRAM
-
-    _stack_top = ORIGIN(SRAM) + LENGTH(SRAM);  /* 栈顶在 SRAM 最高地址 */
+    FLASH (rx)  : ORIGIN = 0x00000000, LENGTH = 512K  // 512KB Flash
+    SRAM  (rwx) : ORIGIN = 0x20000000, LENGTH = 128K  // 128KB RAM
 }
 ```
 
-**关键概念**：
+WQ7036AX 每个 core 有独立的链接脚本，在 `wqcore/chipset/bbb/` 下。
 
-- `AT > FLASH`：表示 .data 段的**加载地址（LMA）** 在 Flash，但**运行地址（VMA）** 在 SRAM。启动时需要把 .data 从 Flash 拷贝到 SRAM。
-- `_sdata` / `_edata`：链接器定义的符号，启动代码用它们来确定拷贝范围。
-- `_sbss` / `_ebss`：启动代码用它们来确定清零范围。
+### 2.4 .map 文件：你的"内存账单"
 
-### 2.3 启动文件（startup_xxx.S）做了什么？
-
-芯片上电后，CPU 从固定地址（Reset Vector）取第一条指令。这条指令在启动文件里：
-
-```asm
-/* 简化的 RISC-V 启动代码 */
-.section .text.init
-.global _start
-_start:
-    /* 1. 初始化栈指针 */
-    la   sp, _stack_top
-
-    /* 2. 拷贝 .data 段从 Flash 到 RAM */
-    la   a0, _data_lma       /* Flash 中的源地址 */
-    la   a1, _sdata          /* RAM 中的目标起始地址 */
-    la   a2, _edata          /* RAM 中的目标结束地址 */
-copy_data:
-    bge  a1, a2, done_copy   /* 如果 a1 >= a2，拷贝完成 */
-    lw   a3, 0(a0)           /* 从 Flash 读 4 字节 */
-    sw   a3, 0(a1)           /* 写到 RAM */
-    addi a0, a0, 4
-    addi a1, a1, 4
-    j    copy_data
-done_copy:
-
-    /* 3. 清零 .bss 段 */
-    la   a0, _sbss
-    la   a1, _ebss
-clear_bss:
-    bge  a0, a1, done_clear
-    sw   zero, 0(a0)
-    addi a0, a0, 4
-    j    clear_bss
-done_clear:
-
-    /* 4. 调用 C 语言的 main 函数 */
-    call main
-
-    /* 5. main 返回后死循环 */
-loop:
-    j loop
-```
-
-**启动文件的五步总结**：
-
-| 步骤 | 做什么 | 为什么 |
-|---|---|---|
-| 1 | 设置栈指针 SP | 没有栈就没法调用函数 |
-| 2 | 拷贝 .data | 全局变量的初值存在 Flash，要搬到 RAM 才能读写 |
-| 3 | 清零 .bss | C 标准要求未初始化的全局变量为 0 |
-| 4 | 调用 main() | 进入 C 语言世界 |
-| 5 | 死循环兜底 | main() 不应返回，返回了就卡住 |
-
-### 2.4 .map 文件怎么看？
-
-.map 文件是链接器输出的"内存账单"，可以看到每个函数和变量占了多少空间、放在哪个地址。
+每次编译后都会生成 `.map` 文件，记录每个函数和变量占了多少空间、放在哪个地址。**编译后第一件事应该看这个**——确认 Flash 和 RAM 没超。
 
 ```
-// 示例 .map 文件片段
-.text          0x00000000    0x1234
- main.o        0x00000000    0x200
- app_task.o    0x00000200    0x400
- uart_drv.o    0x00000600    0x100
-
-.data          0x20000000    0x50
- config        0x20000000    0x20    /* 全局配置结构体 */
-
-.bss           0x20000050    0x100
- rx_buffer     0x20000050    0x80    /* 接收缓冲区 */
+.map 文件关键信息：
+  .text   0x00001000  0x5234   ← 代码段占 0x5234 = 21KB，还有 491KB 可用
+  .data   0x20000000  0x0100   ← 数据段占 256B
+  .bss    0x20000100  0x0800   ← BSS 段占 2KB
+  Total RAM: .data + .bss = 2.25KB，还有 125KB 可用
 ```
 
-**怎么用 .map 文件排查问题？**
+### 2.5 在 WQ7036AX 项目中怎么用
 
-1. **Flash 超了**：看 `.text` + `.rodata` 的总大小是否超过 Flash 容量。
-2. **RAM 超了**：看 `.data` + `.bss` + 栈 + 堆是否超过 RAM 容量。
-3. **哪个函数最大**：按大小排序 `.text` 段，找到最占空间的函数来优化。
+```bash
+# 编译后查看内存占用
+riscv64-unknown-elf-size build/acore/glass_acore.elf
+#    text    data     bss     dec     hex
+#   52340     256    2048   54644    d574
+#   ↑ 代码    ↑ 有初值 ↑ 无初值
 
-### 2.5 项目中 WQ7036A 的编译启动流程
+# 查看哪个函数最占空间
+riscv64-unknown-elf-nm --size-sort build/acore/glass_acore.elf | tail -10
 
-WQ7036A 是**三核 SoC**，每个核有独立的 ELF 文件：
-
+# 查看最终的 .map 文件
+cat build/acore/glass_acore.map
 ```
-build/
-  acore/  ← ACORE 的 ELF/BIN（RISC-V 架构）
-  bcore/  ← BCORE 的 ELF/BIN（RISC-V 架构）
-  dcore/  ← DCORE 的 ELF/BIN（Xtensa 架构）
-  xxx.wpk ← 最终固件包（ZIP 格式，包含三核 BIN + 元数据）
-```
-
-启动顺序：ACORE 先启动 → 初始化 IPC → 启动 BCORE → 启动 DCORE。
-
-详见 [[boot-ota-启动流程与OTA升级]] 和 [[ipc-multicore-多核通信与IPC]]。
 
 ---
 
 ## 第三层：深入扩展
 
-### 3.1 GCC 编译选项速查
+### 3.1 启动代码的关键细节
 
-| 选项 | 作用 | 嵌入式常用 |
-|---|---|---|
-| `-O0` / `-O2` / `-Os` | 优化级别 | `-Os`（优化体积）常用于嵌入式 |
-| `-g` | 生成调试信息 | 调试时必须加 |
-| `-Wall` | 开启所有警告 | 强烈建议 |
-| `-ffreestanding` | 无标准库环境 | 裸机编程 |
-| `-nostdlib` | 不链接标准库 | Bootloader |
-| `-march=rv32imac` | 指定目标架构 | RISC-V |
-| `-ffunction-sections` | 每个函数独立段 | 配合 `--gc-sections` 去掉无用代码 |
-| `-fdata-sections` | 每个变量独立段 | 同上 |
+上面第一层说的是启动代码"做什么"，这里说"为什么必须用汇编写"。
 
-### 3.2 构造函数 / 全局对象的初始化
-
-在 C++ 或有构造函数的场景下，启动文件还要调用 `.init_array` 段中的函数指针：
-
-```c
-// 启动代码中的初始化调用
-typedef void (*init_func_t)(void);
-extern init_func_t __init_array_start[];
-extern init_func_t __init_array_end[];
-
-void call_constructors(void)
-{
-    for (init_func_t *p = __init_array_start; p < __init_array_end; p++) {
-        (*p)();
-    }
-}
+```asm
+/* 启动代码必须用汇编，因为 C 语言做不到这些事：
+   1. C 函数调用需要栈，但栈指针还没初始化
+   2. C 不能直接访问特定的 CPU 寄存器（如 mtvec）
+   3. C 不能生成精确的异常入口地址
+*/
+_start:
+    la   sp, _stack_top      /* ① 设栈指针——没有栈，= 不能调用任何 C 函数 */
+    la   a0, _data_lma       /* ② 拷贝 .data */
+    la   a1, _sdata
+    la   a2, _edata
+1:  bge  a1, a2, 2f
+    lw   a3, 0(a0)
+    sw   a3, 0(a1)
+    addi a0, a0, 4
+    addi a1, a1, 4
+    j    1b
+2:  la   a0, _sbss           /* ③ 清零 .bss */
+    la   a1, _ebss
+3:  bge  a0, a1, 4f
+    sw   zero, 0(a0)
+    addi a0, a0, 4
+    j    3b
+4:  call main                 /* ④ 进入 C 语言 */
+5:  j    5b                   /* ⑤ main 不应该返回，返回就死循环 */
 ```
 
-### 3.3 Bootloader 跳转与中断向量表重定位
+WQ7036AX 的启动代码在 `wqcore/components/startup/boot/` 下，每个 core 有独立的 `startup_*.S`。
 
-当 Bootloader 跳转到 APP 时，APP 的中断向量表可能在不同的地址。需要重定位：
+### 3.2 常见问题
 
-```c
-// ARM Cortex-M：通过 VTOR 寄存器重定位中断向量表
-SCB->VTOR = APP_VECTOR_TABLE_ADDR;
+- **编译和链接的区别？** 编译：单个 `.c` → `.o`（翻译）。链接：多个 `.o` → `.elf`（拼接+分配地址）。
+- **为什么 .bss 不占 Flash 空间？** 因为 .bss 里所有变量都是 0，只需要知道"从哪开始、有多长"，不需要存 0。启动代码统一清零。
+- **`static` 全局变量和普通全局变量有什么区别？** 链接时，`static` 变量的符号是本文件私有的，其他文件看不见。普通全局变量是全局可见的，其他文件可以用 `extern` 引用。
+- **什么是交叉编译？** 在 x86 PC 上编译 RISC-V/ARM 程序。编译器本身跑在 x86 上，但生成的机器码是 RISC-V/ARM 的。
+- **`undefined reference to` 是什么意思？** 链接错误。你调用了某个函数，但链接器在所有 `.o` 和库中都找不到它的实现。
 
-// RISC-V：通过 mtvec 寄存器设置中断向量基地址
-asm volatile("csrw mtvec, %0" : : "r"(app_vector_base));
-```
+### 3.3 GCC 常用编译选项
 
-### 3.4 ELF 文件格式简述
+| 选项 | 作用 | 什么时候用 |
+|------|------|-----------|
+| `-O0` | 不优化 | 调试时 |
+| `-Os` | 优化体积 | 发布版本（嵌入式首选） |
+| `-g` | 生成调试信息 | 调试时 |
+| `-Wall` | 显示所有警告 | 始终加上 |
+| `-march=rv32imac` | 指定 RISC-V 指令集 | WQ7036AX 的 ACORE/BCORE |
+| `-ffunction-sections` | 每个函数独立段 | 配合 `--gc-sections` 删除未用代码 |
 
-ELF（Executable and Linkable Format）不只是可执行文件，它还包含了调试信息、符号表等：
+### 3.4 延伸阅读
 
-| 段 | 内容 |
-|---|---|
-| `.text` | 机器码 |
-| `.rodata` | 常量 |
-| `.data` | 已初始化变量 |
-| `.bss` | 未初始化变量 |
-| `.symtab` | 符号表（函数名、变量名 → 地址的映射） |
-| `.debug` | 调试信息（变量类型、行号） |
-| `.strtab` | 字符串表 |
-
-**实用命令**：
-- `riscv64-unknown-elf-objdump -d xxx.elf` — 反汇编
-- `riscv64-unknown-elf-nm xxx.elf` — 查看符号表
-- `riscv64-unknown-elf-size xxx.elf` — 查看各段大小
-- `riscv64-unknown-elf-readelf -a xxx.elf` — 查看 ELF 完整信息
-
-### 3.5 常见问题
-
-- **编译和链接的区别？** 编译把单个 .c 变成 .o，链接把多个 .o 合成一个可执行文件并分配地址。
-- **为什么 .bss 不占 Flash 空间？** 因为 .bss 里的变量全是 0，不需要存储初值，只需要知道大小和起始地址。
-- **static 全局变量和普通全局变量在链接时有什么区别？** static 全局变量的符号是 local 的，不会和其他文件的同名变量冲突。
-- **什么是交叉编译？** 在一种架构的机器上编译另一种架构的代码（如在 x86 PC 上编译 RISC-V 程序）。
-
-### 3.6 核心术语表
-
-| 英文 | 中文 | 说明 |
-|---|---|---|
-| Preprocessor | 预处理器 | 展开宏和头文件 |
-| Compiler | 编译器 | C → 汇编 |
-| Assembler | 汇编器 | 汇编 → 机器码 |
-| Linker | 链接器 | 合并目标文件、分配地址 |
-| Object File | 目标文件 | 编译后的 .o 文件 |
-| Linker Script | 链接脚本 | 控制内存布局的 .ld 文件 |
-| Section | 段 | .text/.data/.bss 等 |
-| Symbol | 符号 | 函数名/变量名 |
-| Cross Compile | 交叉编译 | 在 A 架构编译 B 架构的代码 |
-| ELF | 可执行可链接格式 | Linux/嵌入式常用的二进制格式 |
-| Reset Vector | 复位向量 | 上电后 CPU 执行的第一条指令地址 |
-
-### 3.7 延伸阅读
-
-- [[c-core-C语言核心]] —— 指针、volatile、内存布局
-- [[computer-arch-mcu-计算机组成与MCU架构]] —— 地址映射、总线
-- [[boot-ota-启动流程与OTA升级]] —— Bootloader 与 OTA 详解
-- [[debug-tools-常用调试工具链]] —— 怎么用 GDB 调试
+- [[c-core-C语言核心]] — 指针、volatile、内存布局
+- [[computer-arch-mcu-计算机组成与MCU架构]] — Flash/RAM/总线的硬件基础
+- [[build-system-构建系统]] — Makefile/SCons 怎么调这些编译选项
+- [[boot-ota-启动流程与OTA升级]] — Bootloader 与 OTA 的完整链路

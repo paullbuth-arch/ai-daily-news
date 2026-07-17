@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "40-LinuxDriver-Linux驱动/DriverModel-驱动模型/platform-driver-外设驱动框架.md",
+                "file": "10-Foundation-基础/OS-Concepts-操作系统/interrupt-concurrency-中断并发同步.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "platform-driver-外设驱动框架"
+              "title": "interrupt-concurrency-中断并发同步"
             }
           }
         ]
@@ -182,6 +182,12 @@
   },
   "active": "78ad2e445440c156",
   "lastOpenFiles": [
+    "01-roadmap-学习路线.md",
+    "10-Foundation-基础/C-Advanced-C语言进阶/compile-link-startup-编译链接与启动流程.md",
+    "10-Foundation-基础/C-Advanced-C语言进阶/c-core-C语言核心.md",
+    "40-LinuxDriver-Linux驱动/DriverModel-驱动模型/platform-driver-外设驱动框架.md",
+    "10-Foundation-基础/moc-基础目录.md",
+    "10-Foundation-基础/Computer-Architecture-计算机组成/computer-arch-mcu-计算机组成与MCU架构.md",
     "40-LinuxDriver-Linux驱动/DMA-Interrupt-PM/dma-interrupt-pm-DMA中断与电源管理.md",
     "40-LinuxDriver-Linux驱动/ALSA-ASoC/alsa-asoc-ALSA音频驱动.md",
     "50-Application-应用层/IPC-DBus-Socket/ipc-dbus-socket-IPC通信.md",
@@ -189,7 +195,6 @@
     "60-Multimedia-AI-多媒体AI/moc-多媒体AI目录.md",
     "60-Multimedia-AI-多媒体AI/Video-H264-ISP/video-h264-isp-视频编码与ISP.md",
     "92-DesignPatterns-设计模式/embedded-design-patterns-嵌入式设计模式.md",
-    "01-roadmap-学习路线.md",
     "70-Bluetooth-蓝牙/BLE-GAP-GATT-低功耗蓝牙/ble-smp-BLE-SMP配对.md",
     "80-Debug-调试/GDB-ftrace/gdb-ftrace-GDB与ftrace.md",
     "80-Debug-调试/Crashdump-Perf/crashdump-perf-Crashdump与性能分析.md",
@@ -200,14 +205,9 @@
     "70-Bluetooth-蓝牙/BLE-GAP-GATT-低功耗蓝牙/ble-gap-BLE-GAP广播.md",
     "40-LinuxDriver-Linux驱动/I2C-SPI-GPIO-Subsys/i2c-spi-gpio-subsys-I2C-SPI-GPIO子系统.md",
     "40-LinuxDriver-Linux驱动/CharDevice-Input/char-device-字符设备驱动.md",
-    "40-LinuxDriver-Linux驱动/DriverModel-驱动模型/platform-driver-外设驱动框架.md",
     "30-BSP-板级支持/Power-Pinmux/power-pinmux-电源与引脚复用.md",
     "30-BSP-板级支持/Kernel-Build/kernel-build-Kernel编译与裁剪.md",
     "30-BSP-板级支持/Firmware-OTA-固件升级/boot-ota-启动流程与OTA升级.md",
-    "30-BSP-板级支持/DeviceTree/devicetree-DeviceTree设备树.md",
-    "30-BSP-板级支持/Buildroot-Yocto/buildroot-yocto-Buildroot与Yocto.md",
-    "30-BSP-板级支持/moc-BSP目录.md",
-    "80-Debug-调试/LogicAnalyzer-Scope/logic-analyzer-逻辑分析仪与示波器.md",
     "20-HardwareProtocol-硬件协议/ADC-DAC-Analog-模拟接口",
     "20-HardwareProtocol-硬件协议/PWM-Timer-定时器与PWM",
     "80-Debug-调试/Serial-JTAG-SWD",
