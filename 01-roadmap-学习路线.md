@@ -109,6 +109,10 @@ aliases: [嵌入式知识库, 学习路线图, 嵌入式入门指南]
 | OTA 升级 | [[30-BSP-板级支持/Firmware-OTA-固件升级/boot-ota-启动流程与OTA升级]] | 需要实现固件更新时 |
 | 调试方法 | [[80-Debug-调试/debug-methodology-嵌入式调试方法论]] | 遇到搞不定的 bug 时 |
 | BLE 配对 | [[70-Bluetooth-蓝牙/BLE-GAP-GATT-低功耗蓝牙/ble-smp-BLE-SMP配对]] | 需要实现安全连接时 |
+| 经典蓝牙 | [[70-Bluetooth-蓝牙/Classic-HFP-A2DP/classic-bluetooth-经典蓝牙]] | 需要通话/音乐功能时 |
+| Linux BSP | [[30-BSP-板级支持/DeviceTree/devicetree-DeviceTree设备树]] → [[30-BSP-板级支持/U-Boot/uboot-U-Boot引导程序]] | 需要定制 V881 系统时 |
+| Linux 应用 | [[50-Application-应用层/Multithread-POSIX/multithread-posix-多线程编程]] → [[50-Application-应用层/IPC-DBus-Socket/ipc-dbus-socket-IPC通信]] | 需要写 V881 服务时 |
+| 嵌入式测试 | [[85-Testing-测试/embedded-testing-嵌入式测试]] | 需要保证代码质量时 |
 
 ---
 
@@ -124,7 +128,7 @@ aliases: [嵌入式知识库, 学习路线图, 嵌入式入门指南]
 第二层：实战理解 (30%)  ← 建议看，能写代码能调试
   代码模板 + 常见错误 + 项目中的实际应用
 第三层：深入扩展 (50%)  ← 按需看，遇到问题时再查
-  源码细节 + 面试题 + 延伸阅读
+  源码细节 + 常见问题 + 延伸阅读
 ```
 
 ### 学习方法
