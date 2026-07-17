@@ -1,0 +1,22 @@
+﻿{
+  "app:go-back": [
+    {
+      "modifiers": ["Alt"],
+      "key": "q"
+    },
+    {
+      "modifiers": ["Alt"],
+      "key": "a"
+    }
+  ],
+  "app:go-forward": [
+    {
+      "modifiers": ["Alt"],
+      "key": "w"
+    },
+    {
+      "modifiers": ["Alt"],
+      "key": "s"
+    }
+  ]
+}

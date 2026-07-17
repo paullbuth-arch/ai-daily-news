@@ -1,0 +1,60 @@
+# Snippet - 环形缓冲区实现
+
+一句话结论：环形缓冲区是 ISR 与任务之间最高效的数据交换方式之一，关键在于用位掩膜简化下标回绕。
+
+---
+
+## 代码
+
+```c
+#include <stdint.h>
+#include <stdbool.h>
+#include <stddef.h>
+
+#define RBUF_SIZE 256
+#define RBUF_MASK (RBUF_SIZE - 1)
+
+typedef struct {
+    uint8_t  buf[RBUF_SIZE];
+    volatile uint32_t head;
+    volatile uint32_t tail;
+} rbuf_t;
+
+static inline bool rbuf_is_empty(rbuf_t *rb)
+{
+    return rb->head == rb->tail;
+}
+
+static inline bool rbuf_is_full(rbuf_t *rb)
+{
+    return ((rb->head - rb->tail) & RBUF_MASK) == 0 && rb->head != rb->tail;
+}
+
+bool rbuf_put(rbuf_t *rb, uint8_t data)
+{
+    if (rbuf_is_full(rb)) {
+        return false;
+    }
+    rb->buf[rb->head & RBUF_MASK] = data;
+    rb->head++;
+    return true;
+}
+
+bool rbuf_get(rbuf_t *rb, uint8_t *data)
+{
+    if (rbuf_is_empty(rb)) {
+        return false;
+    }
+    *data = rb->buf[rb->tail & RBUF_MASK];
+    rb->tail++;
+    return true;
+}
+```
+
+---
+
+## 使用注意
+
+- `RBUF_SIZE` 必须是 2 的幂次，才能用位掩膜。
+- 生产者（通常是 ISR）和消费者（任务）需要正确同步，必要时关中断保护 `head` 或 `tail`。
+- 与项目关联：[[uart-basics-UART基础 中的 UART 数据收发（`app_uart_cmd.c` 使用环形缓冲区）]]、 [[interrupt-concurrency-中断并发同步 中的生产者/消费者模型]]。

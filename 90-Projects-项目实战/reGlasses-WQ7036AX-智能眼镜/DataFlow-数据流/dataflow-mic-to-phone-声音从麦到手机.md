@@ -1,0 +1,148 @@
+---
+type: concept
+created: 2026-07-16
+tags: [dataflow, audio, pdm, opus, ble, 数据流, 音频]
+aliases: [音频数据流, 麦到手机]
+---
+
+# 数据流：声音从麦到手机
+
+## 一句话理解
+
+这条数据流是 reGlasses 最核心的功能之一：声音被 4 颗麦克风捕获 → 经过 6 个处理阶段 → 最终通过 BLE 到达手机。**每一步都有对应的代码文件和函数**，下面带你一步步跟。
+
+## 完整路径
+
+```
+Step 1: 声波 → PDM 1-bit
+  器件: SDM0103B (U12-U15)
+  代码: PDM Controller 硬件自动处理
+
+Step 2: PDM → PCM 16-bit (Decimation)
+  硬件: WQ7036AX PDM Controller
+  代码: wqcore/driver/pdm/
+
+Step 3: DSP 处理 (AEC + NR + AGC + VAD)
+  核: DCORE (HiFi5)
+  代码: wq-adk/components/audio_service/
+
+Step 4: Opus 编码 (压缩 8-16 倍)
+  代码: wqcore/components/codec_factory/
+
+Step 5: WQ Protocol 帧封装
+  代码: wq-adk/components/wq_protocol/
+
+Step 6: BLE GATT Notify
+  代码: wq-adk/components/ota_transport/
+```
+
+## Step 1：声波 → PDM 1-bit
+
+**发生了什么**：4 颗 [[sdm0103b-SDM0103B数字麦 (U12-U15) 把声波振动转换为 1-bit PDM 数字信号]]。
+
+```
+模拟声波:    ∿∿∿ (正弦波)
+PDM 输出: 111110001111000011111100...
+          ↑密=正幅度  ↑疏=负幅度
+```
+
+**硬件连接**：
+- CLK 由 WQ7036AX 提供 (DMIC_L1_CLK / DMIC_R1_CLK)
+- DATA 送回 WQ7036AX (DMIC_L1_DATA / DMIC_R1_DATA)
+- L/R 引脚电平决定 CLK 哪个边沿输出
+
+## Step 2：PDM → PCM (Decimation Filter)
+
+**发生了什么**：WQ7036AX 内部的 **PDM Controller** (硬件模块) 对 1-bit PDM 流做 **Decimation (抽取滤波)**，输出 16-bit PCM 数据。
+
+```
+PDM: 1111100011110000...  (CLK 频率 2.048MHz)
+           ↓ Decimation
+PCM: [0x1234] [0x1256] [0x1198] ...  (采样率 16kHz)
+```
+
+**在 SDK 中**：`wqcore/driver/pdm/` 下查看 PDM 时钟配置，Kconfig 中 `CONFIG_AUDIO_SPK_FB_REF_PDM_CLK_ENABLE` 控制 PDM 时钟使能。
+
+## Step 3：DSP 处理
+
+**发生了什么**：PCM 数据送入 DCORE (HiFi5 DSP) 做 4 种处理：
+
+| 算法 | 英文 | 作用 |
+|------|------|------|
+| AEC | Acoustic Echo Cancellation | 消除扬声器回声 |
+| NR | Noise Reduction | 去除环境噪声 |
+| AGC | Automatic Gain Control | 自动调节音量 |
+| VAD | Voice Activity Detection | 检测"有人在说话" |
+
+**在 SDK 中**：
+1. `aud_sv_api.h` → 音频服务 API 头文件（`wq-adk/components/audio_service/api/`）
+2. `app_trans_down` → 音频下行应用层处理
+3. Kconfig 中 `CONFIG_AUDIO_VAD_WAKEUP_TVAD` → VAD 唤醒配置
+
+## Step 4：Opus 编码
+
+**发生了什么**：PCM 16kHz/16bit = 256kbps 的数据量太大，BLE 传不了。Opus 编码器把它压缩到 16-32kbps。
+
+```
+PCM:  16kHz × 16bit = 256 kbps
+          ↓ Opus (20ms 帧)
+Opus: ~16-32 kbps (压缩 8-16 倍)
+```
+
+**在 SDK 中**：
+1. `audio_encoder.h` → 编码器统一接口（`wqcore/components/codec_factory/`）
+2. Kconfig 中 `CONFIG_AUDIO_VAD_SEND_PKT_BY_OPUS` → 确认使用 Opus 编码
+
+## Step 5：WQ Protocol 帧封装
+
+**发生了什么**：Opus 数据被打包成 [[wq-audio-protocol-WQ-Audio-Protocol 帧 (0x5751)]]。
+
+```c
+wq_proto_pkt_pack(&pkt,
+    SERVICE_TYPE_TRANS_UP,  // 音频上行
+    TRANS_UP_DATA_IND,      // 数据帧
+    FRAME_TYPE_IND,         // 单向通知
+    seq_number++,           // 序列号
+    0,                      // 不需要 ACK
+    opus_data,              // Opus 编码后的数据
+    opus_data_len           // 数据长度
+);
+```
+
+**在 SDK 中**：`wq_protocol.h` 中搜索 `wq_proto_pkt_pack`
+
+## Step 6：BLE GATT Notify
+
+**发生了什么**：打包好的 WQ Protocol 帧通过 BLE GATT 的 **C3 Audio Stream Characteristic** 以 Notify 方式推送给手机。
+
+```c
+wq_gatts_notify(conn_handle, char_audio, pkt_buf, pkt_size);
+```
+
+**在 SDK 中**：`ota_transport_ble.c` 中搜索 `wq_gatts_notify`
+
+## 每一步的带宽变化
+
+| 阶段 | 数据格式 | 带宽 |
+|------|----------|------|
+| PDM | 1-bit @ 2.048MHz | 2.048 Mbps |
+| PCM | 16-bit @ 16kHz × 4ch | 1.024 Mbps |
+| DSP 后 | 16-bit @ 16kHz × 1-2ch | 256-512 Kbps |
+| Opus 后 | 压缩帧 | 16-32 Kbps |
+| BLE 发送 | GATT Notify | ~16-32 Kbps (占用 BLE ~2%) |
+
+## 关联概念
+
+- [[wq7036ax-audio-pipeline-WQ7036AX音频管道]] — 完整音频处理链
+- [[pdm-mic-PDM麦克风]] — Step 1 详解
+- [[wq-audio-protocol-WQ-Audio-Protocol]] — Step 5 详解
+- [[ble-gatt-BLE-GATT]] — Step 6 详解
+- [[i2s-vs-pdm-音频接口对比]] — PDM vs I2S 选择
+- [[reglasses-bandwidth-reGlasses带宽约束]] — 带宽限制
+
+#flashcard
+问：声音从麦到手机经过哪 6 个阶段？
+答：①PDM 采集 ②Decimation (PDM→PCM) ③DSP (AEC/NR/AGC/VAD) ④Opus 编码 ⑤WQ Protocol 帧封装 ⑥BLE GATT Notify
+
+问：Opus 编码的压缩比大约是多少？
+答：PCM 256kbps → Opus 16-32kbps，压缩约 8-16 倍。
