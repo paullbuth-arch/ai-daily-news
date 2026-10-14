@@ -6,6 +6,8 @@ import 'package:crypto/crypto.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
+import 'xiaohongshu_note_parser.dart';
+
 class ImportedMaterialImage {
   final Uri originalUrl;
   final Uri downloadedUrl;
@@ -663,33 +665,50 @@ class EcommerceMaterialImportService {
       return null;
     }
 
-    final title = _firstNonEmpty([
-      document.querySelector('.title-no-padding-top')?.text,
-      document.querySelector('.note-content .title')?.text,
-      document.querySelector('.content-container .title')?.text,
-      _metaContent(document, 'og:title'),
-      document.querySelector('title')?.text,
-    ]);
-    final description = _firstNonEmpty([
-      document.querySelector('.author-desc .note-desc-text-opt')?.text,
-      document.querySelector('.author-desc-content')?.text,
-      document.querySelector('.author-desc')?.text,
-      _metaContent(document, 'description'),
-      _metaContent(document, 'og:description'),
-    ]);
-    final images = _collectXiaohongshuImageUrls(
-      document,
-      fetched.finalUrl,
-      html: fetched.body,
+    // 首选：解析分享页里的 SSR 数据。
+    //
+    // 老路子是拿正则从整页 HTML 里捞 CDN 链接，那样会连评论区的头像一起捞进来
+    // （commentData.comments[].user.image）。SSR 里只读笔记本体的 imageList，
+    // 而且能用 fileId 拼出无水印原图。详见 xiaohongshu_note_parser.dart。
+    final ssrNote = XiaohongshuNoteParser.parseHtml(
+      fetched.body,
+      base: fetched.finalUrl,
     );
-    final videos =
-        _isXiaohongshuVideoNote(fetched.finalUrl, fetched.body, document)
-            ? _collectXiaohongshuVideoUrls(
-              document,
-              fetched.finalUrl,
-              html: fetched.body,
-            )
-            : <Uri>[];
+
+    final title = ssrNote != null && ssrNote.title.isNotEmpty
+        ? ssrNote.title
+        : _firstNonEmpty([
+            document.querySelector('.title-no-padding-top')?.text,
+            document.querySelector('.note-content .title')?.text,
+            document.querySelector('.content-container .title')?.text,
+            _metaContent(document, 'og:title'),
+            document.querySelector('title')?.text,
+          ]);
+    final description = ssrNote != null && ssrNote.description.isNotEmpty
+        ? ssrNote.description
+        : _firstNonEmpty([
+            document.querySelector('.author-desc .note-desc-text-opt')?.text,
+            document.querySelector('.author-desc-content')?.text,
+            document.querySelector('.author-desc')?.text,
+            _metaContent(document, 'description'),
+            _metaContent(document, 'og:description'),
+          ]);
+    final images = ssrNote != null && ssrNote.images.isNotEmpty
+        ? ssrNote.images
+        : _collectXiaohongshuImageUrls(
+            document,
+            fetched.finalUrl,
+            html: fetched.body,
+          );
+    final videos = ssrNote != null && ssrNote.videos.isNotEmpty
+        ? ssrNote.videos
+        : (_isXiaohongshuVideoNote(fetched.finalUrl, fetched.body, document)
+              ? _collectXiaohongshuVideoUrls(
+                  document,
+                  fetched.finalUrl,
+                  html: fetched.body,
+                )
+              : <Uri>[]);
     if (title.isEmpty &&
         description.isEmpty &&
         images.isEmpty &&
