@@ -36,7 +36,9 @@ def releaseSigningRequired = gradle.startParameter.taskNames.any { taskName ->
 
 android {
     namespace "com.ipadboss.ipad_boss_app"
-    compileSdkVersion 36
+    // AGP 9 起只读新 DSL：compileSdkVersion/minSdkVersion/targetSdkVersion
+    // 这些旧属性不再生效，必须用赋值形式。
+    compileSdk 36
     buildToolsVersion "36.0.0"
     ndkVersion "27.0.12077973"
 
@@ -58,8 +60,8 @@ android {
         applicationId "com.ipadboss.ipad_boss_app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-build-configuration.
-        minSdkVersion 24
-        targetSdkVersion 36
+        minSdk 24
+        targetSdk 36
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }

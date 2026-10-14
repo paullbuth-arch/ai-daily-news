@@ -3,3 +3,4 @@ analyzer:
     - build/**
     - tmp/**
     - third_party/**
+    - android/**

@@ -197,7 +197,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
           borderSide: BorderSide(color: C.primary, width: 1.4),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: C.hudDark2,
         shape: RoundedRectangleBorder(
@@ -298,7 +298,7 @@ class _IpadBossAppState extends State<IpadBossApp> {
           borderSide: BorderSide(color: C.primary, width: 1.4),
         ),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 0,
         color: C.bgCard,
         shape: RoundedRectangleBorder(
