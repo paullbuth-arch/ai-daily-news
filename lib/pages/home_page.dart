@@ -174,12 +174,12 @@ class _HeroPhoneCard extends StatelessWidget {
                             children: [
                               _CommandBadge(
                                 icon: Icons.sensors_rounded,
-                                label: 'HUOMAI OPS',
+                                label: '经营中控',
                                 color: C.primary,
                               ),
                               _CommandBadge(
                                 icon: Icons.bolt_rounded,
-                                label: 'LIVE',
+                                label: '实时',
                                 color: C.orange,
                               ),
                             ],
@@ -390,7 +390,7 @@ class _OperationsDashboardCard extends StatelessWidget {
                   children: [
                     _DashboardBadge(
                       icon: Icons.sensors_rounded,
-                      label: 'HUOMAI OPS',
+                      label: '经营中控',
                       color: C.purple,
                     ),
                     const SizedBox(width: 8),
@@ -420,23 +420,26 @@ class _OperationsDashboardCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'MY DATA',
+                            '经营数据',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.90),
                               fontSize: 25,
-                              height: 0.95,
+                              // 中文是方块字，行高必须 >= 1，否则上下会被切。
+                              // 这里原来跟的是英文 'MY DATA'，配 height 0.95
+                              // （拉丁字母没有上下伸部分，不裁切）。
+                              height: 1.2,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 2),
                           Text(
-                            '今日经营',
+                            '今日',
                             style: TextStyle(
                               color: Colors.white.withValues(alpha: 0.64),
                               fontSize: 12,
-                              height: 1,
+                              height: 1.2,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
