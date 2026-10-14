@@ -2,16 +2,16 @@
 
 ## Theme
 
-Restrained operations UI for a Flutter mobile/tablet product. The interface should feel closer to a compact business terminal than a landing page.
+Telemetry cockpit for a Flutter mobile/tablet product. The interface uses a dark orbital field, a silver/lilac mechanical launch visual, and a controlled Mars-red data state. It should feel like an instrument panel for a resale operation, not a generic dark dashboard.
 
 ## Color
 
-- Background: near-white cool slate in light mode, near-black neutral in dark mode.
-- Surface: white or deep neutral panels with visible one-pixel borders.
-- Primary: teal/green for scan, receive, and selected states.
-- Secondary: blue for analysis and system intelligence.
-- Semantic: green success, red danger, amber warning.
-- Avoid decorative gradients except for rare summary surfaces where the gradient conveys emphasis.
+- Background: near-black neutral with graphite orbital grid lines.
+- Surface: deep graphite panels with four-corner HUD frames and one-pixel violet borders.
+- Primary: silver/lilac for selection, navigation, and live telemetry.
+- Mars state: muted red/rose for dense analytics and history, never for normal actions.
+- Semantic: mint success, orange attention, rose danger.
+- Gradients are reserved for the launch visual and Mars data surface where they communicate depth.
 
 ## Typography
 
@@ -27,7 +27,7 @@ Use the platform sans stack. Keep product UI type fixed and compact:
 
 - Cards: 10-12 radius, border-first, minimal or no shadow.
 - Buttons: one primary shape, one outlined/ghost shape, no emoji prefixes.
-- Navigation: vector Material icons only, selected state uses filled/tinted background.
+- Navigation: vector Material icons only, selected state uses a framed violet instrument cell.
 - Lists: compact rows with stable icon containers and one-line metadata.
 - Empty states: useful next action, not just large decorative symbols.
 

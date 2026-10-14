@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>货脉 · Visual Direction Lab</title>
+    <style>
+      :root {
+        --ink: #f7f4ff;
+        --muted: #a9a8be;
+        --line: rgba(222, 216, 255, .25);
+        --line-soft: rgba(222, 216, 255, .09);
+        --violet: #b39aff;
+        --violet-hot: #8d68ff;
+        --mint: #64ead0;
+        --coral: #f58d88;
+        --mars: #ad596c;
+        --panel: #161722;
+        --field: #0b0b11;
+        --display: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        background: #090910;
+        font-family: var(--display);
+      }
+      button { font: inherit; }
+      .lab-shell {
+        min-height: 100vh;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+      }
+      .lab-shell::before,
+      .lab-shell::after {
+        content: "";
+        position: fixed;
+        inset: -30vh -15vw;
+        pointer-events: none;
+        z-index: -2;
+      }
+      .lab-shell::before {
+        opacity: .55;
+        background-image: linear-gradient(rgba(180, 168, 255, .06) 1px, transparent 1px), linear-gradient(90deg, rgba(180, 168, 255, .06) 1px, transparent 1px);
+        background-size: 92px 92px;
+        transform: rotate(-7deg) scale(1.2);
+      }
+      .lab-shell::after {
+        opacity: .42;
+        border: 1px solid rgba(194, 184, 255, .12);
+        border-radius: 50%;
+        transform: scale(.7, .44) rotate(-20deg);
+        box-shadow: 0 0 0 120px rgba(194, 184, 255, .03), 0 0 0 240px rgba(194, 184, 255, .02);
+      }
+      .lab-header {
+        width: min(1180px, calc(100% - 36px));
+        margin: 0 auto;
+        padding: 34px 0 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        gap: 20px;
+        flex-wrap: wrap;
+      }
+      .brand-lockup { display: grid; gap: 8px; }
+      .brand-mark { font-size: 12px; letter-spacing: .34em; color: var(--violet); font-weight: 800; }
+      h1 { margin: 0; font-size: clamp(28px, 4vw, 46px); letter-spacing: -.035em; line-height: .98; }
+      .lab-copy { max-width: 620px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+      .variant-tabs { width: 100%; display: flex; justify-content: flex-end; gap: 7px; padding: 5px; border: 1px solid var(--line); background: rgba(16, 15, 26, .82); }
+      .variant-tab { border: 1px solid transparent; background: transparent; color: var(--muted); padding: 10px 13px; cursor: pointer; }
+      .variant-tab:hover, .variant-tab:focus-visible { color: var(--ink); border-color: var(--line); }
+      .variant-tab[aria-selected="true"] { color: #0e0b16; background: var(--violet); }
+      .lab-main { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: 15px 0 54px; }
+      .variant-meta { display: flex; justify-content: space-between; align-items: center; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+      .variant-meta strong { color: var(--ink); font-size: 14px; }
+      .screen-stage { min-height: 680px; border: 1px solid rgba(220, 212, 255, .16); background: rgba(12, 12, 19, .7); padding: 20px; position: relative; }
+      .screen-stage::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(220, 212, 255, .055); pointer-events: none; }
+      .screen { width: min(100%, 980px); min-height: 630px; margin: 0 auto; position: relative; overflow: hidden; border: 1px solid rgba(231, 226, 255, .30); background: var(--field); }
+      .screen::before, .screen::after { content: ""; position: absolute; pointer-events: none; }
+      .screen::before { inset: 0; background-image: linear-gradient(rgba(210, 203, 255, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(210, 203, 255, .045) 1px, transparent 1px); background-size: 48px 48px; mix-blend-mode: screen; }
+      .screen::after { width: 80%; height: 70%; top: -25%; left: 12%; border: 1px solid rgba(210, 203, 255, .10); border-radius: 50%; transform: rotate(-18deg); box-shadow: 0 0 0 70px rgba(210, 203, 255, .035), 0 0 0 160px rgba(210, 203, 255, .02); }
+      .screen-content { position: relative; z-index: 1; padding: clamp(24px, 4vw, 48px); }
+      .screen-top { display: flex; justify-content: space-between; gap: 16px; align-items: start; color: var(--muted); font-size: 11px; letter-spacing: .16em; }
+      .screen-top .signal { display: inline-flex; align-items: center; gap: 7px; color: var(--mint); letter-spacing: .08em; }
+      .signal i { width: 6px; height: 6px; background: currentColor; border-radius: 50%; display: inline-block; box-shadow: 0 0 12px currentColor; }
+      .corner-frame { position: absolute; inset: 18px; pointer-events: none; z-index: 2; }
+      .corner-frame::before, .corner-frame::after { content: ""; position: absolute; inset: 0; border: 1px solid transparent; }
+      .corner-frame::before { border-top-color: rgba(227, 221, 255, .55); border-left-color: rgba(227, 221, 255, .55); clip-path: polygon(0 0, 14% 0, 14% 2px, 2px 2px, 2px 14%, 0 14%, 0 0, 100% 0, 100% 14%, calc(100% - 2px) 14%, calc(100% - 2px) 2px, 86% 2px, 86% 0); }
+      .corner-frame::after { border-bottom-color: rgba(227, 221, 255, .34); border-right-color: rgba(227, 221, 255, .34); clip-path: polygon(0 100%, 0 86%, 2px 86%, 2px calc(100% - 2px), 14% calc(100% - 2px), 14% 100%, 100% 100%, 100% 86%, calc(100% - 2px) 86%, calc(100% - 2px) calc(100% - 2px), 86% calc(100% - 2px), 86% 100%); }
+      .hud-kicker { font-size: 11px; color: var(--muted); letter-spacing: .18em; font-weight: 800; }
+      .hud-title { margin: 12px 0 0; font-size: clamp(38px, 7vw, 78px); line-height: .9; letter-spacing: -.055em; max-width: 520px; }
+      .hud-title em { color: var(--violet); font-style: normal; }
+      .hud-subtitle { max-width: 420px; margin: 16px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+      .hud-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 24px; }
+      .hud-btn { min-height: 42px; padding: 0 15px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: rgba(16, 15, 26, .80); color: var(--ink); cursor: pointer; }
+      .hud-btn:hover { border-color: var(--violet); color: var(--violet); }
+      .hud-btn.primary { color: #0d0916; border-color: var(--violet); background: var(--violet); }
+      .metric-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 22px; max-width: 550px; }
+      .metric { padding: 12px; border: 1px solid var(--line); background: rgba(7, 8, 13, .68); }
+      .metric small { display: block; color: var(--muted); font-size: 10px; }
+      .metric strong { display: block; margin-top: 6px; font-size: 24px; line-height: 1; }
+      .metric.accent strong { color: var(--violet); }
+      .metric.success strong { color: var(--mint); }
+      .metric.warn strong { color: #ffb183; }
+      .pilot-image { position: absolute; z-index: 0; right: 0; top: 0; bottom: 0; width: 46%; object-fit: cover; object-position: center; opacity: .92; mix-blend-mode: screen; mask-image: linear-gradient(90deg, transparent 0%, rgba(0,0,0,.86) 30%, #000 100%); }
+      .variant-b { background: #20141a; }
+      .variant-b::after { border-color: rgba(255, 182, 168, .18); }
+      .variant-b .screen-content { min-height: 630px; }
+      .variant-b .hud-title { max-width: 700px; }
+      .variant-b .hud-title em { color: #ffd6bd; }
+      .mars-field { position: absolute; inset: 32% -10% -18%; background: radial-gradient(circle at 65% 36%, rgba(234, 151, 142, .32), transparent 28%), linear-gradient(180deg, transparent 0%, rgba(148, 65, 87, .70) 60%, #29121e 100%); }
+      .mars-field::after { content: ""; position: absolute; inset: 20% 0 0; opacity: .55; background: repeating-linear-gradient(0deg, transparent 0, transparent 20px, rgba(255, 190, 172, .12) 21px, transparent 22px); transform: skewY(-7deg); }
+      .variant-b .data-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 1.1fr); gap: 12px; margin-top: 28px; }
+      .data-box { border: 1px solid rgba(255, 215, 196, .32); background: rgba(68, 27, 42, .48); padding: 14px; }
+      .data-box .data-label { color: rgba(255, 220, 205, .74); font-size: 10px; letter-spacing: .22em; }
+      .data-box .data-value { margin-top: 6px; font-size: 32px; font-weight: 900; color: #fff1e6; }
+      .data-box .data-note { margin-top: 4px; color: #ffc2b9; font-size: 11px; }
+      .chart { height: 168px; padding: 12px 0 0; }
+      .chart svg { width: 100%; height: 100%; overflow: visible; }
+      .chart-grid { stroke: rgba(255, 218, 203, .18); stroke-width: 1; }
+      .chart-line { fill: none; stroke: #f3a6c0; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px rgba(247, 137, 175, .55)); }
+      .chart-dot { fill: #fff2e9; stroke: #f3a6c0; stroke-width: 2; }
+      .vitals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+      .vital { display: flex; gap: 12px; align-items: center; border-top: 1px solid rgba(255, 215, 196, .22); padding-top: 12px; }
+      .vital-icon { width: 38px; height: 38px; display: grid; place-items: center; color: #ffd2bf; border: 1px solid rgba(255, 215, 196, .40); }
+      .vital strong { display: block; font-size: 28px; line-height: 1; color: #fff2e9; }
+      .vital small { color: rgba(255, 220, 205, .72); font-size: 10px; letter-spacing: .14em; }
+      .variant-c .screen { background: #11121c; }
+      .variant-c .screen-content { min-height: 630px; }
+      .command-grid { display: grid; grid-template-columns: minmax(0, .86fr) minmax(260px, 1fr); gap: 30px; align-items: end; margin-top: 90px; }
+      .command-orbit { min-height: 300px; position: relative; display: grid; place-items: center; }
+      .command-orbit::before, .command-orbit::after { content: ""; position: absolute; border: 1px solid rgba(188, 169, 255, .38); border-radius: 50%; transform: rotate(-18deg); }
+      .command-orbit::before { width: 82%; height: 44%; box-shadow: 0 0 0 28px rgba(188, 169, 255, .04), 0 0 0 56px rgba(188, 169, 255, .03); }
+      .command-orbit::after { width: 46%; height: 74%; }
+      .orbit-core { width: 132px; height: 132px; display: grid; place-items: center; border-radius: 50%; color: var(--violet); background: radial-gradient(circle at 35% 30%, #8066c5, #2a2153 55%, #151124); box-shadow: 0 0 46px rgba(141, 104, 255, .44); z-index: 1; font-size: 38px; font-weight: 900; }
+      .command-title { margin: 0; font-size: 16px; color: var(--muted); letter-spacing: .10em; }
+      .command-value { margin: 8px 0 0; font-size: clamp(50px, 8vw, 88px); line-height: .84; letter-spacing: -.07em; }
+      .command-value span { font-size: 18px; color: var(--violet); letter-spacing: .05em; }
+      .command-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 22px; }
+      .command-stat { border: 1px solid var(--line); padding: 13px; }
+      .command-stat small { color: var(--muted); font-size: 10px; }
+      .command-stat strong { display: block; margin-top: 9px; font-size: 24px; }
+      .command-stat strong.purple { color: var(--violet); }
+      .command-stat strong.mint { color: var(--mint); }
+      .compare-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+      .compare-card { border: 1px solid var(--line-soft); background: rgba(15, 15, 23, .74); padding: 12px; cursor: pointer; color: var(--muted); text-align: left; }
+      .compare-card:hover, .compare-card.active { border-color: var(--violet); color: var(--ink); }
+      .compare-swatch { height: 42px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,.12); }
+      .compare-swatch.a { background: linear-gradient(100deg, #10111a 35%, #c7c2d4 100%); }
+      .compare-swatch.b { background: linear-gradient(130deg, #261522, #a95569 66%, #f09d88); }
+      .compare-swatch.c { background: radial-gradient(circle at 52% 55%, #6750aa, #11121c 34%); }
+      .compare-card strong { display: block; font-size: 13px; }
+      .compare-card small { display: block; margin-top: 4px; font-size: 11px; color: inherit; }
+      @media (max-width: 700px) {
+        .lab-header { display: grid; align-items: start; padding-top: 24px; }
+        .variant-tabs { width: 100%; overflow-x: auto; }
+        .variant-tab { flex: 1; white-space: nowrap; }
+        .screen-stage { padding: 10px; min-height: 0; }
+        .screen { min-height: 700px; }
+        .screen-content { padding: 22px; }
+        .pilot-image { right: -20%; top: 0; width: 90%; height: 50%; bottom: auto; mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.84) 60%, transparent 100%); opacity: .72; }
+        .hud-title { margin-top: 160px; font-size: clamp(42px, 14vw, 66px); }
+        .metric-row { gap: 6px; }
+        .metric { padding: 9px; }
+        .metric strong { font-size: 18px; }
+        .variant-b .data-grid, .command-grid { grid-template-columns: 1fr; gap: 12px; margin-top: 45px; }
+        .variant-b .screen { min-height: 740px; }
+        .variant-c .screen { min-height: 740px; }
+        .command-orbit { min-height: 220px; }
+        .compare-strip { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+    </style>
+  </head>
+  <body>
+    <div class="lab-shell">
+      <header class="lab-header">
+        <div class="brand-lockup">
+          <div class="brand-mark">S — E — A &nbsp; T — L — R</div>
+          <h1>货脉 / 视觉方向实验室</h1>
+          <p class="lab-copy">同一组经营数据，三种不同的图三语汇落地方式。先选整体气质，再把选中的方向铺到首页、库存、订单和收货页。</p>
+        </div>
+        <nav class="variant-tabs" aria-label="视觉方向">
+          <button class="variant-tab" data-variant="a" aria-selected="true">A · 机械启动舱</button>
+          <button class="variant-tab" data-variant="b" aria-selected="false">B · 火星数据舱</button>
+          <button class="variant-tab" data-variant="c" aria-selected="false">C · 轨道指挥台</button>
+        </nav>
+      </header>
+      <main class="lab-main">
+        <div class="variant-meta"><span id="variantNote">银灰机械视觉负责第一印象，数据退到暗部，适合首页入口。</span><strong id="variantCode">DIRECTION A</strong></div>
+        <section class="screen-stage" aria-live="polite"><div id="screen" class="screen variant-a"></div></section>
+        <div class="compare-strip" aria-label="对比选择">
+          <button class="compare-card active" data-variant="a"><div class="compare-swatch a"></div><strong>A / 机械启动舱</strong><small>视觉冲击最强，首页最像图三左侧主屏。</small></button>
+          <button class="compare-card" data-variant="b"><div class="compare-swatch b"></div><strong>B / 火星数据舱</strong><small>数据密度最高，适合经营分析和报表页。</small></button>
+          <button class="compare-card" data-variant="c"><div class="compare-swatch c"></div><strong>C / 轨道指挥台</strong><small>最克制耐用，适合库存和订单的高频操作。</small></button>
+        </div>
+      </main>
+    </div>
+    <script>
+      const chart = `<div class="chart" aria-label="近七日成交趋势"><svg viewBox="0 0 520 168" role="img"><path class="chart-grid" d="M0 30H520M0 70H520M0 110H520M0 150H520"/><path class="chart-line" d="M8 133 C 42 118, 57 121, 90 96 S 135 118, 168 77 S 221 95, 252 86 S 306 55, 338 70 S 390 60, 426 44 S 470 35, 512 24"/><circle class="chart-dot" cx="8" cy="133" r="4"/><circle class="chart-dot" cx="90" cy="96" r="4"/><circle class="chart-dot" cx="168" cy="77" r="4"/><circle class="chart-dot" cx="252" cy="86" r="4"/><circle class="chart-dot" cx="338" cy="70" r="4"/><circle class="chart-dot" cx="426" cy="44" r="4"/><circle class="chart-dot" cx="512" cy="24" r="4"/></svg></div>`;
+      const variants = {
+        a: {
+          note: '银灰机械视觉负责第一印象，数据退到暗部，适合首页入口。',
+          code: 'DIRECTION A',
+          html: `<div class="corner-frame"></div><img class="pilot-image" src="assets/mission_pilot.jpg" alt="银灰机械头盔主视觉"/><div class="screen-content"><div class="screen-top"><span>货脉 / MISSION CONTROL</span><span class="signal"><i></i>LIVE · 17:25</span></div><div class="hud-kicker" style="margin-top:150px">INFORMATION AND ANALYSIS / DEVICE OPS</div><h2 class="hud-title">设备经营<br><em>实时状态</em></h2><p class="hud-subtitle">把入库、定价、销售和利润压缩成一次扫描可以读懂的经营信号。</p><div class="metric-row"><div class="metric accent"><small>今日成交额</small><strong>¥0</strong></div><div class="metric success"><small>毛利率</small><strong>0.0%</strong></div><div class="metric warn"><small>待发订单</small><strong>0</strong></div></div><div class="hud-actions"><button class="hud-btn primary">＋ 扫码收货</button><button class="hud-btn">⌁ 批发行情</button><button class="hud-btn">▣ 销售登记</button></div></div>`
+        },
+        b: {
+          note: '把图三右侧的火星红、MY DATA、图表和生命体征全部放大，适合分析页。',
+          code: 'DIRECTION B',
+          html: `<div class="corner-frame"></div><div class="mars-field"></div><div class="screen-content"><div class="screen-top"><span>货脉 / DATA MODULE</span><span class="signal" style="color:#ffd0bb"><i></i>MARS-02</span></div><div class="hud-kicker" style="margin-top:72px;color:#ffc2b9">MY DATA / OPERATIONS TELEMETRY</div><h2 class="hud-title"><em>经营数据</em></h2><div class="data-grid"><div><div class="data-box"><div class="data-label">INVENTORY GRAVITY</div><div class="data-value">0 台</div><div class="data-note">库存设备 · 资金占用 ¥0</div></div><div class="data-box" style="margin-top:10px"><div class="data-label">MARGIN TEMPERATURE</div><div class="data-value">0.0%</div><div class="data-note">今日毛利率 · 经营状态稳定</div></div></div><div class="data-box"><div class="data-label">REVENUE TELEMETRY / 7 DAYS</div>${chart}</div></div><div class="vitals"><div class="vital"><div class="vital-icon">♡</div><div><strong>0</strong><small>ORDERS / PULSE</small></div></div><div class="vital"><div class="vital-icon">⌁</div><div><strong>0</strong><small>DEVICES / FLOW</small></div></div></div></div>`
+        },
+        c: {
+          note: '把图三的轨道、核心球体、测量线变成工作台，适合库存、订单和收货等高频页。',
+          code: 'DIRECTION C',
+          html: `<div class="corner-frame"></div><div class="screen-content"><div class="screen-top"><span>货脉 / COMMAND DECK</span><span class="signal"><i></i>NORMAL</span></div><div class="command-grid"><div class="command-orbit"><div class="orbit-core">0</div></div><div><p class="command-title">INVENTORY SIGNAL</p><p class="command-value">0 <span>DEVICES</span></p><div class="command-stats"><div class="command-stat"><small>库存资金</small><strong class="purple">¥0</strong></div><div class="command-stat"><small>待质检</small><strong class="mint">0</strong></div><div class="command-stat"><small>滞销设备</small><strong style="color:#ffae82">0</strong></div><div class="command-stat"><small>待发订单</small><strong>0</strong></div></div><div class="hud-actions"><button class="hud-btn primary">＋ 新建设备</button><button class="hud-btn">⌕ 搜索库存</button></div></div></div></div>`
+        }
+      };
+      const screen = document.querySelector('#screen');
+      const note = document.querySelector('#variantNote');
+      const code = document.querySelector('#variantCode');
+      function renderVariant(key) {
+        const variant = variants[key];
+        screen.className = `screen variant-${key}`;
+        screen.innerHTML = variant.html;
+        note.textContent = variant.note;
+        code.textContent = variant.code;
+        document.querySelectorAll('[data-variant]').forEach((el) => {
+          const selected = el.dataset.variant === key;
+          if (el.classList.contains('variant-tab')) el.setAttribute('aria-selected', selected ? 'true' : 'false');
+          if (el.classList.contains('compare-card')) el.classList.toggle('active', selected);
+        });
+      }
+      document.addEventListener('click', (event) => {
+        const target = event.target.closest('[data-variant]');
+        if (target) renderVariant(target.dataset.variant);
+      });
+      renderVariant('a');
+    </script>
+  </body>
+</html>
