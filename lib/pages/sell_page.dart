@@ -195,6 +195,20 @@ class _SellPageState extends State<SellPage> {
     _computeProfit();
   }
 
+  /// 选中设备时，把已记录的维修成本填进表单。
+  ///
+  /// 维修页是**累加**写 device.repairCost 的，而确认售出时这里会拿表单的值
+  /// **覆盖**那个字段 —— 表单空着就等于把已记录的维修成本清零，毛利也跟着虚高。
+  void _prefillRepairCost(Device device) {
+    final repair = device.repairCost ?? 0;
+    final text = repair > 0 ? _moneyInput(repair / 100) : '';
+    if (_repairCtrl.text == text) return;
+    _repairCtrl.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+
   void _selectChannel(String value) {
     setState(() => channel = value);
     _syncPlatformFee();
@@ -555,6 +569,7 @@ class _SellPageState extends State<SellPage> {
           onTap:
               () => setState(() {
                 selected = d;
+                _prefillRepairCost(d);
                 _computeProfit();
               }),
           child: Ink(
