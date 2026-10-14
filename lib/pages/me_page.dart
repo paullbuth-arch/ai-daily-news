@@ -10,6 +10,7 @@ import 'ai_report_page.dart';
 import 'analytics_page.dart';
 import 'backup_page.dart';
 import 'customer_page.dart';
+import 'data_health_page.dart';
 import 'finance_page.dart';
 import 'market_price_page.dart';
 import 'purchase_decision_page.dart';
@@ -235,6 +236,12 @@ class _MePageState extends State<MePage> {
                 'AI 配置',
                 C.purple,
                 () => _nav(const AiConfigPage()),
+              ),
+              _MenuItem(
+                Icons.health_and_safety_outlined,
+                '数据体检',
+                C.orange,
+                () => _nav(const DataHealthPage()),
               ),
               _MenuItem(
                 Icons.settings_outlined,
