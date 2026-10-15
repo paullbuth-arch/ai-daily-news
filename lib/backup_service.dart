@@ -5,24 +5,32 @@ import 'dart:convert';
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as p;
 import 'storage.dart';
+import 'update_service.dart';
 
 class BackupService {
   static const kDataFile = 'ipad_boss_data.json';
 
   /// 导出。返回生成的 zip 绝对路径（写在 [outDir] 临时目录下）。
+  ///
+  /// [includeImages] 为 false 时只打包数据文件，体积从数十 MB 降到几十 KB，
+  /// 适合高频自动备份；产出的仍是合法 zip，[import] 可直接读取。
   static Future<String> export({
     required String docDir,
     required Storage storage,
     required String outDir,
+    bool includeImages = true,
   }) async {
     final archive = Archive();
     // 1) manifest
     final manifest = {
-      'appVersion': '2.7.0',
+      // 之前这里写死成 '2.7.0'，备份里记的版本一直和实际不符，排障时误导人。
+      'appVersion': UpdateService.currentVersion,
+      'appBuild': UpdateService.currentBuild,
       'exportTime': DateTime.now().toIso8601String(),
       'deviceCount': storage.getDevices().length,
       'orderCount': storage.getOrders().length,
       'schemaVersion': Storage.schemaVersion,
+      'includeImages': includeImages,
     };
     final manifestBytes = utf8.encode(json.encode(manifest));
     archive.addFile(
@@ -37,7 +45,7 @@ class BackupService {
       );
     }
     // 3) 图片：扫描 gDocDir 下所有 about_*.jpg / dev_*.jpg / cover_*.png
-    await _addImages(archive, docDir);
+    if (includeImages) await _addImages(archive, docDir);
     // 4) 编码 zip
     final bytes = ZipEncoder().encode(archive);
     final name = '货脉备份_${_ts(DateTime.now())}.zip';

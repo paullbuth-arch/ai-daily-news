@@ -5,8 +5,10 @@ import '../components/index.dart';
 import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
+import '../services/douyin_share_resolver.dart';
 import '../services/ecommerce_material_import_service.dart';
 import '../services/xianyu_copy_service.dart';
+import 'browser_page.dart';
 
 class XianyuCopywritingPage extends StatefulWidget {
   const XianyuCopywritingPage({Key? key}) : super(key: key);
@@ -288,25 +290,42 @@ class _XianyuCopywritingPageState extends State<XianyuCopywritingPage> {
     }
     setState(() => _importingMaterial = true);
     try {
-      final result = await EcommerceMaterialImportService.importFromText(
-        raw,
-        docDir: gDocDir,
-      );
+      final result = await _resolveMaterial(raw);
       if (!mounted) return;
       setState(() => _importResult = result);
       final parts = <String>[];
       if (result.images.isNotEmpty) parts.add('${result.images.length} 张图片');
       if (result.videos.isNotEmpty) parts.add('${result.videos.length} 个视频');
-      toast(
-        context,
-        '已下载 ${parts.isEmpty ? "素材" : parts.join("、")}，提取到${result.hasCopyText ? "文案" : "页面信息"}',
-      );
+      if (parts.isEmpty) {
+        // 别再用"已下载素材"糊弄过去，直接把没拿到的原因说出来
+        final warnings = result.warnings.where((w) => w.trim().isNotEmpty);
+        toast(context, warnings.isEmpty ? '没有拿到可保存素材' : warnings.last);
+      } else {
+        toast(
+          context,
+          '已下载 ${parts.join("、")}，提取到${result.hasCopyText ? "文案" : "页面信息"}',
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       toast(context, '链接导入失败：${_friendlyImportError(e)}');
     } finally {
       if (mounted) setState(() => _importingMaterial = false);
     }
+  }
+
+  /// 抖音链接走内嵌浏览器，其余平台照旧走 HTTP 抓取。
+  Future<EcommerceMaterialImportResult> _resolveMaterial(String raw) async {
+    final url = EcommerceMaterialImportService.extractFirstUrl(raw);
+    if (url != null && DouyinShareResolver.canHandle(url)) {
+      final viaBrowser = await importDouyinViaBrowser(
+        context: context,
+        sourceUrl: url,
+        docDir: gDocDir,
+      );
+      if (viaBrowser != null) return viaBrowser;
+    }
+    return EcommerceMaterialImportService.importFromText(raw, docDir: gDocDir);
   }
 
   String _friendlyImportError(Object error) {

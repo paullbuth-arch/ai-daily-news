@@ -179,15 +179,19 @@ int _scoreModel(String id) {
 /// 从 API 响应中解析模型列表，返回按性能评分降序排列的列表
 /// 失败时返回 null（无兜底）
 Future<List<ModelInfo>?> fetchModels(String modelsUrl, String apiKey) async {
+  final client = HttpClient();
+  client.connectionTimeout = const Duration(seconds: 15);
   try {
     final uri = Uri.parse(modelsUrl);
-    final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 15);
     final req = await client.getUrl(uri);
     req.headers.set('Authorization', 'Bearer $apiKey');
-    final resp = await req.close();
-    final raw = await resp.transform(utf8.decoder).join();
-    client.close();
+    // connectionTimeout 只覆盖建连阶段；响应体读取也要有截止时间，
+    // 否则服务端发完响应头后卡住会让这里永久挂起。
+    final resp = await req.close().timeout(const Duration(seconds: 30));
+    final raw = await resp
+        .transform(utf8.decoder)
+        .join()
+        .timeout(const Duration(seconds: 30));
 
     if (resp.statusCode != 200) return null;
 
@@ -214,6 +218,8 @@ Future<List<ModelInfo>?> fetchModels(String modelsUrl, String apiKey) async {
     return result;
   } catch (_) {
     return null;
+  } finally {
+    client.close(force: true);
   }
 }
 
@@ -323,7 +329,10 @@ class AiService {
           req.write(json.encode(body));
 
           final resp = await req.close().timeout(const Duration(seconds: 90));
-          final raw = await resp.transform(utf8.decoder).join();
+          final raw = await resp
+              .transform(utf8.decoder)
+              .join()
+              .timeout(const Duration(seconds: 120));
           client.close();
 
           if (resp.statusCode != 200) {

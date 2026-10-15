@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import '../components/index.dart';
@@ -6,9 +7,7 @@ import '../utils/utils.dart';
 import '../main.dart';
 import '../update_service.dart';
 import '../ai_service.dart';
-import '../auth_service.dart';
 import '../backup_service.dart';
-import '../cloud_sync_service.dart';
 import 'ai_config_page.dart';
 import 'ai_prompt_rules_page.dart';
 import 'xianyu_copywriting_page.dart';
@@ -21,10 +20,8 @@ class SettingsPage extends StatefulWidget {
 
 class _SettingsPageState extends State<SettingsPage> {
   String _fileSize = '';
-  bool _updateChecking = false;
   String? _updateError;
   bool _updateMessageIsError = false;
-  double? _updateProgress;
 
   @override
   void initState() {
@@ -47,8 +44,6 @@ class _SettingsPageState extends State<SettingsPage> {
     final devices = gStorage.getDevices();
     final orders = gStorage.getOrders();
     final agents = gStorage.getAgents();
-    final protectionSummary = CloudSyncService.protectionSummary(gStorage);
-    final protectionError = CloudSyncService.lastSyncError(gStorage);
     return appScaffold(
       context,
       '设置',
@@ -104,7 +99,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   'AI引擎',
                   '${AiService.effectiveConfig.providerName} · ${AiService.effectiveConfig.model}',
                 ),
-                _row('数据保护', protectionSummary),
                 const SizedBox(height: 10),
                 ghostBtn(
                   '配置 AI 引擎',
@@ -136,65 +130,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   icon: Icons.library_books_outlined,
                 ),
                 const SizedBox(height: 8),
-                ghostBtn('检查更新', _checkUpdate),
-              ],
-            ),
-          ),
-          CardBox(
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: protectionError == null ? C.green : C.orange,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        protectionError == null ? '后台保护正常' : '后台保护自动重试中',
-                        style: TextStyle(fontSize: 12, color: C.t1),
-                      ),
-                      Text(
-                        protectionError == null
-                            ? '数据会先保存到本机，并在后台完成服务器保护。'
-                            : '本机数据不受影响，后台会在下次数据变化或重启后继续尝试。',
-                        style: TextStyle(fontSize: 10, color: C.t3),
-                      ),
-                    ],
-                  ),
+                ghostBtn(
+                  '选择安装包更新',
+                  _pickAndInstallApk,
+                  icon: Icons.system_update_alt_rounded,
                 ),
               ],
             ),
           ),
-          if (_updateChecking)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: Column(
-                  children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: C.t3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '正在检查更新...',
-                      style: TextStyle(fontSize: 12, color: C.t2),
-                    ),
-                  ],
-                ),
-              ),
-            ),
           if (_updateError != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -205,24 +148,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   color: _updateMessageIsError ? C.red : C.green,
                 ),
                 textAlign: TextAlign.center,
-              ),
-            ),
-          if (_updateProgress != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: _updateProgress,
-                    backgroundColor: C.border,
-                    valueColor: AlwaysStoppedAnimation<Color>(C.t3),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '下载中... ${(_updateProgress! * 100).toStringAsFixed(0)}%',
-                    style: TextStyle(fontSize: 11, color: C.t2),
-                  ),
-                ],
               ),
             ),
           Padding(
@@ -354,7 +279,6 @@ class _SettingsPageState extends State<SettingsPage> {
     await gStorage.saveSettings(settings);
     AiService.setConfig(AiConfig.defaultConfig());
     AiService.setPromptRules({});
-    await AuthService.logout(gStorage);
     gThemeMode = ThemeMode.light;
     gOnThemeChange?.call();
     _calcSize();
@@ -396,122 +320,41 @@ class _SettingsPageState extends State<SettingsPage> {
       name.startsWith('cover_') ||
       name == 'ipad_boss_data.json.bak';
 
-  /// 检查更新
-  Future<void> _checkUpdate() async {
+  /// 选择本地 APK 安装包，调系统安装器完成更新
+  Future<void> _pickAndInstallApk() async {
     setState(() {
-      _updateChecking = true;
       _updateError = null;
       _updateMessageIsError = false;
-      _updateProgress = null;
     });
-    // 1. 检查远端版本
-    UpdateInfo? info;
+
+    String? picked;
     try {
-      info = await UpdateService.check();
-    } catch (_) {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: const ['apk'],
+      );
+      picked = result?.files.single.path;
+    } catch (e) {
       if (!mounted) return;
       setState(() {
-        _updateChecking = false;
         _updateMessageIsError = true;
-        _updateError = '检查更新失败，请稍后重试';
+        _updateError = '选择文件失败：$e';
       });
       return;
     }
-    if (!mounted) return;
-    if (info == null) {
-      setState(() {
-        _updateChecking = false;
-        _updateMessageIsError = false;
-        _updateError = '当前已是最新版本（v${UpdateService.currentVersion}）';
-      });
-      return;
-    }
-    final updateInfo = info;
-    // 2. 有新版本 → 询问是否下载
-    final ok = await showDialog<bool>(
-      context: context,
-      builder:
-          (ctx) => AlertDialog(
-            backgroundColor: C.bgCard,
-            title: Text(
-              '发现新版本 v${updateInfo.version}',
-              style: TextStyle(color: C.t1, fontSize: 16),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '当前版本：v${UpdateService.currentVersion}',
-                  style: TextStyle(color: C.t2, fontSize: 12),
-                ),
-                Text(
-                  '新版本：v${updateInfo.version}',
-                  style: TextStyle(
-                    color: C.green,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                if (updateInfo.changelog.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Text('更新内容：', style: TextStyle(color: C.t2, fontSize: 12)),
-                  Text(
-                    updateInfo.changelog,
-                    style: TextStyle(color: C.t1, fontSize: 12),
-                  ),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text('稍后', style: TextStyle(color: C.t2)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text('立即更新', style: TextStyle(color: C.t3)),
-              ),
-            ],
-          ),
-    );
-    if (ok != true) {
-      setState(() => _updateChecking = false);
-      return;
-    }
-    // 3. 下载 APK
-    setState(() {
-      _updateChecking = false;
-      _updateProgress = 0.0;
-    });
-    final apkPath = await UpdateService.downloadApk(
-      updateInfo.apkUrl,
-      fileName: 'ipad_boss_${updateInfo.version}_${updateInfo.buildNumber}.apk',
-      expectedSha256: updateInfo.sha256,
-      onProgress: (p) {
-        if (mounted) setState(() => _updateProgress = p);
-      },
-    );
-    if (!mounted) return;
-    if (apkPath == null) {
-      setState(() {
-        _updateProgress = null;
-        _updateMessageIsError = true;
-        _updateError = '下载失败，请检查网络后重试';
-      });
-      return;
-    }
-    setState(() => _updateProgress = null);
-    // 4. 安装
-    final installResult = await UpdateService.installApk(apkPath);
+
+    // 用户取消选择
+    if (picked == null || picked.isEmpty) return;
+
+    final installResult = await UpdateService.installApk(picked);
     if (!mounted) return;
     if (!installResult.success) {
       setState(() {
         _updateMessageIsError = true;
         _updateError =
             installResult.permissionRequired
-                ? '已打开权限设置。开启「安装未知应用」后，请回来再点一次检查更新'
-                : '安装失败，请稍后重试';
+                ? '已打开权限设置。开启「安装未知应用」后，请回来重新选择安装包'
+                : '安装失败，请确认所选文件是完整的 APK';
       });
     } else {
       setState(() {

@@ -6,6 +6,7 @@ import 'package:crypto/crypto.dart';
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
 
+import 'douyin_share_resolver.dart';
 import 'xiaohongshu_note_parser.dart';
 
 class ImportedMaterialImage {
@@ -104,6 +105,16 @@ class EcommerceMaterialImportService {
   static const int _maxHtmlBytes = 4 * 1024 * 1024;
   static const int _maxImageBytes = 18 * 1024 * 1024;
   static const int _maxVideoBytes = 160 * 1024 * 1024;
+
+  /// 等响应头的时间。`connectionTimeout` 只管建连阶段，服务器接了连接却不回响应头
+  /// 时，没有这个截止时间就会一直挂着——这正是「转圈没反应」的一个来源。
+  static const Duration _headerTimeout = Duration(seconds: 20);
+
+  /// 响应体**两次收到数据之间**的最大间隔。
+  ///
+  /// 刻意用「静默超时」而不是「总时长」：23MB 的视频在慢网下传几分钟是正常的，
+  /// 按总时长砍会把正常下载也一起砍掉。要抓的是「服务器接了、回了头，然后卡住不传了」。
+  static const Duration _bodyIdleTimeout = Duration(seconds: 30);
   static const String _userAgent =
       'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
       '(KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36';
@@ -233,6 +244,96 @@ class EcommerceMaterialImportService {
         ),
         docDir: docDir,
       );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// 抖音专用入口：WebView 已经渲染出页面并拿到了 `video_id`，
+  /// 这里只负责下载无水印视频并落盘。
+  ///
+  /// 为什么必须走 WebView：抖音分享页的 HTML 里已**没有任何媒体地址**
+  /// （实测 `play_addr`/`url_list`/`video_id`/`og:video` 全部为 0，
+  /// `_ROUTER_DATA` 和 `_SSR_DATA` 都是空壳）。唯一的路子是让页面自己的
+  /// JS 算出 `video_id`，之后再走 [DouyinShareResolver] 的免签名 CDN 端点。
+  ///
+  /// [title] / [description] 来自渲染后的页面，比 HTTP 抓取拿到的模板句
+  /// （"于xxxx发布在抖音，已经收获了N个喜欢"）真实得多。
+  static Future<EcommerceMaterialImportResult> importFromDouyinWeb({
+    required Uri sourceUrl,
+    required String awemeId,
+    required String videoId,
+    required String title,
+    required String description,
+    required String docDir,
+    int maxVideos = defaultMaxVideos,
+  }) async {
+    final client =
+        HttpClient()..connectionTimeout = const Duration(seconds: 15);
+    try {
+      final pageUrl = Uri.parse('https://www.douyin.com/video/$awemeId');
+      final downloadedVideos = await _downloadVideos(
+        client,
+        DouyinShareResolver.fallbackUrls(videoId),
+        docDir: docDir,
+        maxVideos: maxVideos,
+        referer: pageUrl,
+      );
+
+      final warnings = <String>[
+        '已通过内嵌浏览器解析出视频地址，取的是平台自己提供的无水印副本。',
+        '不会抹除视频里原本就存在的作者、商家或版权水印；请确认你有权使用导入素材。',
+      ];
+      if (downloadedVideos.videos.isEmpty) {
+        warnings.add('拿到了视频地址但下载失败；可能是网络问题，或该视频已删除/设为私密。');
+      }
+
+      return await _saveLinkManifest(
+        EcommerceMaterialImportResult(
+          sourceUrl: sourceUrl,
+          finalUrl: pageUrl,
+          platform: '抖音',
+          title: title,
+          description: description,
+          copyText: _copyTextFromParts(title, description),
+          images: const <ImportedMaterialImage>[],
+          videos: downloadedVideos.videos,
+          candidateImageCount: 0,
+          candidateVideoCount: DouyinShareResolver.playHosts.length,
+          cleanedUrlCount: 0,
+          warnings: warnings,
+        ),
+        docDir: docDir,
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  /// 展开抖音短链，返回落地页地址（只解析跳转，不抓内容）。
+  ///
+  /// `v.douyin.com/xxxx` 里没有 aweme_id，必须跟随 302 才能拿到
+  /// `iesdouyin.com/share/video/{id}`。这一步是纯 HTTP，实测稳定；
+  /// 拿到 id 之后才轮到 WebView 出场。
+  static Future<Uri?> expandDouyinShortLink(Uri url) async {
+    final client =
+        HttpClient()..connectionTimeout = const Duration(seconds: 15);
+    try {
+      final request = await client.getUrl(url);
+      request.followRedirects = true;
+      request.maxRedirects = 5;
+      request.headers.set(HttpHeaders.userAgentHeader, _userAgent);
+      final response = await request.close().timeout(
+        const Duration(seconds: 15),
+      );
+      // 把响应体读掉，否则连接会挂着不释放
+      try {
+        await response.drain<void>();
+      } catch (_) {}
+      if (response.redirects.isEmpty) return null;
+      return response.redirects.last.location;
+    } catch (_) {
+      return null;
     } finally {
       client.close(force: true);
     }
@@ -1711,7 +1812,7 @@ class EcommerceMaterialImportService {
     if (referer != null) {
       request.headers.set(HttpHeaders.refererHeader, referer.toString());
     }
-    return request.close();
+    return request.close().timeout(_headerTimeout);
   }
 
   static Future<_GoofishDetail?> _fetchGoofishDetail(
@@ -1754,7 +1855,7 @@ class EcommerceMaterialImportService {
         httpRequest.headers.set(HttpHeaders.cookieHeader, cookieHeader);
       }
 
-      final response = await httpRequest.close();
+      final response = await httpRequest.close().timeout(_headerTimeout);
       final bytes = await _readLimited(response, _maxHtmlBytes);
       final text = utf8.decode(bytes, allowMalformed: true);
       final cookies = response.cookies.map((c) => '${c.name}=${c.value}');
@@ -1940,7 +2041,9 @@ class EcommerceMaterialImportService {
     int maxBytes,
   ) async {
     final builder = BytesBuilder(copy: false);
-    await for (final chunk in response) {
+    // 响应体没有内建超时。Stream.timeout 计的是两次事件之间的间隔，
+    // 所以正常的大文件下载不受影响，只有真的静默了才抛 TimeoutException。
+    await for (final chunk in response.timeout(_bodyIdleTimeout)) {
       builder.add(chunk);
       if (builder.length > maxBytes) {
         throw const HttpException('下载内容过大，已中止');

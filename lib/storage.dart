@@ -37,6 +37,20 @@ class Storage {
     'otherInOuts',
   };
 
+  /// 已废弃的 settings 键。随云端同步 / WebDAV 功能一并移除。
+  /// 其中 auth_token / auth_email 是失效的凭据材料，留着没有意义。
+  static const Set<String> _retiredSettingKeys = {
+    'auth_token',
+    'auth_email',
+    'webdavConfig',
+    'syncDeviceId',
+    'lastWebDavSync',
+    'lastCloudSync',
+    'lastCloudSyncAttempt',
+    'lastCloudSyncError',
+    'lastCloudSyncState',
+  };
+
   Map<String, dynamic> _emptyData() => {
     'schemaVersion': schemaVersion,
     'devices': [],
@@ -87,6 +101,23 @@ class Storage {
     }
   }
 
+  /// 清掉废弃的 settings 键，返回是否真的删掉了东西。
+  ///
+  /// 返回值有意义：`load()` 里如果清掉了东西就必须立刻落盘，否则磁盘上还是旧的
+  /// —— 自动备份读的是文件而不是内存，会原样把旧键打进备份里。
+  bool _dropRetiredSettings() {
+    final settings = _cache['settings'];
+    if (settings is! Map) return false;
+    var removed = false;
+    for (final key in _retiredSettingKeys) {
+      if (settings.containsKey(key)) {
+        settings.remove(key);
+        removed = true;
+      }
+    }
+    return removed;
+  }
+
   void _ensureSchema() {
     _cache = normalizeDataMap(_cache);
   }
@@ -107,6 +138,8 @@ class Storage {
       if (await file.exists()) {
         _cache = await _readDataFile(file);
         _dropRetiredCollections();
+        // 删掉了废弃键就立刻落盘：不落盘的话文件里还留着，备份会原样打进去
+        if (_dropRetiredSettings()) await _flush();
       } else {
         _cache = _emptyData();
       }
@@ -116,6 +149,7 @@ class Storage {
         if (await bak.exists()) {
           _cache = await _readDataFile(bak);
           _dropRetiredCollections();
+          if (_dropRetiredSettings()) await _flush();
         } else {
           _cache = _emptyData();
         }
@@ -131,6 +165,7 @@ class Storage {
     if (!await parent.exists()) await parent.create(recursive: true);
     _ensureSchema();
     _dropRetiredCollections();
+    _dropRetiredSettings();
 
     final raw = json.encode(_cache);
     final decoded = json.decode(raw);
@@ -1101,21 +1136,6 @@ class Storage {
   String _todayStr() {
     final d = DateTime.now();
     return '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
-  }
-
-  /// 导出完整数据（用于云端同步上传）
-  Map<String, dynamic> toFullMap() {
-    final data = Map<String, dynamic>.from(_cache);
-    for (final key in _retiredCollections) {
-      data.remove(key);
-    }
-    return data;
-  }
-
-  /// 用云端数据覆盖本地（用于云端同步下载）
-  void setFullData(Map<String, dynamic> data) {
-    _cache = normalizeDataMap(data);
-    _dropRetiredCollections();
   }
 
   /// 直接刷写到文件

@@ -9,9 +9,11 @@ import '../utils/utils.dart';
 import '../models.dart';
 import '../main.dart';
 import '../services/device_export_service.dart';
+import '../services/douyin_share_resolver.dart';
 import '../services/ecommerce_material_import_service.dart';
 import '../services/automation_service.dart';
 import 'ai_report_page.dart';
+import 'browser_page.dart';
 import 'market_price_page.dart';
 import 'sell_page.dart';
 import 'stagnant_list_page.dart';
@@ -1126,69 +1128,98 @@ class _LinkMaterialImportSheetState extends State<_LinkMaterialImportSheet> {
     });
 
     try {
-      final result = await EcommerceMaterialImportService.importFromText(
-        raw,
-        docDir: gDocDir,
-        maxImages: _maxImages,
-      );
-
-      final copyText = result.copyText.trim();
-      final copiedText = copyText.isNotEmpty;
-      if (copiedText) {
-        await Clipboard.setData(ClipboardData(text: copyText));
-      }
-
-      var savedImages = 0;
-      var savedVideos = 0;
-      String? saveError;
-      final imagePaths = result.images.map((image) => image.savedPath).toList();
-      if (imagePaths.isNotEmpty) {
-        try {
-          savedImages = await DeviceExportService.saveImagesToGallery(
-            paths: imagePaths,
-            albumName: '货脉链接素材',
-          );
-        } catch (e) {
-          saveError = _friendlyError(e);
-        }
-      }
-      final videoPaths = result.videos.map((video) => video.savedPath).toList();
-      if (videoPaths.isNotEmpty) {
-        try {
-          savedVideos = await DeviceExportService.saveVideosToGallery(
-            paths: videoPaths,
-            albumName: '货脉链接素材',
-          );
-        } catch (e) {
-          final message = _friendlyError(e);
-          saveError = saveError == null ? message : '$saveError；$message';
-        }
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _result = result;
-        _savedImageCount = savedImages;
-        _savedVideoCount = savedVideos;
-        _copiedText = copiedText;
-        _saveError = saveError;
-      });
-
-      final parts = <String>[];
-      if (savedImages > 0) parts.add('已保存$savedImages张图到相册');
-      if (savedVideos > 0) parts.add('已保存$savedVideos个视频到相册');
-      if (copiedText) parts.add('文案已复制');
-      if (parts.isEmpty) parts.add('已解析链接，但没有拿到可保存素材');
-      if (saveError != null) {
-        toast(context, '解析成功，相册保存失败：$saveError');
-      } else {
-        toast(context, parts.join('，'));
-      }
+      final result = await _resolveMaterial(raw);
+      if (result == null) return;
+      await _applyImportResult(result);
     } catch (e) {
       if (!mounted) return;
       toast(context, '解析下载失败：${_friendlyError(e)}');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// 决定走哪条路：抖音链接必须经过内嵌浏览器，其余平台照旧走 HTTP 抓取。
+  Future<EcommerceMaterialImportResult?> _resolveMaterial(String raw) async {
+    final url = EcommerceMaterialImportService.extractFirstUrl(raw);
+    if (url != null && DouyinShareResolver.canHandle(url)) {
+      final viaBrowser = await importDouyinViaBrowser(
+        context: context,
+        sourceUrl: url,
+        docDir: gDocDir,
+        maxImages: _maxImages,
+      );
+      // 浏览器路线没成功就回落到 HTTP 路径，让原有逻辑给出更明确的原因
+      if (viaBrowser != null) return viaBrowser;
+    }
+    return EcommerceMaterialImportService.importFromText(
+      raw,
+      docDir: gDocDir,
+      maxImages: _maxImages,
+    );
+  }
+
+  /// 两条路线共用的收尾：复制文案 → 存相册 → 提示。
+  Future<void> _applyImportResult(
+    EcommerceMaterialImportResult result,
+  ) async {
+    final copyText = result.copyText.trim();
+    final copiedText = copyText.isNotEmpty;
+    if (copiedText) {
+      await Clipboard.setData(ClipboardData(text: copyText));
+    }
+
+    var savedImages = 0;
+    var savedVideos = 0;
+    String? saveError;
+    final imagePaths = result.images.map((image) => image.savedPath).toList();
+    if (imagePaths.isNotEmpty) {
+      try {
+        savedImages = await DeviceExportService.saveImagesToGallery(
+          paths: imagePaths,
+          albumName: '货脉链接素材',
+        );
+      } catch (e) {
+        saveError = _friendlyError(e);
+      }
+    }
+    final videoPaths = result.videos.map((video) => video.savedPath).toList();
+    if (videoPaths.isNotEmpty) {
+      try {
+        savedVideos = await DeviceExportService.saveVideosToGallery(
+          paths: videoPaths,
+          albumName: '货脉链接素材',
+        );
+      } catch (e) {
+        final message = _friendlyError(e);
+        saveError = saveError == null ? message : '$saveError；$message';
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _result = result;
+      _savedImageCount = savedImages;
+      _savedVideoCount = savedVideos;
+      _copiedText = copiedText;
+      _saveError = saveError;
+    });
+
+    final parts = <String>[];
+    if (savedImages > 0) parts.add('已保存$savedImages张图到相册');
+    if (savedVideos > 0) parts.add('已保存$savedVideos个视频到相册');
+    if (copiedText) parts.add('文案已复制');
+    if (parts.isEmpty) {
+      // 说清楚是哪一步空手而归，别再给一句含糊的"解析成功"
+      final warnings = result.warnings.where((w) => w.trim().isNotEmpty);
+      parts.add(
+        warnings.isEmpty ? '已解析链接，但没有拿到可保存素材' : warnings.last,
+      );
+    }
+    if (saveError != null) {
+      toast(context, '解析成功，相册保存失败：$saveError');
+    } else {
+      toast(context, parts.join('，'));
     }
   }
 

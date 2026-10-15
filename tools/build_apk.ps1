@@ -3,8 +3,6 @@ param(
   [string]$FlutterSdk = "",
   [switch]$SkipPubGet,
   [switch]$RunTests,
-  [switch]$PrivateOwnerSync,
-  [switch]$NoPrivateOwnerSync,
   [string[]]$ExtraFlutterArgs = @()
 )
 
@@ -13,12 +11,6 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $HasDevEnvParam = $PSBoundParameters.ContainsKey("DevEnv")
 $HasFlutterSdkParam = $PSBoundParameters.ContainsKey("FlutterSdk")
-$DeepSellSyncToken = ""
-$DeepSellSyncEmail = ""
-$DeepSellSyncPassword = ""
-$DeepSellFallbackBaseUrl = ""
-$DefaultDeepSellFallbackVersionUrl = "https://42.193.131.66/api/version"
-$DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
 $ExpectedReleaseCertSha256 = "84c43cb86f4c390aaa48f7af429828d4207680ac760a17d30cf0bf332734fa28"
 $ReleaseKeystore = ""
 $ReleaseKeyAlias = "boss"
@@ -35,11 +27,6 @@ if (Test-Path -LiteralPath $LocalConfig -PathType Leaf) {
   $LocalReleaseKeyAlias = ""
   $LocalReleaseStorePassword = ""
   $LocalReleaseKeyPassword = ""
-  $DeepSellSyncToken = ""
-  $DeepSellSyncEmail = ""
-  $DeepSellSyncPassword = ""
-  $DeepSellFallbackBaseUrl = ""
-  $DeepSellFallbackVersionUrl = $DefaultDeepSellFallbackVersionUrl
   . $LocalConfig
 
   if (-not $HasDevEnvParam -and $LocalDevEnv) { $DevEnv = $LocalDevEnv }
@@ -81,12 +68,6 @@ function Resolve-PubspecVersion {
     Version = $parts[0]
     Build = $build
   }
-}
-
-function First-NonEmpty {
-  param([string]$Primary, [string]$Fallback)
-  if ($Primary) { return $Primary }
-  return $Fallback
 }
 
 function Resolve-FirstExistingDir {
@@ -309,33 +290,6 @@ try {
   Add-DartDefine $BuildArgs "DEEPSELL_APP_VERSION" $AppVersion.Version
   Add-DartDefine $BuildArgs "DEEPSELL_APP_BUILD" $AppVersion.Build
   foreach ($arg in $ExtraFlutterArgs) { $BuildArgs.Add($arg) }
-  $OwnerSyncToken = First-NonEmpty $env:DEEPSELL_SYNC_TOKEN $DeepSellSyncToken
-  $OwnerSyncEmail = First-NonEmpty $env:DEEPSELL_SYNC_EMAIL $DeepSellSyncEmail
-  $OwnerSyncPassword = First-NonEmpty $env:DEEPSELL_SYNC_PASSWORD $DeepSellSyncPassword
-  $FallbackBaseUrl = First-NonEmpty $env:DEEPSELL_FALLBACK_BASE_URL $DeepSellFallbackBaseUrl
-  $FallbackVersionUrl = First-NonEmpty $env:DEEPSELL_FALLBACK_VERSION_URL $DeepSellFallbackVersionUrl
-  if ($FallbackBaseUrl -or $FallbackVersionUrl) {
-    Add-DartDefine $BuildArgs "DEEPSELL_ALLOW_INSECURE_IP_FALLBACK" "true"
-    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_BASE_URL" $FallbackBaseUrl
-    Add-DartDefine $BuildArgs "DEEPSELL_FALLBACK_VERSION_URL" $FallbackVersionUrl
-    Write-Host "Fallback update endpoint: included."
-  }
-  $HasOwnerCredential = $OwnerSyncToken -or ($OwnerSyncEmail -and $OwnerSyncPassword)
-  $IncludePrivateOwnerSync = (-not $NoPrivateOwnerSync) -and ($PrivateOwnerSync -or $HasOwnerCredential)
-  if ($IncludePrivateOwnerSync) {
-    if (-not $HasOwnerCredential) {
-      throw "Private owner sync was requested, but no token or email/password credential is configured."
-    }
-    Add-DartDefine $BuildArgs "DEEPSELL_PRIVATE_OWNER_SYNC" "true"
-    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_TOKEN" $OwnerSyncToken
-    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_EMAIL" $OwnerSyncEmail
-    Add-DartDefine $BuildArgs "DEEPSELL_SYNC_PASSWORD" $OwnerSyncPassword
-    Write-Host "Private owner background sync: included."
-  } elseif ($NoPrivateOwnerSync) {
-    Write-Host "Private owner background sync: disabled by -NoPrivateOwnerSync."
-  } else {
-    Write-Host "Private owner background sync: no local credential configured."
-  }
 
   & $Flutter @BuildArgs
 

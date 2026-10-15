@@ -19,8 +19,7 @@ import 'theme/colors.dart';
 import 'storage.dart';
 import 'models.dart';
 import 'ai_service.dart';
-import 'auth_service.dart';
-import 'cloud_sync_service.dart';
+import 'services/auto_backup_service.dart';
 import 'pages/shell.dart';
 
 // ═══════════════════════════════════════════════
@@ -50,7 +49,6 @@ Future<void> _initializeApp() async {
   gStorage = Storage('$gDocDir/ipad_boss_data.json');
   await gStorage.load();
   await gStorage.prepareForUserDataStartup();
-  await AuthService.init(gStorage);
   final aiMap = gStorage.getSettings()['aiConfig'] as Map<String, dynamic>?;
   AiService.setConfig(AiConfig.fromMap(aiMap));
   AiService.setPromptRules(gStorage.getAiPromptRules());
@@ -91,7 +89,9 @@ class _IpadBossAppState extends State<IpadBossApp> {
     try {
       await _initializeApp();
       await _forceLightTheme();
-      CloudSyncService.startBackgroundSync(storage: gStorage, docDir: gDocDir);
+      // 把数据自动备份到手机公共目录：App 私有目录卸载即清空，
+      // 公共目录不会。失败不阻塞启动。
+      AutoBackupService.start(storage: gStorage, docDir: gDocDir);
     } catch (error) {
       _startupError = error;
     } finally {

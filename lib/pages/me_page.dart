@@ -9,6 +9,7 @@ import 'ai_config_page.dart';
 import 'ai_report_page.dart';
 import 'analytics_page.dart';
 import 'backup_page.dart';
+import 'browser_page.dart';
 import 'customer_page.dart';
 import 'data_health_page.dart';
 import 'finance_page.dart';
@@ -189,6 +190,12 @@ class _MePageState extends State<MePage> {
                 C.mint,
                 () => _nav(const SellPage()),
               ),
+              _MenuItem(
+                Icons.photo_library_outlined,
+                '微购相册',
+                C.purple,
+                () => openSzwegoBrowser(context),
+              ),
             ],
           ),
           _MenuGroup(
@@ -253,7 +260,7 @@ class _MePageState extends State<MePage> {
           ),
           const SizedBox(height: 12),
           Text(
-            '数据本机保存 · 后台保护 · 手动备份',
+            '数据本机保存 · 建议定期备份',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: C.t3,

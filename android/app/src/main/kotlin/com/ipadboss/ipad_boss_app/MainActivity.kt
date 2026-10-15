@@ -1,5 +1,6 @@
 package com.ipadboss.ipad_boss_app
 
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
@@ -133,6 +134,66 @@ class MainActivity : FlutterActivity() {
                                     // 闲鱼未安装，返回标记让 Flutter 引导去应用商店
                                     result.success(mapOf("success" to false, "reason" to "not_installed"))
                                 }
+                            }
+                        } catch (e: Exception) {
+                            result.error("exception", e.message, null)
+                        }
+                    }
+                    "exportBackupToDocuments" -> {
+                        val srcPath = call.argument<String>("srcPath") ?: ""
+                        val fileName = call.argument<String>("fileName") ?: ""
+                        if (srcPath.isEmpty() || fileName.isEmpty()) {
+                            result.error("empty", "源路径或文件名为空", null)
+                            return@setMethodCallHandler
+                        }
+                        val src = File(srcPath)
+                        if (!src.exists()) {
+                            result.error("missing", "源文件不存在: $srcPath", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val saved = exportBackup(this, src, fileName)
+                            if (saved == null) {
+                                result.error("save_failed", "写入公共目录失败", null)
+                            } else {
+                                result.success(mapOf("success" to true, "uri" to saved))
+                            }
+                        } catch (e: Exception) {
+                            result.error("exception", e.message, null)
+                        }
+                    }
+                    "listBackupDocuments" -> {
+                        try {
+                            result.success(listBackups(this))
+                        } catch (e: Exception) {
+                            result.error("exception", e.message, null)
+                        }
+                    }
+                    "deleteBackupDocument" -> {
+                        val target = call.argument<String>("uri") ?: ""
+                        if (target.isEmpty()) {
+                            result.error("empty", "uri 为空", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            result.success(deleteBackup(this, target))
+                        } catch (e: Exception) {
+                            result.error("exception", e.message, null)
+                        }
+                    }
+                    "copyBackupToCache" -> {
+                        val target = call.argument<String>("uri") ?: ""
+                        val fileName = call.argument<String>("fileName") ?: "restore.zip"
+                        if (target.isEmpty()) {
+                            result.error("empty", "uri 为空", null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val path = copyBackupToCache(this, target, fileName)
+                            if (path == null) {
+                                result.error("copy_failed", "读取备份文件失败", null)
+                            } else {
+                                result.success(path)
                             }
                         } catch (e: Exception) {
                             result.error("exception", e.message, null)
@@ -303,5 +364,176 @@ class MainActivity : FlutterActivity() {
         }
         startActivity(intent)
         return mapOf("success" to true)
+    }
+
+    // ══════ 自动备份：写入公共目录（卸载 App 不会被清除） ══════
+
+    /// 备份的候选落点。Download 对任意类型文件最宽松，优先用；
+    /// 个别 ROM 拒绝时再退回 Documents。两者都在公共目录下，卸载不会被清。
+    private fun backupTargets(): List<Pair<Uri, String>> =
+        listOf(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI to
+                "${Environment.DIRECTORY_DOWNLOADS}/$BACKUP_DIR_NAME",
+            MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY) to
+                "${Environment.DIRECTORY_DOCUMENTS}/$BACKUP_DIR_NAME",
+        )
+
+    /// 把 [src] 复制到公共目录。成功返回目标 uri（API 29+）或绝对路径。
+    @Suppress("DEPRECATION")
+    private fun exportBackup(context: Context, src: File, fileName: String): String? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val dir =
+                File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                    BACKUP_DIR_NAME,
+                )
+            if (!dir.exists() && !dir.mkdirs()) return null
+            val dest = File(dir, fileName)
+            FileOutputStream(dest).use { out -> src.inputStream().use { it.copyTo(out) } }
+            return dest.absolutePath
+        }
+
+        val resolver = context.contentResolver
+        for ((collection, relativePath) in backupTargets()) {
+            val values =
+                ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/zip")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+            val uri =
+                try {
+                    resolver.insert(collection, values)
+                } catch (e: Exception) {
+                    null
+                } ?: continue
+
+            try {
+                val out =
+                    resolver.openOutputStream(uri)
+                        ?: throw Exception("openOutputStream 返回 null")
+                out.use { sink -> src.inputStream().use { it.copyTo(sink) } }
+            } catch (e: Exception) {
+                // 写失败要回收占位记录，否则公共目录里会留下空文件
+                try {
+                    resolver.delete(uri, null, null)
+                } catch (_: Exception) {}
+                continue
+            }
+
+            values.clear()
+            values.put(MediaStore.MediaColumns.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+            return uri.toString()
+        }
+        return null
+    }
+
+    /// 列出公共目录里的备份，按修改时间倒序。
+    @Suppress("DEPRECATION")
+    private fun listBackups(context: Context): List<Map<String, Any>> {
+        val out = ArrayList<Map<String, Any>>()
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+            val dir =
+                File(
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                    BACKUP_DIR_NAME,
+                )
+            dir.listFiles()?.forEach { f ->
+                if (f.isFile && f.name.endsWith(BACKUP_SUFFIX)) {
+                    out.add(
+                        mapOf(
+                            "name" to f.name,
+                            "uri" to f.absolutePath,
+                            "size" to f.length(),
+                            "dateModified" to f.lastModified(),
+                        ),
+                    )
+                }
+            }
+            return out.sortedByDescending { it["dateModified"] as Long }
+        }
+
+        val resolver = context.contentResolver
+        val projection =
+            arrayOf(
+                MediaStore.MediaColumns._ID,
+                MediaStore.MediaColumns.DISPLAY_NAME,
+                MediaStore.MediaColumns.SIZE,
+                MediaStore.MediaColumns.DATE_MODIFIED,
+            )
+        for ((collection, relativePath) in backupTargets()) {
+            try {
+                resolver
+                    .query(
+                        collection,
+                        projection,
+                        "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
+                        arrayOf("$relativePath%"),
+                        "${MediaStore.MediaColumns.DATE_MODIFIED} DESC",
+                    )
+                    ?.use { cursor ->
+                        while (cursor.moveToNext()) {
+                            val name = cursor.getString(1) ?: continue
+                            if (!name.endsWith(BACKUP_SUFFIX)) continue
+                            val uri =
+                                ContentUris.withAppendedId(collection, cursor.getLong(0))
+                            out.add(
+                                mapOf(
+                                    "name" to name,
+                                    "uri" to uri.toString(),
+                                    "size" to cursor.getLong(2),
+                                    "dateModified" to cursor.getLong(3) * 1000L,
+                                ),
+                            )
+                        }
+                    }
+            } catch (_: Exception) {
+                // 该落点不可用，跳过
+            }
+        }
+        return out.sortedByDescending { it["dateModified"] as Long }
+    }
+
+    /// 删除一个备份。[target] 为 content uri 字符串或绝对路径。
+    private fun deleteBackup(context: Context, target: String): Boolean =
+        if (target.startsWith("content://")) {
+            try {
+                context.contentResolver.delete(Uri.parse(target), null, null) > 0
+            } catch (e: Exception) {
+                false
+            }
+        } else {
+            File(target).delete()
+        }
+
+    /// 把公共目录里的备份复制回应用缓存，返回本地绝对路径。
+    /// Dart 侧的 File 读不了 content:// uri，恢复前必须先落到本地。
+    private fun copyBackupToCache(context: Context, target: String, fileName: String): String? {
+        val dir = File(context.cacheDir, "restore")
+        if (!dir.exists() && !dir.mkdirs()) return null
+        val dest = File(dir, fileName)
+
+        if (target.startsWith("content://")) {
+            val input =
+                try {
+                    context.contentResolver.openInputStream(Uri.parse(target))
+                } catch (e: Exception) {
+                    null
+                } ?: return null
+            input.use { src -> FileOutputStream(dest).use { out -> src.copyTo(out) } }
+        } else {
+            val src = File(target)
+            if (!src.exists()) return null
+            src.inputStream().use { s -> FileOutputStream(dest).use { out -> s.copyTo(out) } }
+        }
+        return dest.absolutePath
+    }
+
+    private companion object {
+        const val BACKUP_DIR_NAME = "货脉备份"
+        const val BACKUP_SUFFIX = ".zip"
     }
 }
