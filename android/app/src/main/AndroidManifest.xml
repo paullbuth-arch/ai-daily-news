@@ -39,6 +39,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- 微购相册网页版：用原生 WebView 打开 -->
+        <!-- 必须原生，不能用 webview_flutter：该站按运行环境判设备，而
+             shouldInterceptRequest 是唯一能"只改主文档内容、其余保持原生"的钩子。
+             详见 SzwegoActivity 的类注释。 -->
+        <activity
+            android:name=".SzwegoActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize" />
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

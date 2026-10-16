@@ -34,6 +34,11 @@ class MainActivity : FlutterActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    // 微购相册走原生 WebView（见 SzwegoActivity）。
+                    "openSzwego" -> {
+                        startActivity(Intent(this, SzwegoActivity::class.java))
+                        result.success(true)
+                    }
                     "installApk" -> {
                         val path = call.argument<String>("path") ?: ""
                         if (path.isEmpty()) {
