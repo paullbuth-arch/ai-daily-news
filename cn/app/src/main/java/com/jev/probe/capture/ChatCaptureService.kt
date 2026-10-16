@@ -22,6 +22,7 @@ import com.jev.probe.core.kb.ContextBuilder
 import com.jev.probe.core.kb.KbStore
 import com.jev.probe.jev.JevClient
 import com.jev.probe.overlay.OverlayController
+import java.io.File
 import java.util.concurrent.Callable
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -76,7 +77,7 @@ open class ChatCaptureService : AccessibilityService() {
 
     /** Adapted chat apps, keyed by package name. Apps in [BLOCKED_PKGS] are
      *  never read at all (see [maybeCapture] / [onAccessibilityEvent]). */
-    private val adapters = listOf(QQAdapter(), XAdapter(), FeishuAdapter(), WhatsAppAdapter()).associateBy { it.pkg }
+    private val adapters = listOf(QQAdapter(), XAdapter(), FeishuAdapter(), WhatsAppAdapter(), XianyuAdapter()).associateBy { it.pkg }
 
     /** Submit to the worker, ignoring rejection after the service is torn down
      *  (a stale overlay callback must never crash the process). */
@@ -361,6 +362,10 @@ open class ChatCaptureService : AccessibilityService() {
         // their list screen produced no bubble at all.
         val rawSnapshot = adapter.extract(root, resources)
         if (rawSnapshot == null) { scheduleLeave(); return }
+        // 闲鱼排查用：采集成功就把窗口底部节点能力 + 解析结果写盘。挂在采集这一层
+        // 而不是填入那一层，是为了**不需要悬浮窗权限**也能拿到诊断（realme 上
+        // appops / pm grant 都被权限策略堵死了，悬浮窗只能用户手动给）。
+        if (pkg == "com.taobao.idlefish") writeXianyuDiag(root, rawSnapshot)
         val target = targetFor(root)
         if (target == null) { scheduleLeave(); return }
         main.removeCallbacks(confirmLeave)
@@ -816,6 +821,7 @@ open class ChatCaptureService : AccessibilityService() {
             "com.tencent.mobileqq" -> root.findAccessibilityNodeInfosByViewId("com.tencent.mobileqq:id/input").firstOrNull()
             "com.ss.android.lark" -> root.findAccessibilityNodeInfosByViewId("com.ss.android.lark:id/kb_rich_text_content").firstOrNull()
             "com.twitter.android" -> findEditable(root)
+            "com.taobao.idlefish" -> findXianyuInput(root)
             else -> null // Unknown apps support explicit clipboard copy, not unverified writes.
         }
         // Re-read the node after SET_TEXT: the accessibility cache may still
@@ -856,6 +862,142 @@ open class ChatCaptureService : AccessibilityService() {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text)
         }
         return edit.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
+    }
+
+    /**
+     * 闲鱼输入框定位（com.taobao.idlefish）。
+     *
+     * 闲鱼是 Flutter 混合工程（`FishFlutterBoostActivity`），输入框是**自绘的
+     * `android.view.View`**：没有 resource-id，class 也不是 EditText，`text` 恒为空，
+     * 占位提示放在 content-desc（`想跟TA说点什么...`）。所以 QQ/飞书那套按 id 找
+     * 的做法用不上，X 那套 findEditable 也不一定命中。
+     *
+     * 两条路：
+     *   1. [findEditable] —— Flutter 的 TextField 语义节点理论上带 isEditable
+     *   2. 几何兜底 —— 屏幕底部、横向够宽、够扁、可点击的那个 View
+     *
+     * 无论走哪条，都先把候选节点能力写进诊断文件（见 [writeXianyuDiag]），
+     * 用来确认 ACTION_SET_TEXT / ACTION_PASTE 到底可不可用。
+     */
+    private fun findXianyuInput(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {
+        // 诊断不在这里写：放在采集层（见 maybeCapture），那样不需要悬浮窗权限。
+        findEditable(root)?.let { return it }
+
+        val screen = Rect()
+        root.getBoundsInScreen(screen)
+        val minWidth = (screen.width() * 0.4).toInt()
+        val maxHeight = (screen.height() * 0.12).toInt()
+        val bottomStart = (screen.height() * 0.85).toInt()
+
+        var best: AccessibilityNodeInfo? = null
+        var bestTop = -1
+        val stack = ArrayDeque<AccessibilityNodeInfo>()
+        stack.addLast(root)
+        var guard = 0
+        while (stack.isNotEmpty() && guard < 5000) {
+            guard++
+            val node = stack.removeLast()
+            if (node.isClickable && node.isVisibleToUser && node.isEnabled) {
+                val b = Rect()
+                node.getBoundsInScreen(b)
+                val fits =
+                    b.width() >= minWidth &&
+                        b.height() in 1..maxHeight &&
+                        b.top >= bottomStart
+                // 取最靠下的那个：输入框永远贴着底栏，上面的消息行不符合高度条件
+                if (fits && b.top > bestTop) {
+                    bestTop = b.top
+                    best = node
+                }
+            }
+            for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
+        }
+        return best
+    }
+
+    /**
+     * 把当前窗口**底部区域**每个节点的能力写成文本，落到
+     * `filesDir/xianyu_diag.txt`（`adb pull` 拿得到）。
+     *
+     * 为什么需要它：`uiautomator dump` 不输出 `editable`，也看不到节点的可执行
+     * 动作列表，而判断"能不能把候选回复写进输入框"恰恰取决于这两样——
+     * 看 `ACTION_SET_TEXT`(2097152) / `ACTION_PASTE`(32768) 在不在 actions 里。
+     *
+     * 这是排查工具，不参与回复流程；结果不对也不影响正常使用。
+     */
+    private fun writeXianyuDiag(root: AccessibilityNodeInfo, snapshot: ChatSnapshot) {
+        try {
+            val screen = Rect()
+            root.getBoundsInScreen(screen)
+            val bottomStart = (screen.height() * 0.8).toInt()
+            val sb = StringBuilder()
+            sb.appendLine("screen=[${screen.left},${screen.top}][${screen.right},${screen.bottom}]")
+            sb.appendLine("bottomStart=${bottomStart}")
+            sb.appendLine()
+            sb.appendLine("===== 适配器解析结果 =====")
+            sb.appendLine("title=${snapshot.title}")
+            sb.appendLine("extraContext=${snapshot.extraContext}")
+            sb.appendLine("messages=${snapshot.messages.size}")
+            snapshot.messages.forEachIndexed { i, m ->
+                sb.appendLine("  [$i] ${m.side}: ${m.text}")
+            }
+            sb.appendLine()
+            sb.appendLine("===== 屏幕上实际有的节点（对照用，看漏没漏）=====")
+            val allNodes = ArrayDeque<AccessibilityNodeInfo>()
+            allNodes.addLast(root)
+            var g = 0
+            while (allNodes.isNotEmpty() && g < 6000) {
+                g++
+                val n = allNodes.removeLast()
+                val d = n.contentDescription?.toString()?.trim().orEmpty()
+                if (d.isNotEmpty()) {
+                    val nb = Rect()
+                    n.getBoundsInScreen(nb)
+                    if (nb.top < bottomStart) {
+                        sb.appendLine(
+                            "  [${nb.left},${nb.top}-${nb.right},${nb.bottom}] " +
+                                "${n.className?.toString()?.substringAfterLast('.')} " +
+                                "'${d.replace('\n', '⏎')}'"
+                        )
+                    }
+                }
+                for (i in n.childCount - 1 downTo 0) n.getChild(i)?.let { allNodes.addLast(it) }
+            }
+            sb.appendLine()
+            sb.appendLine("===== 底部节点能力 =====")
+            sb.appendLine("（判据：actions 里有没有 2097152=ACTION_SET_TEXT / 32768=ACTION_PASTE）")
+            sb.appendLine()
+
+            val stack = ArrayDeque<Pair<AccessibilityNodeInfo, Int>>()
+            stack.addLast(root to 0)
+            var guard = 0
+            while (stack.isNotEmpty() && guard < 5000) {
+                guard++
+                val (node, depth) = stack.removeLast()
+                val b = Rect()
+                node.getBoundsInScreen(b)
+                if (b.top >= bottomStart || node.isEditable) {
+                    sb.append("  ".repeat(minOf(depth, 8)))
+                    sb.append("class=${node.className}")
+                    sb.append(" bounds=[${b.left},${b.top}][${b.right},${b.bottom}]")
+                    sb.append(" editable=${node.isEditable}")
+                    sb.append(" clickable=${node.isClickable}")
+                    sb.append(" enabled=${node.isEnabled}")
+                    sb.append(" text=${node.text}")
+                    sb.append(" desc=${node.contentDescription}")
+                    sb.append(" id=${node.viewIdResourceName}")
+                    sb.append(" actions=[")
+                    sb.append(node.actionList.joinToString(",") { it.id.toString() })
+                    sb.appendLine("]")
+                }
+                for (i in node.childCount - 1 downTo 0) {
+                    node.getChild(i)?.let { stack.addLast(it to depth + 1) }
+                }
+            }
+            File(filesDir, "xianyu_diag.txt").writeText(sb.toString())
+        } catch (e: Exception) {
+            Log.w(TAG, "闲鱼诊断写入失败：${e.message}")
+        }
     }
 
     private fun findEditable(root: AccessibilityNodeInfo): AccessibilityNodeInfo? {

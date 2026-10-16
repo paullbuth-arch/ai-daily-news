@@ -28,7 +28,15 @@ data class ChatSnapshot(
     val title: String?,
     val messages: List<Msg>,
     val bubbleRects: List<BubbleRect> = emptyList(),
-    val note: String? = null
+    val note: String? = null,
+    /**
+     * 会话级的额外背景，会并入送给模型的 `background`。
+     *
+     * 闲鱼用得上：私信页顶部挂着当前商品信息（`商品信息, ¥2260.00\n含运费0.00元\n广东·深圳`），
+     * 回复时知道「在聊哪一单、什么价、发到哪」和不知道，判断质量差很多。
+     * 其它适配器不填就是 null，行为不变。
+     */
+    val extraContext: String? = null
 ) {
     val latestFrom: String? get() = messages.lastOrNull()?.side
 

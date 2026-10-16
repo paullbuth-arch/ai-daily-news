@@ -19,7 +19,7 @@ gradle.properties.local
 .vscode/
 
 # Dev artifacts / reports (not part of the product)
-/_reports/
+_reports/
 /cn/tools/jev/report/
 **/__pycache__/
 *.pyc

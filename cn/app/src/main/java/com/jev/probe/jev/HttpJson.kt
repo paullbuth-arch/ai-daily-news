@@ -117,11 +117,30 @@ object HttpJson {
         } catch (_: Exception) { "" }
     }
 
-    /** OpenRouter wants attribution headers; other hosts reject unknown ones politely. */
-    fun headersFor(url: String): Map<String, String> =
-        if (url.contains("openrouter.ai", ignoreCase = true))
+    /**
+     * Per-host request headers.
+     *
+     * OpenRouter wants attribution. OpenCode Zen Go is a paid subscription that
+     * documents exactly what a non-OpenCode client must send: a stable
+     * `x-opencode-session` per conversation (routing / prompt cache) and its
+     * own user agent rather than a generic SDK name. Without the session header
+     * the gateway answers 400 MissingSessionID; with it but no credential, 401.
+     *
+     * Other hosts reject unknown headers politely, so the map stays empty.
+     */
+    fun headersFor(url: String): Map<String, String> = when {
+        url.contains("openrouter.ai", ignoreCase = true) ->
             mapOf("HTTP-Referer" to "https://jev-assistant.local", "X-Title" to "Jev Assistant")
-        else emptyMap()
+        url.contains("opencode.ai", ignoreCase = true) ->
+            mapOf("x-opencode-session" to OPENCODE_SESSION, "User-Agent" to USER_AGENT)
+        else -> emptyMap()
+    }
+
+    /** Stable per-install id; the gateway only needs it to be consistent. */
+    private const val OPENCODE_SESSION = "jev-xianyu-assistant"
+
+    /** Identify as ourselves, not as a generic HTTP library (OpenCode docs). */
+    private const val USER_AGENT = "jev-xianyu-assistant/1.0"
 
     /** Human-readable transport failures (no key material ever appears here). */
     private fun describe(e: Exception): String {

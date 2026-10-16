@@ -15,8 +15,17 @@ import com.jev.probe.core.Prefs
  */
 object ContextBuilder {
 
-    /** Notes + history together may not exceed this many characters. */
-    const val BUDGET_CHARS = 1500
+    /**
+     * Notes + history together may not exceed this many characters.
+     *
+     * Sized for the 300-entry history window: ~23 chars per chat line
+     * (measured on real Xianyu dumps) x 300 = ~7000, plus room for the
+     * matched knowledge notes that share this budget.
+     *
+     * The count alone is not the limit -- at the original 1500 the real
+     * window was only ~65 entries no matter what the setting said.
+     */
+    const val BUDGET_CHARS = 10000
 
     /** At most this many matched (non-always-on) notes. */
     const val MAX_HIT_NOTES = 5
@@ -36,8 +45,16 @@ object ContextBuilder {
         val store = KbStore.get(context)
         val title = snapshot.title ?: ""
 
-        // 1. Contact — matched only, never created here.
-        val contact = store.findContact(title, app)
+        // 1. Contact — matched by name/alias. Auto-created ONLY while history
+        //    recording is on: one-off marketplace buyers make manual filing
+        //    unrealistic, and without a contact nothing is recorded at all.
+        //    With "记录聊天历史" off this path is dead, so the promise that
+        //    nothing is written to disk still holds.
+        var contact = store.findContact(title, app)
+        if (contact == null && prefs.contextEnabled && title.isNotBlank()) {
+            store.saveOrMergeContact(title, app)
+            contact = store.findContact(title, app)
+        }
 
         // 2. History — recorded and injected only with the user's opt-in.
         val history = if (prefs.contextEnabled && contact != null)
@@ -58,8 +75,8 @@ object ContextBuilder {
             trimmedHits.removeAt(trimmedHits.size - 1)
 
         Log.d(TAG, "context: contact=${contact != null} notes=${alwaysOn.size + trimmedHits.size} " +
-            "history=${trimmedHistory.size}")
-        return ChatContext(contact, trimmedHistory, alwaysOn + trimmedHits)
+            "history=${trimmedHistory.size} extra=${snapshot.extraContext != null}")
+        return ChatContext(contact, trimmedHistory, alwaysOn + trimmedHits, snapshot.extraContext)
     }
 
     /**
@@ -76,7 +93,7 @@ object ContextBuilder {
     ): List<LogEntry> {
         val now = System.currentTimeMillis()
         store.appendLog(contact.id, snapshot.messages.map { LogEntry(it.side, it.text, now, app) })
-        val n = prefs.contextHistoryCount.coerceIn(0, 100)
+        val n = prefs.contextHistoryCount.coerceIn(0, 300)
         if (n == 0) return emptyList()
         val onScreen = snapshot.messages
             .filter { it.text.length >= DEDUPE_MIN_LEN }

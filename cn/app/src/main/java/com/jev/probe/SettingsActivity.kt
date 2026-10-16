@@ -337,8 +337,8 @@ class SettingsActivity : AppCompatActivity() {
         val ctxRow = toggleRow("记录聊天历史（只存本机，用于关联上下文）", prefs.contextEnabled)
         card2.addView(ctxRow)
         card2.addView(text("关闭时不写任何聊天内容到磁盘；笔记与联系人匹配仍然照常工作。", 11f, sub))
-        card2.addView(label("注入最近历史条数（0–100）"))
-        val ctxCountEdit = edit(prefs.contextHistoryCount.toString(), "30").apply {
+        card2.addView(label("注入最近历史条数（0–300）"))
+        val ctxCountEdit = edit(prefs.contextHistoryCount.toString(), "300").apply {
             inputType = InputType.TYPE_CLASS_NUMBER
         }
         card2.addView(ctxCountEdit)
@@ -444,7 +444,7 @@ class SettingsActivity : AppCompatActivity() {
             prefs.ocrAutoAnalyze = (ocrAutoRow.tag as? Boolean) ?: false
             prefs.contextEnabled = (ctxRow.tag as? Boolean) ?: false
             prefs.contextHistoryCount =
-                ctxCountEdit.text.toString().trim().toIntOrNull()?.coerceIn(0, 100) ?: 30
+                ctxCountEdit.text.toString().trim().toIntOrNull()?.coerceIn(0, 300) ?: 300
             prefs.overlayOpacity = seek.progress + 60
             Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
         })

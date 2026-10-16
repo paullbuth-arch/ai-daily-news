@@ -58,7 +58,7 @@ class ReplyClient(private val prefs: Prefs) {
         if (background.isNotBlank()) sb.append(background).append('\n')
         if (history.isNotEmpty()) {
             sb.append("\n更早的聊天记录（越靠下越新）：\n")
-            history.takeLast(prefs.contextHistoryCount.coerceIn(0, 100)).forEach {
+            history.takeLast(prefs.contextHistoryCount.coerceIn(0, 300)).forEach {
                 sb.append(if (it.side == "me") "我：" else "对方：").append(it.text).append('\n')
             }
         }

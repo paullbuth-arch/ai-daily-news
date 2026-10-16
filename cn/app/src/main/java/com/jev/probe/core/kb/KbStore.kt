@@ -472,7 +472,7 @@ class KbStore private constructor(context: Context) {
 
     companion object {
         private const val TAG = "JEVASSIST"
-        const val MAX_LOG = 300
+        const val MAX_LOG = 800
 
         @Volatile private var instance: KbStore? = null
 

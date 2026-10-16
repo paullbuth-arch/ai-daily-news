@@ -22,7 +22,7 @@
 
 | 接口 | 默认服务商（可自行更换） | 每次发送的内容 | 触发时机 |
 |---|---|---|---|
-| 判断接口 | OpenRouter 转发 TypeSafe Jev | 当前聊天窗口最近 10 条消息的文本与方向（我方/对方）+ 你自己填写的关系描述 +（若开启知识库）命中的笔记与联系人备注 +（若开启历史记录）该联系人最近 N 条历史消息（N 默认 30，可调 0–100） | 你触发一次分析（自动或手动） |
+| 判断接口 | OpenRouter 转发 TypeSafe Jev | 当前聊天窗口最近 10 条消息的文本与方向（我方/对方）+ 你自己填写的关系描述 +（若开启知识库）命中的笔记与联系人备注 +（若开启历史记录）该联系人最近 N 条历史消息（N 默认 300，可调 0–300） | 你触发一次分析（自动或手动） |
 | 回复接口 | OpenRouter 上的 DeepSeek | 同一批最近 10 条消息拼成的对话文本 + 同一份背景信息 + 生成提示词 | 判断完成后起草候选回复时 |
 | 视觉接口 | 可配置，默认与判断接口一致 | 仅在你于设置页主动点击「测试视觉」时，发送一张 1×1 白色测试图；**不在日常采集主路径里** | 你手动点「测试视觉」 |
 
@@ -107,7 +107,7 @@ API 密钥会作为请求头（`Authorization`）随对应请求发给你自己�
 Jev Chat Assistant (Android) reads the chat you are currently viewing on your device and sends that text to a **model endpoint you configure yourself** (default: OpenRouter routing to TypeSafe Jev / DeepSeek; you may switch to TypeSafe direct, DeepSeek official, Alibaba Cloud's Qwen-compatible endpoint, or any OpenAI-compatible URL) so it can judge intent and draft reply candidates.
 
 - **No servers are operated by the author.** The author cannot receive, store, or see your chat content — it never passes through any author-controlled infrastructure.
-- **Chat text goes only to your own configured model endpoint**, along with a relationship description you write, optionally matched knowledge-base notes/contact notes, and optionally recent history for that contact (default 30 messages, 0–100 adjustable, off by default).
+- **Chat text goes only to your own configured model endpoint**, along with a relationship description you write, optionally matched knowledge-base notes/contact notes, and optionally recent history for that contact (default 300 messages, 0–300 adjustable, off by default).
 - **Screenshots are never uploaded.** When a chat app's accessibility tree lacks readable text (e.g. Feishu), the screen is captured and OCR'd entirely on-device; the image is processed in memory and discarded, never saved or sent anywhere.
 - **Local-only storage**: API keys, endpoint settings, knowledge-base notes/contacts, and (if enabled) per-contact chat history live only in the app's private storage on your device. Nothing syncs to the cloud. Uninstalling the app deletes all of it; a one-tap "clear knowledge base & history" option is also available.
 - **No ads, no third-party analytics SDKs (no Google Analytics, Firebase, etc.), no cookies or advertising identifiers.**

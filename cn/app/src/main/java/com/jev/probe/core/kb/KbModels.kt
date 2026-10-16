@@ -48,11 +48,17 @@ data class LogEntry(val side: String, val text: String, val ts: Long, val app: S
 data class ChatContext(
     val contact: Contact?,
     val history: List<LogEntry>,
-    val notes: List<Note>
+    val notes: List<Note>,
+    /**
+     * 适配器从页面上直接读到的会话背景（闲鱼的当前商品信息等）。
+     * 与知识库无关，所以不占 [ContextBuilder.BUDGET_CHARS] 预算。
+     */
+    val extra: String? = null
 ) {
 
     /** True when there is nothing extra to inject (then no field is sent at all). */
     fun isEmpty(): Boolean = history.isEmpty() && notes.isEmpty() &&
+        extra.isNullOrBlank() &&
         (contact == null || (contact.relationship.isBlank() &&
             contact.notes.isBlank() && contact.autoSummary.isBlank()))
 
@@ -69,6 +75,10 @@ data class ChatContext(
      */
     fun background(defaultRelationship: String): String {
         val sb = StringBuilder()
+        // 页面直接读到的会话背景放最前：它描述"当下在聊什么"，比长期档案更贴近
+        extra?.takeIf { it.isNotBlank() }?.let {
+            sb.append("当前会话背景：").append(it.trim()).append('\n')
+        }
         contact?.let { c ->
             val rel = c.relationship.trim()
             if (rel.isNotEmpty()) sb.append("关系：").append(rel).append('\n')

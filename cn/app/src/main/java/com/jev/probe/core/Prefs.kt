@@ -141,9 +141,9 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         get() = sp.getBoolean(K_CTX_ENABLED, false)
         set(v) = sp.edit().putBoolean(K_CTX_ENABLED, v).apply()
 
-    /** How many recent history entries to inject. */
+    /** How many recent history entries to inject. Default 300 (the window the app is tuned for). */
     var contextHistoryCount: Int
-        get() = sp.getInt(K_CTX_COUNT, 30)
+        get() = sp.getInt(K_CTX_COUNT, 300)
         set(v) = sp.edit().putInt(K_CTX_COUNT, v).apply()
 
     /** Auto-summarize a contact once enough history accumulates. */
@@ -347,6 +347,6 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         const val DEFAULT_VISION_MODEL = "qwen/qwen2.5-vl-72b-instruct"
         const val DASHSCOPE_VISION_MODEL = "qwen-vl-max"
 
-        const val DEFAULT_REL = "对方是我的伴侣；from=me 的是我发的，from=other 的是对方发的"
+        const val DEFAULT_REL = "对方是闲鱼上咨询我的买家；from=me 的是我（卖家）发的，from=other 的是买家发的"
     }
 }

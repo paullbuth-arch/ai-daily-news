@@ -313,6 +313,7 @@ class KnowledgeActivity : AppCompatActivity() {
         "com.tencent.mobileqq" -> "QQ"
         "com.ss.android.lark" -> "飞书"
         "com.twitter.android" -> "X"
+        "com.taobao.idlefish" -> "闲鱼"
         else -> pkg
     }
 
